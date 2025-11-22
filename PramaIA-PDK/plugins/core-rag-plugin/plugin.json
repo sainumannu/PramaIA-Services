@@ -1,0 +1,410 @@
+{
+  "name": "core-rag-plugin",
+  "display_name": "RAG Core",
+  "version": "1.0.0",
+  "description": "Plugin con i nodi per sistemi RAG (Retrieval Augmented Generation) nei workflow PramaIA",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "text_chunker",
+      "name": "Text Chunker",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Divide un testo in chunk più piccoli per l'elaborazione",
+      "icon": "✂️",
+      "color": "#4CAF50",
+      "entry": "src/text_chunker_processor.py",
+      "inputs": [
+        {
+          "name": "text",
+          "type": "string",
+          "description": "Testo da suddividere in chunk",
+          "required": true
+        },
+        {
+          "name": "metadata",
+          "type": "object",
+          "description": "Metadati da associare ai chunk",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "chunks",
+          "type": "array",
+          "description": "Array di chunk di testo"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Text Chunker RAG",
+        "properties": {
+          "chunk_size": {
+            "type": "integer",
+            "title": "Dimensione chunk",
+            "description": "Numero massimo di caratteri per chunk",
+            "default": 1000
+          },
+          "chunk_overlap": {
+            "type": "integer",
+            "title": "Sovrapposizione chunk",
+            "description": "Numero di caratteri di sovrapposizione tra chunk consecutivi",
+            "default": 200
+          },
+          "split_method": {
+            "type": "string",
+            "title": "Metodo di divisione",
+            "description": "Metodo per dividere il testo in chunk",
+            "enum": ["character", "word", "sentence", "paragraph", "recursive"],
+            "default": "paragraph"
+          },
+          "include_metadata": {
+            "type": "boolean",
+            "title": "Includi metadati",
+            "description": "Includi i metadati in ogni chunk",
+            "default": true
+          },
+          "add_chunk_metadata": {
+            "type": "boolean",
+            "title": "Aggiungi metadati chunk",
+            "description": "Aggiungi metadati sul numero e posizione del chunk",
+            "default": true
+          }
+        }
+      },
+      "defaultConfig": {
+        "chunk_size": 1000,
+        "chunk_overlap": 200,
+        "split_method": "paragraph",
+        "include_metadata": true,
+        "add_chunk_metadata": true
+      }
+    },
+    {
+      "id": "text_embedder",
+      "name": "Text Embedder",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Converte testo in embedding vettoriali per la ricerca semantica",
+  "icon": "🧬",
+      "color": "#2196F3",
+      "entry": "src/text_embedder_processor.py",
+      "inputs": [
+        {
+          "name": "text",
+          "type": "string",
+          "description": "Testo da convertire in embedding",
+          "required": true
+        },
+        {
+          "name": "texts",
+          "type": "array",
+          "description": "Array di testi da convertire in embedding (alternativa a text)",
+          "required": false
+        },
+        {
+          "name": "metadata",
+          "type": "any",
+          "description": "Metadati da associare agli embedding",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "embeddings",
+          "type": "array",
+          "description": "Array di embedding vettoriali"
+        },
+        {
+          "name": "documents",
+          "type": "array",
+          "description": "Array di documenti con testo e embedding"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Text Embedder RAG",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello",
+            "description": "Modello di embedding da utilizzare",
+            "enum": ["openai", "sentence-transformers", "huggingface", "custom"],
+            "default": "openai"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Nome modello",
+            "description": "Nome specifico del modello di embedding",
+            "default": "text-embedding-ada-002"
+          },
+          "openai_api_key": {
+            "type": "string",
+            "title": "OpenAI API Key",
+            "description": "Chiave API per OpenAI (se si usa il modello OpenAI)",
+            "default": ""
+          },
+          "dimensions": {
+            "type": "integer",
+            "title": "Dimensioni",
+            "description": "Dimensioni dell'embedding (se applicabile)",
+            "default": 1536
+          },
+          "batch_size": {
+            "type": "integer",
+            "title": "Dimensione batch",
+            "description": "Numero di testi da elaborare in un batch",
+            "default": 32
+          },
+          "normalize": {
+            "type": "boolean",
+            "title": "Normalizza",
+            "description": "Normalizza i vettori di embedding",
+            "default": true
+          }
+        },
+        "required": ["model"]
+      },
+      "defaultConfig": {
+        "model": "openai",
+        "model_name": "text-embedding-ada-002",
+        "openai_api_key": "",
+        "dimensions": 1536,
+        "batch_size": 32,
+        "normalize": true
+      }
+    },
+    {
+      "id": "vector_store",
+      "name": "Vector Store",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Salva e recupera embedding vettoriali da un database vettoriale",
+  "icon": "🗂",
+      "color": "#673AB7",
+      "entry": "src/vector_store_processor.py",
+      "inputs": [
+        {
+          "name": "operation",
+          "type": "string",
+          "description": "Operazione da eseguire (store, search, delete)",
+          "required": false
+        },
+        {
+          "name": "documents",
+          "type": "array",
+          "description": "Documenti da salvare (per operation=store)",
+          "required": false
+        },
+        {
+          "name": "query",
+          "type": "string",
+          "description": "Query di ricerca (per operation=search)",
+          "required": false
+        },
+        {
+          "name": "query_embedding",
+          "type": "array",
+          "description": "Embedding della query (per operation=search)",
+          "required": false
+        },
+        {
+          "name": "ids",
+          "type": "array",
+          "description": "ID dei documenti da eliminare (per operation=delete)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "results",
+          "type": "array",
+          "description": "Risultati dell'operazione"
+        },
+        {
+          "name": "status",
+          "type": "object",
+          "description": "Stato dell'operazione"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Vector Store RAG",
+        "properties": {
+          "db_type": {
+            "type": "string",
+            "title": "Tipo database",
+            "description": "Tipo di database vettoriale",
+            "enum": ["chroma", "faiss", "qdrant", "milvus", "pinecone", "redis"],
+            "default": "chroma"
+          },
+          "collection_name": {
+            "type": "string",
+            "title": "Nome collezione",
+            "description": "Nome della collezione nel database",
+            "default": "documents"
+          },
+          "persist_directory": {
+            "type": "string",
+            "title": "Directory persistenza",
+            "description": "Directory per la persistenza dei dati (per database locali)",
+            "default": "./vector_db"
+          },
+          "default_operation": {
+            "type": "string",
+            "title": "Operazione di default",
+            "description": "Operazione da eseguire se non specificata negli input",
+            "enum": ["store", "search", "delete"],
+            "default": "search"
+          },
+          "embedding_dimension": {
+            "type": "integer",
+            "title": "Dimensione embedding",
+            "description": "Dimensione degli embedding vettoriali",
+            "default": 1536
+          },
+          "similarity_metric": {
+            "type": "string",
+            "title": "Metrica similarità",
+            "description": "Metrica di similarità per la ricerca",
+            "enum": ["cosine", "euclidean", "dot_product"],
+            "default": "cosine"
+          },
+          "top_k": {
+            "type": "integer",
+            "title": "Top K",
+            "description": "Numero di risultati da restituire nella ricerca",
+            "default": 5
+          },
+          "connection_string": {
+            "type": "string",
+            "title": "Stringa connessione",
+            "description": "Stringa di connessione per database remoti",
+            "default": ""
+          },
+          "api_key": {
+            "type": "string",
+            "title": "API Key",
+            "description": "Chiave API per database remoti",
+            "default": ""
+          }
+        },
+        "required": ["db_type", "collection_name"]
+      },
+      "defaultConfig": {
+        "db_type": "chroma",
+        "collection_name": "documents",
+        "persist_directory": "./vector_db",
+        "default_operation": "search",
+        "embedding_dimension": 1536,
+        "similarity_metric": "cosine",
+        "top_k": 5,
+        "connection_string": "",
+        "api_key": ""
+      }
+    },
+    {
+      "id": "rag_prompt_builder",
+      "name": "RAG Prompt Builder",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Costruisce un prompt per LLM arricchito con contesto recuperato",
+  "icon": "🧩",
+      "color": "#FF9800",
+      "entry": "src/rag_prompt_builder_processor.py",
+      "inputs": [
+        {
+          "name": "query",
+          "type": "string",
+          "description": "Query o domanda dell'utente",
+          "required": true
+        },
+        {
+          "name": "context_documents",
+          "type": "array",
+          "description": "Documenti di contesto recuperati",
+          "required": true
+        },
+        {
+          "name": "system_message",
+          "type": "string",
+          "description": "Messaggio di sistema opzionale",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "description": "Prompt completo per il modello LLM"
+        },
+        {
+          "name": "messages",
+          "type": "array",
+          "description": "Array di messaggi formattati per API chat"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione RAG Prompt Builder",
+        "properties": {
+          "prompt_template": {
+            "type": "string",
+            "title": "Template prompt",
+            "description": "Template per il prompt (usa {{query}} e {{context}})",
+            "default": "Usa solo le seguenti informazioni per rispondere alla domanda. Se non conosci la risposta, dì semplicemente che non lo sai.\n\nContesto:\n{{context}}\n\nDomanda: {{query}}\nRisposta:"
+          },
+          "system_message_template": {
+            "type": "string",
+            "title": "Template messaggio sistema",
+            "description": "Template per il messaggio di sistema",
+            "default": "Sei un assistente AI utile che risponde alle domande basandosi esclusivamente sul contesto fornito."
+          },
+          "context_format": {
+            "type": "string",
+            "title": "Formato contesto",
+            "description": "Formato per il contesto nel prompt",
+            "enum": ["numbered", "newline", "bullet", "paragraph"],
+            "default": "numbered"
+          },
+          "max_context_length": {
+            "type": "integer",
+            "title": "Lunghezza max contesto",
+            "description": "Lunghezza massima del contesto in caratteri",
+            "default": 4000
+          },
+          "include_metadata": {
+            "type": "boolean",
+            "title": "Includi metadati",
+            "description": "Includi i metadati nel contesto",
+            "default": false
+          },
+          "output_format": {
+            "type": "string",
+            "title": "Formato output",
+            "description": "Formato dell'output: testo o messaggi",
+            "enum": ["text", "messages", "both"],
+            "default": "both"
+          }
+        }
+      },
+      "defaultConfig": {
+        "prompt_template": "Usa solo le seguenti informazioni per rispondere alla domanda. Se non conosci la risposta, dì semplicemente che non lo sai.\n\nContesto:\n{{context}}\n\nDomanda: {{query}}\nRisposta:",
+        "system_message_template": "Sei un assistente AI utile che risponde alle domande basandosi esclusivamente sul contesto fornito.",
+        "context_format": "numbered",
+        "max_context_length": 4000,
+        "include_metadata": false,
+        "output_format": "both"
+      }
+    }
+  ],
+  "dependencies": {
+    "numpy": ">=1.20.0",
+    "chromadb": ">=0.4.0",
+    "openai": ">=1.0.0",
+    "sentence-transformers": ">=2.2.0"
+  }
+}

@@ -1,0 +1,265 @@
+{
+  "name": "scheduler-event-source",
+  "version": "1.0.0",
+  "description": "Event source per scheduling avanzato - supporta cron, intervalli e one-time events",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "type": "event-source",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  
+  "lifecycle": "persistent",
+  
+  "tags": ["scheduling", "cron", "timer", "automation", "recurring"],
+  
+  "eventTypes": [
+    {
+      "id": "cron_trigger",
+      "name": "Cron Schedule Trigger",
+      "description": "Triggered based on cron expression (e.g., '0 9 * * MON' for every Monday at 9 AM)",
+      "tags": ["cron", "schedule", "recurring", "timed"],
+      "outputs": [
+        {
+          "name": "trigger_time",
+          "type": "string",
+          "description": "ISO timestamp when the trigger fired"
+        },
+        {
+          "name": "cron_expression",
+          "type": "string",
+          "description": "The cron expression that triggered this event"
+        },
+        {
+          "name": "schedule_name",
+          "type": "string",
+          "description": "Name of the schedule (if provided)"
+        },
+        {
+          "name": "next_execution",
+          "type": "string",
+          "description": "ISO timestamp of the next scheduled execution"
+        }
+      ]
+    },
+    {
+      "id": "interval_trigger",
+      "name": "Interval Trigger",
+      "description": "Triggered at regular intervals (every N minutes/hours/days)",
+      "outputs": [
+        {
+          "name": "trigger_time",
+          "type": "string",
+          "description": "ISO timestamp when the trigger fired"
+        },
+        {
+          "name": "interval_seconds",
+          "type": "number",
+          "description": "Interval in seconds between triggers"
+        },
+        {
+          "name": "schedule_name",
+          "type": "string",
+          "description": "Name of the schedule (if provided)"
+        },
+        {
+          "name": "execution_count",
+          "type": "number",
+          "description": "Number of times this schedule has been executed"
+        }
+      ]
+    },
+    {
+      "id": "one_time_trigger",
+      "name": "One-Time Trigger",
+      "description": "Triggered once at a specific date and time",
+      "outputs": [
+        {
+          "name": "trigger_time",
+          "type": "string",
+          "description": "ISO timestamp when the trigger fired"
+        },
+        {
+          "name": "scheduled_time",
+          "type": "string",
+          "description": "Originally scheduled time for this trigger"
+        },
+        {
+          "name": "schedule_name",
+          "type": "string",
+          "description": "Name of the schedule (if provided)"
+        },
+        {
+          "name": "delay_seconds",
+          "type": "number",
+          "description": "Actual delay from scheduled time (positive if late, negative if early)"
+        }
+      ]
+    },
+    {
+      "id": "schedule_error",
+      "name": "Schedule Error",
+      "description": "Triggered when there's an error in schedule execution",
+      "outputs": [
+        {
+          "name": "error_time",
+          "type": "string",
+          "description": "ISO timestamp when the error occurred"
+        },
+        {
+          "name": "schedule_name",
+          "type": "string",
+          "description": "Name of the failed schedule"
+        },
+        {
+          "name": "error_message",
+          "type": "string",
+          "description": "Description of the error"
+        },
+        {
+          "name": "schedule_type",
+          "type": "string",
+          "description": "Type of schedule that failed (cron, interval, one_time)"
+        }
+      ]
+    }
+  ],
+  
+  "configSchema": {
+    "title": "Scheduler Configuration",
+    "type": "object",
+    "properties": {
+      "schedules": {
+        "type": "array",
+        "title": "Schedules",
+        "description": "Array of schedule configurations",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Schedule Name",
+              "description": "Unique name for this schedule"
+            },
+            "type": {
+              "type": "string",
+              "title": "Schedule Type",
+              "description": "Type of schedule",
+              "enum": ["cron", "interval", "one_time"],
+              "default": "cron"
+            },
+            "cron": {
+              "type": "string",
+              "title": "Cron Expression",
+              "description": "Cron expression (e.g., '0 9 * * MON' for every Monday at 9 AM)",
+              "default": "0 9 * * *"
+            },
+            "interval_seconds": {
+              "type": "number",
+              "title": "Interval (seconds)",
+              "description": "Interval in seconds for interval-based schedules",
+              "minimum": 1,
+              "default": 3600
+            },
+            "execute_at": {
+              "type": "string",
+              "title": "Execute At",
+              "description": "ISO timestamp for one-time execution (e.g., '2025-08-04T10:00:00Z')",
+              "format": "date-time"
+            },
+            "enabled": {
+              "type": "boolean",
+              "title": "Enabled",
+              "description": "Whether this schedule is active",
+              "default": true
+            },
+            "timezone": {
+              "type": "string",
+              "title": "Timezone",
+              "description": "Timezone for cron schedules (e.g., 'Europe/Rome', 'UTC')",
+              "default": "UTC"
+            },
+            "metadata": {
+              "type": "object",
+              "title": "Metadata",
+              "description": "Additional metadata to pass with the event",
+              "additionalProperties": true
+            }
+          },
+          "required": ["name", "type"],
+          "allOf": [
+            {
+              "if": { "properties": { "type": { "const": "cron" } } },
+              "then": { "required": ["cron"] }
+            },
+            {
+              "if": { "properties": { "type": { "const": "interval" } } },
+              "then": { "required": ["interval_seconds"] }
+            },
+            {
+              "if": { "properties": { "type": { "const": "one_time" } } },
+              "then": { "required": ["execute_at"] }
+            }
+          ]
+        },
+        "default": [
+          {
+            "name": "daily_morning",
+            "type": "cron",
+            "cron": "0 9 * * *",
+            "enabled": true,
+            "timezone": "UTC"
+          }
+        ]
+      },
+      "max_concurrent_executions": {
+        "type": "number",
+        "title": "Max Concurrent Executions",
+        "description": "Maximum number of schedules that can execute simultaneously",
+        "default": 5,
+        "minimum": 1,
+        "maximum": 50
+      },
+      "execution_timeout": {
+        "type": "number",
+        "title": "Execution Timeout (seconds)",
+        "description": "Maximum time a schedule execution can take before being considered failed",
+        "default": 300,
+        "minimum": 1
+      },
+      "retry_failed_schedules": {
+        "type": "boolean",
+        "title": "Retry Failed Schedules",
+        "description": "Whether to retry schedules that fail to execute",
+        "default": true
+      },
+      "max_retries": {
+        "type": "number",
+        "title": "Max Retries",
+        "description": "Maximum number of retries for failed schedules",
+        "default": 3,
+        "minimum": 0,
+        "maximum": 10
+      },
+      "log_level": {
+        "type": "string",
+        "title": "Log Level",
+        "description": "Logging level for scheduler events",
+        "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+        "default": "INFO"
+      }
+    },
+    "required": ["schedules"]
+  },
+  
+  "entry": "src/event_source.py",
+  
+  "dependencies": {
+    "croniter": ">=1.3.0",
+    "pytz": ">=2023.3",
+    "asyncio": "*",
+    "datetime": "*",
+    "json": "*",
+    "threading": "*",
+    "time": "*"
+  }
+}

@@ -1,0 +1,292 @@
+{
+  "name": "core-llm-plugin",
+  "display_name": "LLM Core",
+  "version": "1.0.0",
+  "description": "Plugin con i nodi di modelli di linguaggio per i workflow PramaIA",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "type": "llm",
+      "category": "LLM",
+      "description": "Nodo per integrare i modelli OpenAI (GPT-3.5, GPT-4, ecc.)",
+    "icon": "🚀",
+      "color": "#10a37f",
+      "entry": "src/openai_processor.py",
+      "inputs": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "description": "Prompt da inviare al modello",
+          "required": true
+        },
+        {
+          "name": "system",
+          "type": "string",
+          "description": "Messaggio di sistema opzionale",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "string",
+          "description": "Risposta generata dal modello"
+        },
+        {
+          "name": "full_response",
+          "type": "object",
+          "description": "Risposta completa dall'API con tutti i metadati"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione OpenAI LLM",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello",
+            "description": "Modello OpenAI da utilizzare",
+            "enum": ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o"],
+            "default": "gpt-3.5-turbo"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "title": "Token massimi",
+            "description": "Numero massimo di token nella risposta",
+            "default": 1000
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperatura",
+            "description": "Controllo della creatività (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          }
+        },
+        "required": ["model"]
+      },
+      "defaultConfig": {
+        "model": "gpt-3.5-turbo",
+        "max_tokens": 1000,
+        "temperature": 0.7
+      }
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "type": "llm",
+      "category": "LLM",
+      "description": "Nodo per integrare i modelli Anthropic (Claude)",
+  "icon": "🛸",
+      "color": "#6244bb",
+      "entry": "src/anthropic_processor.py",
+      "inputs": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "description": "Prompt da inviare al modello",
+          "required": true
+        },
+        {
+          "name": "system",
+          "type": "string",
+          "description": "Messaggio di sistema opzionale",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "string",
+          "description": "Risposta generata dal modello"
+        },
+        {
+          "name": "full_response",
+          "type": "object",
+          "description": "Risposta completa dall'API con tutti i metadati"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Anthropic LLM",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello",
+            "description": "Modello Anthropic da utilizzare",
+            "enum": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
+            "default": "claude-3-sonnet-20240229"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "title": "Token massimi",
+            "description": "Numero massimo di token nella risposta",
+            "default": 1000
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperatura",
+            "description": "Controllo della creatività (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          }
+        },
+        "required": ["model"]
+      },
+      "defaultConfig": {
+        "model": "claude-3-sonnet-20240229",
+        "max_tokens": 1000,
+        "temperature": 0.7
+      }
+    },
+    {
+      "id": "gemini",
+      "name": "Google Gemini",
+      "type": "llm",
+      "category": "LLM",
+      "description": "Nodo per integrare i modelli Google Gemini",
+  "icon": "🧠",
+      "color": "#4285F4",
+      "entry": "src/gemini_processor.py",
+      "inputs": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "description": "Prompt da inviare al modello",
+          "required": true
+        },
+        {
+          "name": "system",
+          "type": "string",
+          "description": "Messaggio di sistema opzionale",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "string",
+          "description": "Risposta generata dal modello"
+        },
+        {
+          "name": "full_response",
+          "type": "object",
+          "description": "Risposta completa dall'API con tutti i metadati"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Google Gemini LLM",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello",
+            "description": "Modello Gemini da utilizzare",
+            "enum": ["gemini-1.0-pro", "gemini-1.5-pro", "gemini-1.5-flash"],
+            "default": "gemini-1.5-pro"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "title": "Token massimi",
+            "description": "Numero massimo di token nella risposta",
+            "default": 1000
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperatura",
+            "description": "Controllo della creatività (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          }
+        },
+        "required": ["model"]
+      },
+      "defaultConfig": {
+        "model": "gemini-1.5-pro",
+        "max_tokens": 1000,
+        "temperature": 0.7
+      }
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "type": "llm",
+      "category": "LLM",
+      "description": "Nodo per integrare modelli Ollama self-hosted",
+  "icon": "🦙",
+      "color": "#FF6B6B",
+      "entry": "src/ollama_processor.py",
+      "inputs": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "description": "Prompt da inviare al modello",
+          "required": true
+        },
+        {
+          "name": "system",
+          "type": "string",
+          "description": "Messaggio di sistema opzionale",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "string",
+          "description": "Risposta generata dal modello"
+        },
+        {
+          "name": "full_response",
+          "type": "object",
+          "description": "Risposta completa dall'API con tutti i metadati"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Ollama LLM",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello",
+            "description": "Modello Ollama da utilizzare",
+            "default": "llama3"
+          },
+          "endpoint": {
+            "type": "string",
+            "title": "Endpoint",
+            "description": "URL dell'endpoint Ollama",
+            "default": "http://localhost:11434"
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperatura",
+            "description": "Controllo della creatività (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          }
+        },
+        "required": ["model", "endpoint"]
+      },
+      "defaultConfig": {
+        "model": "llama3",
+        "endpoint": "http://localhost:11434",
+        "temperature": 0.7
+      }
+    }
+  ],
+  "dependencies": {
+    "openai": "^1.0.0",
+    "anthropic": "^0.5.0",
+    "google-generativeai": "^0.1.0"
+  }
+}

@@ -1,0 +1,7 @@
+pymupdf>=1.21.0
+langchain>=0.0.267
+pytesseract>=0.3.10
+Pillow>=9.0.0
+tabula-py>=2.7.0
+jsonschema>=4.17.3
+pramaialog>=1.0.0

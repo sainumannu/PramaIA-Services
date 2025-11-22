@@ -1,0 +1,485 @@
+{
+  "workflow_id": "pdf_document_delete_pipeline",
+  "name": "PDF Document DELETE Pipeline",
+  "description": "Pipeline completa per la cancellazione sicura di documenti PDF con cleanup dual-storage (metadati + semantico) usando architettura Backend + PDK",
+  "is_active": true,
+  "is_public": true,
+  "category": "CRUD",
+  "tags": ["pdf", "delete", "cleanup", "metadata", "semantic", "pdk", "secure-deletion"],
+  "architecture": "backend_pdk_distributed",
+  "nodes": [
+    {
+      "node_id": "delete_input_validator",
+      "node_type": "user_input",
+      "name": "Delete Input Validator",
+      "description": "Validazione richiesta cancellazione e controlli di sicurezza (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": [],
+        "outputPorts": ["validated_delete", "document_id", "delete_options"],
+        "additionalConfig": {
+          "validate_document_exists": true,
+          "check_delete_permissions": true,
+          "require_confirmation": true,
+          "prevent_accidental_deletion": true,
+          "support_soft_delete": true
+        }
+      },
+      "position": { "x": 100, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "dependency_checker",
+      "node_type": "DependencyChecker",
+      "name": "Document Dependency Checker",
+      "description": "Verifica dipendenze e riferimenti prima della cancellazione (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["document_id", "delete_options"],
+        "outputPorts": ["dependency_report", "can_delete"],
+        "additionalConfig": {
+          "check_references": true,
+          "check_active_workflows": true,
+          "check_user_bookmarks": true,
+          "force_delete_option": false
+        }
+      },
+      "position": { "x": 400, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "backup_creator",
+      "node_type": "BackupCreator",
+      "name": "Pre-Delete Backup Creator",
+      "description": "Creazione backup di sicurezza prima della cancellazione (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["document_id", "dependency_report", "can_delete"],
+        "outputPorts": ["backup_result", "backup_location"],
+        "additionalConfig": {
+          "create_full_backup": true,
+          "include_metadata": true,
+          "include_version_history": true,
+          "backup_retention_days": 90,
+          "compress_backup": true
+        }
+      },
+      "position": { "x": 700, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "metadata_deleter",
+      "node_type": "MetadataDeleter",
+      "name": "Metadata Database Deleter",
+      "description": "Rimozione metadati dal database strutturato (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["document_id", "backup_result", "delete_options"],
+        "outputPorts": ["metadata_delete_result", "deleted_metadata"],
+        "additionalConfig": {
+          "table_name": "pdf_documents",
+          "cascade_delete_relations": true,
+          "soft_delete_option": true,
+          "log_deletion": true,
+          "atomic_operation": true
+        }
+      },
+      "position": { "x": 1000, "y": 50 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_vector_deleter",
+      "node_type": "PDKVectorDeleter",
+      "name": "Vector Database Deleter (PDK)",
+      "description": "Rimozione embeddings dal database vettoriale ChromaDB (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["document_id", "backup_result"],
+        "outputPorts": ["vector_delete_result", "deleted_vectors_count"],
+        "additionalConfig": {
+          "collection_name": "pdf_documents",
+          "delete_all_chunks": true,
+          "verify_deletion": true,
+          "cleanup_orphaned_vectors": true,
+          "batch_deletion": true
+        }
+      },
+      "position": { "x": 1000, "y": 200 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_cleanup_processor",
+      "node_type": "PDKCleanupProcessor",
+      "name": "Cleanup Processor (PDK)",
+      "description": "Cleanup risorse associate e file temporanei (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["document_id", "vector_delete_result"],
+        "outputPorts": ["cleanup_result", "freed_resources"],
+        "additionalConfig": {
+          "cleanup_temp_files": true,
+          "cleanup_cache_entries": true,
+          "cleanup_processing_artifacts": true,
+          "verify_cleanup": true
+        }
+      },
+      "position": { "x": 1300, "y": 200 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "transaction_finalizer",
+      "node_type": "TransactionFinalizer",
+      "name": "Delete Transaction Finalizer",
+      "description": "Finalizzazione transazionale cancellazione dual-storage (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["metadata_delete_result", "vector_delete_result", "cleanup_result", "document_id"],
+        "outputPorts": ["deletion_result", "transaction_status"],
+        "additionalConfig": {
+          "verify_complete_deletion": true,
+          "ensure_no_orphaned_data": true,
+          "rollback_on_partial_failure": true,
+          "timeout_seconds": 120
+        }
+      },
+      "position": { "x": 1300, "y": 50 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "index_cleaner",
+      "node_type": "IndexCleaner", 
+      "name": "Search Index Cleaner",
+      "description": "Rimozione riferimenti da indici di ricerca (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["document_id", "deletion_result"],
+        "outputPorts": ["index_cleanup_result"],
+        "additionalConfig": {
+          "clean_fulltext_index": true,
+          "clean_metadata_index": true,
+          "clean_semantic_index_refs": true,
+          "optimize_indexes": false
+        }
+      },
+      "position": { "x": 1600, "y": 50 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "audit_logger",
+      "node_type": "AuditLogger",
+      "name": "Deletion Audit Logger",
+      "description": "Logging completo operazione cancellazione per audit (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["deletion_result", "deleted_metadata", "backup_location", "document_id"],
+        "outputPorts": ["audit_result", "deletion_record"],
+        "additionalConfig": {
+          "log_all_details": true,
+          "include_user_info": true,
+          "include_timestamp": true,
+          "secure_log_storage": true,
+          "retention_policy_compliance": true
+        }
+      },
+      "position": { "x": 1600, "y": 200 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "notification_manager",
+      "node_type": "NotificationManager",
+      "name": "Deletion Notification Manager",
+      "description": "Gestione notifiche cancellazione e aggiornamento statistiche (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["deletion_result", "audit_result", "document_id"],
+        "outputPorts": ["notification_result", "stats_update"],
+        "additionalConfig": {
+          "notify_deletion": true,
+          "update_document_count": true,
+          "update_storage_stats": true,
+          "notify_subscribers": true
+        }
+      },
+      "position": { "x": 1900, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "recovery_manager",
+      "node_type": "RecoveryManager", 
+      "name": "Deletion Recovery Manager",
+      "description": "Gestione recupero in caso di cancellazione accidentale (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["backup_location", "deletion_record"],
+        "outputPorts": ["recovery_options", "restore_capability"],
+        "additionalConfig": {
+          "enable_undelete": true,
+          "recovery_time_window": "24_hours",
+          "require_admin_approval": true,
+          "track_recovery_requests": true
+        }
+      },
+      "position": { "x": 1600, "y": 350 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "error_recovery",
+      "node_type": "ErrorRecovery",
+      "name": "Error Recovery Handler",
+      "description": "Gestione errori e ripristino stato in caso di fallimento (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["transaction_status", "backup_location", "document_id"],
+        "outputPorts": ["recovery_result", "error_details"],
+        "additionalConfig": {
+          "auto_recover_on_failure": true,
+          "restore_from_backup": true,
+          "cleanup_partial_changes": true,
+          "notify_failure": true
+        }
+      },
+      "position": { "x": 1000, "y": 350 },
+      "width": 220,
+      "height": 100
+    }
+  ],
+  "connections": [
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "dependency_checker",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "dependency_checker",
+      "from_port": "delete_options",
+      "to_port": "delete_options"
+    },
+    {
+      "from_node_id": "dependency_checker",
+      "to_node_id": "backup_creator",
+      "from_port": "dependency_report",
+      "to_port": "dependency_report"
+    },
+    {
+      "from_node_id": "dependency_checker",
+      "to_node_id": "backup_creator",
+      "from_port": "can_delete",
+      "to_port": "can_delete"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "backup_creator",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "backup_creator",
+      "to_node_id": "metadata_deleter",
+      "from_port": "backup_result",
+      "to_port": "backup_result"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "metadata_deleter",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "metadata_deleter",
+      "from_port": "delete_options",
+      "to_port": "delete_options"
+    },
+    {
+      "from_node_id": "backup_creator",
+      "to_node_id": "pdk_vector_deleter",
+      "from_port": "backup_result",
+      "to_port": "backup_result"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "pdk_vector_deleter",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "pdk_vector_deleter",
+      "to_node_id": "pdk_cleanup_processor",
+      "from_port": "vector_delete_result",
+      "to_port": "vector_delete_result"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "pdk_cleanup_processor",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "metadata_deleter",
+      "to_node_id": "transaction_finalizer",
+      "from_port": "metadata_delete_result",
+      "to_port": "metadata_delete_result"
+    },
+    {
+      "from_node_id": "pdk_vector_deleter",
+      "to_node_id": "transaction_finalizer",
+      "from_port": "vector_delete_result",
+      "to_port": "vector_delete_result"
+    },
+    {
+      "from_node_id": "pdk_cleanup_processor",
+      "to_node_id": "transaction_finalizer",
+      "from_port": "cleanup_result",
+      "to_port": "cleanup_result"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "transaction_finalizer",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "transaction_finalizer",
+      "to_node_id": "index_cleaner",
+      "from_port": "deletion_result",
+      "to_port": "deletion_result"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "index_cleaner",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "transaction_finalizer",
+      "to_node_id": "audit_logger",
+      "from_port": "deletion_result",
+      "to_port": "deletion_result"
+    },
+    {
+      "from_node_id": "metadata_deleter",
+      "to_node_id": "audit_logger",
+      "from_port": "deleted_metadata",
+      "to_port": "deleted_metadata"
+    },
+    {
+      "from_node_id": "backup_creator",
+      "to_node_id": "audit_logger",
+      "from_port": "backup_location",
+      "to_port": "backup_location"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "audit_logger",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "transaction_finalizer",
+      "to_node_id": "notification_manager",
+      "from_port": "deletion_result",
+      "to_port": "deletion_result"
+    },
+    {
+      "from_node_id": "audit_logger",
+      "to_node_id": "notification_manager",
+      "from_port": "audit_result",
+      "to_port": "audit_result"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "notification_manager",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "backup_creator",
+      "to_node_id": "recovery_manager",
+      "from_port": "backup_location",
+      "to_port": "backup_location"
+    },
+    {
+      "from_node_id": "audit_logger",
+      "to_node_id": "recovery_manager",
+      "from_port": "deletion_record",
+      "to_port": "deletion_record"
+    },
+    {
+      "from_node_id": "transaction_finalizer",
+      "to_node_id": "error_recovery",
+      "from_port": "transaction_status",
+      "to_port": "transaction_status"
+    },
+    {
+      "from_node_id": "backup_creator",
+      "to_node_id": "error_recovery",
+      "from_port": "backup_location",
+      "to_port": "backup_location"
+    },
+    {
+      "from_node_id": "delete_input_validator",
+      "to_node_id": "error_recovery",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    }
+  ],
+  "execution_strategy": {
+    "type": "hybrid_backend_pdk",
+    "backend_orchestration": true,
+    "pdk_processing": true,
+    "transaction_support": true,
+    "backup_support": true,
+    "recovery_support": true,
+    "secure_deletion": true
+  },
+  "view_state": {
+    "zoom": 0.6,
+    "pan_x": -100,
+    "pan_y": -50
+  },
+  "metadata": {
+    "version": "2.0",
+    "created_at": "2025-11-15T00:00:00Z",
+    "author": "PramaIA Team",
+    "architecture": "Backend + PDK Distributed",
+    "crud_operation": "DELETE",
+    "deletion_types": ["soft_delete", "hard_delete", "secure_delete"],
+    "execution_contexts": {
+      "backend_nodes": [
+        "delete_input_validator",
+        "dependency_checker",
+        "backup_creator",
+        "metadata_deleter",
+        "transaction_finalizer",
+        "index_cleaner",
+        "audit_logger",
+        "notification_manager",
+        "recovery_manager",
+        "error_recovery"
+      ],
+      "pdk_nodes": [
+        "pdk_vector_deleter",
+        "pdk_cleanup_processor"
+      ]
+    },
+    "data_flow": {
+      "input": "Document ID + Delete Options",
+      "backend_processing": "Validation + Backup + Metadata Deletion",
+      "pdk_processing": "Vector Deletion + Resource Cleanup",
+      "output": "Confirmed Secure Deletion with Audit Trail"
+    }
+  }
+}

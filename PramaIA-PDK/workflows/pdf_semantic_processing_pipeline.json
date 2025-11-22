@@ -1,0 +1,318 @@
+{
+  "workflow_id": "pdf_semantic_processing",
+  "name": "PDF Semantic Processing Pipeline",
+  "description": "Sistema completo di elaborazione semantica PDF con due pipeline: ingestione documenti e query semantiche con RAG",
+  "is_active": true,
+  "is_public": true,
+  "category": "RAG",
+  "tags": ["pdf", "semantic", "rag", "embedding", "llm", "chromadb", "pipeline"],
+  "nodes": [
+    {
+      "node_id": "pdf_input_node",
+      "node_type": "file_input",
+      "name": "PDF Input",
+      "description": "Riceve file PDF dall'utente per l'elaborazione",
+      "config": {
+        "inputPorts": [],
+        "outputPorts": ["pdf_file", "metadata"],
+        "additionalConfig": {
+          "accept_multiple": false,
+          "max_file_size": "10MB",
+          "allowed_types": ["pdf"],
+          "required": true
+        }
+      },
+      "position": { "x": 100, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "pdf_text_extractor",
+      "node_type": "pdf_text_extractor",
+      "name": "PDF Text Extractor",
+      "description": "Estrae testo dal PDF preservando il layout e la struttura",
+      "config": {
+        "inputPorts": ["pdf_file"],
+        "outputPorts": ["extracted_text", "extraction_metadata"],
+        "additionalConfig": {
+          "preserve_layout": true,
+          "extract_images": false,
+          "extract_tables": true,
+          "language": "auto"
+        }
+      },
+      "position": { "x": 400, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "text_chunker",
+      "node_type": "text_chunker",
+      "name": "Text Chunker",
+      "description": "Divide il testo in segmenti ottimali per l'embedding",
+      "config": {
+        "inputPorts": ["text"],
+        "outputPorts": ["text_chunks"],
+        "additionalConfig": {
+          "chunk_size": 1000,
+          "chunk_overlap": 200,
+          "separator": "\n\n",
+          "preserve_sentences": true
+        }
+      },
+      "position": { "x": 700, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "text_embedder",
+      "node_type": "text_embedder",
+      "name": "Text Embedder",
+      "description": "Genera rappresentazioni vettoriali del testo per ricerca semantica",
+      "config": {
+        "inputPorts": ["text_chunks"],
+        "outputPorts": ["embeddings"],
+        "additionalConfig": {
+          "model": "sentence-transformers/all-MiniLM-L6-v2",
+          "batch_size": 32,
+          "normalize_embeddings": true,
+          "dimensions": 384
+        }
+      },
+      "position": { "x": 1000, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "chroma_vector_store",
+      "node_type": "chroma_vector_store",
+      "name": "ChromaDB Writer",
+      "description": "Salva embeddings nel database vettoriale per ricerca semantica",
+      "config": {
+        "inputPorts": ["embeddings", "metadata"],
+        "outputPorts": ["storage_result"],
+        "additionalConfig": {
+          "collection_name": "pdf_documents",
+          "persist_directory": "./chroma_db",
+          "distance_metric": "cosine",
+          "create_if_not_exists": true
+        }
+      },
+      "position": { "x": 1300, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "query_input_node", 
+      "node_type": "query_input_node",
+      "name": "Query Input",
+      "description": "Input per domande dell'utente in linguaggio naturale",
+      "config": {
+        "inputPorts": [],
+        "outputPorts": ["query_text"],
+        "additionalConfig": {
+          "placeholder": "Inserisci la tua domanda sui documenti...",
+          "multiline": true,
+          "max_length": 500,
+          "required": true
+        }
+      },
+      "position": { "x": 100, "y": 400 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "query_embedder",
+      "node_type": "text_embedder", 
+      "name": "Query Embedder",
+      "description": "Converte la query dell'utente in embedding per ricerca semantica",
+      "config": {
+        "inputPorts": ["text"],
+        "outputPorts": ["query_embedding"],
+        "additionalConfig": {
+          "model": "sentence-transformers/all-MiniLM-L6-v2",
+          "normalize_embeddings": true,
+          "dimensions": 384
+        }
+      },
+      "position": { "x": 400, "y": 400 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "chroma_retriever",
+      "node_type": "chroma_retriever",
+      "name": "ChromaDB Retriever", 
+      "description": "Ricerca semantica nei documenti indicizzati basata sulla query",
+      "config": {
+        "inputPorts": ["query_embedding"],
+        "outputPorts": ["retrieved_documents"],
+        "additionalConfig": {
+          "collection_name": "pdf_documents",
+          "top_k": 5,
+          "score_threshold": 0.7,
+          "include_metadata": true
+        }
+      },
+      "position": { "x": 700, "y": 400 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "rag_prompt_builder",
+      "node_type": "rag_prompt_builder",
+      "name": "RAG Prompt Builder",
+      "description": "Costruisce il prompt combinando query e documenti recuperati",
+      "config": {
+        "inputPorts": ["query", "retrieved_documents"],
+        "outputPorts": ["rag_prompt"],
+        "additionalConfig": {
+          "prompt_template": "Rispondi alla seguente domanda basandoti esclusivamente sui documenti forniti:\n\nDomanda: {query}\n\nContesto:\n{context}\n\nRisposta:",
+          "context_format": "- {document_content}",
+          "context_separator": "\n\n",
+          "max_context_length": 4000
+        }
+      },
+      "position": { "x": 1000, "y": 400 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "llm_processor",
+      "node_type": "llm_processor", 
+      "name": "LLM Processor",
+      "description": "Genera risposta contestualizzata usando il modello linguistico",
+      "config": {
+        "inputPorts": ["rag_prompt"],
+        "outputPorts": ["llm_response"],
+        "additionalConfig": {
+          "model": "ollama/llama3.2",
+          "temperature": 0.7,
+          "max_tokens": 1000,
+          "system_prompt": "Sei un assistente esperto. Rispondi alla domanda basandoti esclusivamente sui documenti forniti nel contesto. Se le informazioni non sono presenti nei documenti, dichiara che non hai sufficienti informazioni per rispondere."
+        }
+      },
+      "position": { "x": 1300, "y": 400 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "pdf_results_formatter",
+      "node_type": "document_results_formatter",
+      "name": "Results Formatter",
+      "description": "Formatta la risposta finale con metadati e riferimenti alle fonti",
+      "config": {
+        "inputPorts": ["llm_response", "source_documents"],
+        "outputPorts": ["formatted_result"],
+        "additionalConfig": {
+          "output_format": "markdown",
+          "include_sources": true,
+          "include_metadata": true,
+          "max_snippet_length": 200,
+          "add_citations": true
+        }
+      },
+      "position": { "x": 1600, "y": 400 },
+      "width": 200,
+      "height": 100
+    }
+  ],
+  "connections": [
+    {
+      "from_node_id": "pdf_input_node",
+      "to_node_id": "pdf_text_extractor", 
+      "from_port": "pdf_file",
+      "to_port": "pdf_file"
+    },
+    {
+      "from_node_id": "pdf_text_extractor",
+      "to_node_id": "text_chunker",
+      "from_port": "extracted_text", 
+      "to_port": "text"
+    },
+    {
+      "from_node_id": "text_chunker",
+      "to_node_id": "text_embedder",
+      "from_port": "text_chunks",
+      "to_port": "text_chunks"
+    },
+    {
+      "from_node_id": "text_embedder",
+      "to_node_id": "chroma_vector_store",
+      "from_port": "embeddings",
+      "to_port": "embeddings"
+    },
+    {
+      "from_node_id": "pdf_input_node",
+      "to_node_id": "chroma_vector_store",
+      "from_port": "metadata",
+      "to_port": "metadata"
+    },
+    {
+      "from_node_id": "query_input_node",
+      "to_node_id": "query_embedder",
+      "from_port": "query_text",
+      "to_port": "text"
+    },
+    {
+      "from_node_id": "query_embedder", 
+      "to_node_id": "chroma_retriever",
+      "from_port": "query_embedding",
+      "to_port": "query_embedding"
+    },
+    {
+      "from_node_id": "query_input_node",
+      "to_node_id": "rag_prompt_builder",
+      "from_port": "query_text",
+      "to_port": "query"
+    },
+    {
+      "from_node_id": "chroma_retriever",
+      "to_node_id": "rag_prompt_builder", 
+      "from_port": "retrieved_documents",
+      "to_port": "retrieved_documents"
+    },
+    {
+      "from_node_id": "rag_prompt_builder",
+      "to_node_id": "llm_processor",
+      "from_port": "rag_prompt",
+      "to_port": "rag_prompt"
+    },
+    {
+      "from_node_id": "llm_processor",
+      "to_node_id": "pdf_results_formatter",
+      "from_port": "llm_response",
+      "to_port": "llm_response"
+    },
+    {
+      "from_node_id": "chroma_retriever",
+      "to_node_id": "pdf_results_formatter",
+      "from_port": "retrieved_documents", 
+      "to_port": "source_documents"
+    }
+  ],
+  "view_state": {
+    "zoom": 1.0,
+    "pan_x": 0,
+    "pan_y": 0
+  },
+  "metadata": {
+    "version": "1.0",
+    "created_at": "2025-11-15T00:00:00Z",
+    "author": "PramaIA Team",
+    "pipeline_type": "dual_pipeline_rag",
+    "documentation_url": "docs/implementation/WORKFLOW_PDF_SEMANTIC_DOCUMENTATION.md",
+    "pipelines": [
+      {
+        "name": "PDF Ingest Pipeline",
+        "description": "Processa e indicizza PDF per ricerca semantica",
+        "nodes": ["pdf_input_node", "pdf_text_extractor", "text_chunker", "text_embedder", "chroma_vector_store"]
+      },
+      {
+        "name": "Query & Response Pipeline", 
+        "description": "Elabora query e genera risposte contestualizzate",
+        "nodes": ["query_input_node", "query_embedder", "chroma_retriever", "rag_prompt_builder", "llm_processor", "pdf_results_formatter"]
+      }
+    ]
+  }
+}

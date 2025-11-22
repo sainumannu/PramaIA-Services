@@ -1,0 +1,434 @@
+{
+  "workflow_id": "pdf_document_update_pipeline",
+  "name": "PDF Document UPDATE Pipeline",
+  "description": "Pipeline completa per l'aggiornamento di documenti PDF con sincronizzazione dual-storage (metadati + semantico) usando architettura Backend + PDK",
+  "is_active": true,
+  "is_public": true,
+  "category": "CRUD",
+  "tags": ["pdf", "update", "metadata", "semantic", "pdk", "sync", "versioning"],
+  "architecture": "backend_pdk_distributed",
+  "nodes": [
+    {
+      "node_id": "update_input_validator",
+      "node_type": "file_input",
+      "name": "Update Input Validator",
+      "description": "Validazione input di aggiornamento e controlli esistenza documento (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": [],
+        "outputPorts": ["validated_update", "document_id", "update_type"],
+        "additionalConfig": {
+          "validate_document_exists": true,
+          "check_permissions": true,
+          "validate_update_fields": true,
+          "support_partial_updates": true
+        }
+      },
+      "position": { "x": 100, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "version_manager",
+      "node_type": "metadata_manager",
+      "name": "Document Version Manager",
+      "description": "Gestione versioning e backup documento esistente (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["document_id", "update_type"],
+        "outputPorts": ["version_info", "backup_result"],
+        "additionalConfig": {
+          "create_backup": true,
+          "version_strategy": "semantic_versioning",
+          "max_versions": 10,
+          "compress_old_versions": true
+        }
+      },
+      "position": { "x": 400, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "metadata_updater",
+      "node_type": "MetadataUpdater",
+      "name": "Metadata Database Updater",
+      "description": "Aggiornamento metadati strutturati nel database (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["validated_update", "document_id", "version_info"],
+        "outputPorts": ["metadata_update_result", "updated_metadata"],
+        "additionalConfig": {
+          "table_name": "pdf_documents",
+          "update_timestamp": true,
+          "validate_constraints": true,
+          "atomic_updates": true
+        }
+      },
+      "position": { "x": 700, "y": 50 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "content_change_detector",
+      "node_type": "ContentChangeDetector", 
+      "name": "Content Change Detector",
+      "description": "Rilevamento modifiche al contenuto per decidere re-elaborazione semantica (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["validated_update", "document_id"],
+        "outputPorts": ["content_changes", "reprocess_needed"],
+        "additionalConfig": {
+          "detect_content_changes": true,
+          "detect_metadata_changes": true,
+          "content_hash_comparison": true,
+          "semantic_significance_threshold": 0.1
+        }
+      },
+      "position": { "x": 400, "y": 300 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_content_reprocessor",
+      "node_type": "PDKContentReprocessor",
+      "name": "Content Re-processor (PDK)",
+      "description": "Re-elaborazione contenuto modificato tramite PDK (estrazione, chunking)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["content_changes", "document_id"],
+        "outputPorts": ["reprocessed_content", "new_chunks"],
+        "additionalConfig": {
+          "reprocess_full_document": false,
+          "delta_processing": true,
+          "preserve_unchanged_chunks": true,
+          "chunk_versioning": true
+        }
+      },
+      "position": { "x": 700, "y": 200 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_embedding_updater",
+      "node_type": "PDKEmbeddingUpdater",
+      "name": "Embedding Updater (PDK)",
+      "description": "Aggiornamento embeddings per contenuto modificato (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["new_chunks", "document_id", "reprocess_needed"],
+        "outputPorts": ["updated_embeddings", "embedding_changes"],
+        "additionalConfig": {
+          "model": "sentence-transformers/all-MiniLM-L6-v2",
+          "batch_processing": true,
+          "incremental_updates": true,
+          "preserve_chunk_ids": true
+        }
+      },
+      "position": { "x": 1000, "y": 200 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_vector_sync",
+      "node_type": "PDKVectorSync", 
+      "name": "Vector Database Sync (PDK)",
+      "description": "Sincronizzazione aggiornamenti nel database vettoriale ChromaDB (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["updated_embeddings", "embedding_changes", "document_id"],
+        "outputPorts": ["sync_result", "vector_update_status"],
+        "additionalConfig": {
+          "collection_name": "pdf_documents",
+          "update_strategy": "upsert",
+          "delete_obsolete_chunks": true,
+          "batch_size": 50
+        }
+      },
+      "position": { "x": 1300, "y": 200 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "transaction_coordinator",
+      "node_type": "TransactionCoordinator",
+      "name": "Update Transaction Coordinator", 
+      "description": "Coordinamento transazionale aggiornamenti dual-storage (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["metadata_update_result", "vector_update_status", "document_id"],
+        "outputPorts": ["transaction_result", "consistency_status"],
+        "additionalConfig": {
+          "ensure_consistency": true,
+          "rollback_on_failure": true,
+          "validate_dual_storage_sync": true,
+          "timeout_seconds": 180
+        }
+      },
+      "position": { "x": 1000, "y": 50 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "index_updater",
+      "node_type": "IndexUpdater",
+      "name": "Search Index Updater",
+      "description": "Aggiornamento indici di ricerca per migliorare future query (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["updated_metadata", "consistency_status"],
+        "outputPorts": ["index_update_result"],
+        "additionalConfig": {
+          "update_fulltext_index": true,
+          "update_metadata_index": true,
+          "rebuild_if_necessary": false,
+          "index_optimization": true
+        }
+      },
+      "position": { "x": 1300, "y": 50 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "update_notification",
+      "node_type": "UpdateNotification",
+      "name": "Update Notification Manager",
+      "description": "Gestione notifiche e logging aggiornamenti (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["transaction_result", "version_info", "document_id"],
+        "outputPorts": ["notification_result", "audit_log"],
+        "additionalConfig": {
+          "send_update_notifications": true,
+          "log_all_changes": true,
+          "notify_subscribers": true,
+          "create_audit_trail": true
+        }
+      },
+      "position": { "x": 1600, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "rollback_manager",
+      "node_type": "RollbackManager",
+      "name": "Rollback Manager",
+      "description": "Gestione rollback in caso di fallimento aggiornamento (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["transaction_result", "backup_result", "version_info"],
+        "outputPorts": ["rollback_result", "recovery_status"],
+        "additionalConfig": {
+          "auto_rollback_on_failure": true,
+          "restore_from_backup": true,
+          "cleanup_partial_changes": true,
+          "notify_rollback": true
+        }
+      },
+      "position": { "x": 700, "y": 400 },
+      "width": 220,
+      "height": 100
+    }
+  ],
+  "connections": [
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "version_manager",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "update_input_validator", 
+      "to_node_id": "version_manager",
+      "from_port": "update_type",
+      "to_port": "update_type"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "metadata_updater",
+      "from_port": "validated_update",
+      "to_port": "validated_update"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "metadata_updater",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "version_manager",
+      "to_node_id": "metadata_updater",
+      "from_port": "version_info",
+      "to_port": "version_info"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "content_change_detector",
+      "from_port": "validated_update",
+      "to_port": "validated_update"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "content_change_detector",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "content_change_detector",
+      "to_node_id": "pdk_content_reprocessor",
+      "from_port": "content_changes",
+      "to_port": "content_changes"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "pdk_content_reprocessor",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "pdk_content_reprocessor",
+      "to_node_id": "pdk_embedding_updater",
+      "from_port": "new_chunks",
+      "to_port": "new_chunks"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "pdk_embedding_updater",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "content_change_detector",
+      "to_node_id": "pdk_embedding_updater",
+      "from_port": "reprocess_needed",
+      "to_port": "reprocess_needed"
+    },
+    {
+      "from_node_id": "pdk_embedding_updater",
+      "to_node_id": "pdk_vector_sync",
+      "from_port": "updated_embeddings",
+      "to_port": "updated_embeddings"
+    },
+    {
+      "from_node_id": "pdk_embedding_updater",
+      "to_node_id": "pdk_vector_sync",
+      "from_port": "embedding_changes",
+      "to_port": "embedding_changes"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "pdk_vector_sync",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "metadata_updater",
+      "to_node_id": "transaction_coordinator",
+      "from_port": "metadata_update_result",
+      "to_port": "metadata_update_result"
+    },
+    {
+      "from_node_id": "pdk_vector_sync",
+      "to_node_id": "transaction_coordinator",
+      "from_port": "vector_update_status",
+      "to_port": "vector_update_status"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "transaction_coordinator",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "metadata_updater",
+      "to_node_id": "index_updater",
+      "from_port": "updated_metadata",
+      "to_port": "updated_metadata"
+    },
+    {
+      "from_node_id": "transaction_coordinator",
+      "to_node_id": "index_updater",
+      "from_port": "consistency_status",
+      "to_port": "consistency_status"
+    },
+    {
+      "from_node_id": "transaction_coordinator",
+      "to_node_id": "update_notification",
+      "from_port": "transaction_result",
+      "to_port": "transaction_result"
+    },
+    {
+      "from_node_id": "version_manager",
+      "to_node_id": "update_notification",
+      "from_port": "version_info",
+      "to_port": "version_info"
+    },
+    {
+      "from_node_id": "update_input_validator",
+      "to_node_id": "update_notification",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "transaction_coordinator",
+      "to_node_id": "rollback_manager",
+      "from_port": "transaction_result",
+      "to_port": "transaction_result"
+    },
+    {
+      "from_node_id": "version_manager",
+      "to_node_id": "rollback_manager",
+      "from_port": "backup_result",
+      "to_port": "backup_result"
+    },
+    {
+      "from_node_id": "version_manager",
+      "to_node_id": "rollback_manager",
+      "from_port": "version_info",
+      "to_port": "version_info"
+    }
+  ],
+  "execution_strategy": {
+    "type": "hybrid_backend_pdk",
+    "backend_orchestration": true,
+    "pdk_processing": true,
+    "transaction_support": true,
+    "versioning_support": true,
+    "rollback_capability": true
+  },
+  "view_state": {
+    "zoom": 0.7,
+    "pan_x": -50,
+    "pan_y": -50
+  },
+  "metadata": {
+    "version": "2.0",
+    "created_at": "2025-11-15T00:00:00Z",
+    "author": "PramaIA Team",
+    "architecture": "Backend + PDK Distributed",
+    "crud_operation": "UPDATE",
+    "update_types": ["metadata_only", "content_only", "full_update"],
+    "execution_contexts": {
+      "backend_nodes": [
+        "update_input_validator",
+        "version_manager",
+        "metadata_updater",
+        "content_change_detector",
+        "transaction_coordinator",
+        "index_updater",
+        "update_notification",
+        "rollback_manager"
+      ],
+      "pdk_nodes": [
+        "pdk_content_reprocessor",
+        "pdk_embedding_updater",
+        "pdk_vector_sync"
+      ]
+    },
+    "data_flow": {
+      "input": "Document ID + Update Data",
+      "backend_processing": "Metadata Updates + Version Management",
+      "pdk_processing": "Content Re-processing + Embedding Updates",
+      "output": "Synchronized Dual-storage Update Confirmation"
+    }
+  }
+}

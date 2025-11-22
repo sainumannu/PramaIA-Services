@@ -1,0 +1,107 @@
+{
+  "name": "core-input-plugin",
+  "display_name": "Input Core",
+  "version": "1.0.0",
+  "description": "Plugin con i nodi di input base per i workflow PramaIA",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "user_input",
+      "name": "User Input",
+      "type": "input",
+      "category": "Input",
+      "description": "Nodo per l'input dell'utente tramite form",
+      "icon": "👤",
+      "color": "#4CAF50",
+      "entry": "src/user_input_processor.py",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "string",
+          "description": "Testo inserito dall'utente"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione User Input",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt",
+            "description": "Testo da mostrare all'utente per guidare l'input",
+            "default": "Inserisci il tuo testo qui:"
+          },
+          "placeholder": {
+            "type": "string",
+            "title": "Placeholder",
+            "description": "Testo di esempio mostrato nel campo input",
+            "default": "Scrivi qui..."
+          }
+        },
+        "required": ["prompt"]
+      },
+      "defaultConfig": {
+        "prompt": "Inserisci il tuo testo qui:",
+        "placeholder": "Scrivi qui..."
+      }
+    },
+    {
+      "id": "file_input",
+      "name": "File Input",
+      "type": "input",
+      "category": "Input",
+      "description": "Nodo per caricare file come input",
+      "icon": "📄",
+      "color": "#2196F3",
+      "entry": "src/file_input_processor.py",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "content",
+          "type": "string",
+          "description": "Contenuto del file (se testo)"
+        },
+        {
+          "name": "binary",
+          "type": "binary",
+          "description": "Contenuto binario del file"
+        },
+        {
+          "name": "metadata",
+          "type": "object",
+          "description": "Metadati del file (nome, dimensione, tipo, ecc.)"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione File Input",
+        "properties": {
+          "allowed_extensions": {
+            "type": "array",
+            "title": "Estensioni permesse",
+            "description": "Estensioni di file permesse (es. .pdf, .txt)",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "max_size_mb": {
+            "type": "number",
+            "title": "Dimensione massima (MB)",
+            "description": "Dimensione massima del file in MB",
+            "default": 10
+          }
+        }
+      },
+      "defaultConfig": {
+        "allowed_extensions": [],
+        "max_size_mb": 10
+      }
+    }
+  ],
+  "dependencies": {}
+}

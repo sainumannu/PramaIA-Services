@@ -1,0 +1,16 @@
+{
+  "name": "pramaialog",
+  "version": "1.0.0",
+  "description": "Client JavaScript per il servizio di logging PramaIA",
+  "main": "pramaialog.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "logging",
+    "pramaia",
+    "client"
+  ],
+  "author": "PramaIA Team",
+  "license": "MIT"
+}

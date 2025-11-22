@@ -1,0 +1,81 @@
+{
+  "name": "document-monitor-plugin",
+  "version": "1.0.0",
+  "description": "Plugin per il monitoraggio e la gestione di vari tipi di documenti",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "metadata_manager",
+      "name": "MetadataManager",
+      "type": "processing",
+      "category": "Document Monitor",
+      "description": "Gestisce i metadati dei documenti con funzionalità di aggiornamento, unione, validazione ed estrazione",
+      "icon": "📋",
+      "color": "#4CAF50",
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione MetadataManager PDF Monitor",
+        "properties": {}
+      },
+      "entry": "src/metadata_manager_processor.py"
+    },
+    {
+      "id": "event_logger",
+      "name": "EventLogger",
+      "type": "processing",
+      "category": "Document Monitor",
+      "description": "Registra eventi e attività del sistema di monitoraggio documenti nel database eventi",
+      "icon": "📊",
+      "color": "#2196F3",
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione EventLogger PDF Monitor",
+        "properties": {}
+      },
+      "entry": "src/event_logger_processor.py"
+    },
+    {
+      "id": "file_parsing",
+      "name": "FileParsing",
+      "type": "processing",
+      "category": "Document Monitor",
+      "description": "Esegue il parsing di file documento e ne estrae testo, metadati e altre informazioni",
+      "icon": "📄",
+      "color": "#FF9800",
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione FileParsing PDF Monitor",
+        "properties": {}
+      },
+      "entry": "src/file_parsing_processor.py"
+    },
+    {
+      "id": "document_processor",
+      "name": "DocumentProcessor",
+      "type": "processing",
+      "category": "Document Monitor",
+      "description": "Estrae e processa testo da vari tipi di documenti",
+      "icon": "📑",
+      "color": "#673AB7",
+      "entry": "src/document_processor_processor.py"
+    },
+    {
+      "id": "vector_store_operations",
+      "name": "VectorStoreOperations",
+      "type": "processing",
+      "category": "Document Monitor",
+      "description": "Esegue operazioni CRUD sul vectorstore (add, get, update, delete, query)",
+      "icon": "🗃️",
+      "color": "#E91E63",
+      "entry": "src/vector_store_operations_processor.py"
+    }
+  ],
+  "dependencies": {
+    "pymupdf": "^1.21.0",
+    "pyyaml": "^6.0.0",
+    "sqlalchemy": "^2.0.0"
+  }
+}

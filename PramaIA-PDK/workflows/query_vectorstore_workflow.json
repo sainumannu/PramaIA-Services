@@ -1,0 +1,157 @@
+{
+  "workflow_id": "query_vectorstore_workflow",
+  "name": "Interrogazione VectorStore",
+  "description": "Workflow per interrogare il vectorstore e restituire documenti rilevanti in base a una query testuale",
+  "is_active": true,
+  "is_public": true,
+  "category": "RAG",
+  "tags": ["vectorstore", "query", "rag", "semantica"],
+  "nodes": [
+    {
+      "node_id": "text_input",
+      "node_type": "TextInput",
+      "name": "Input Query",
+      "description": "Input testuale per la query da inviare al vectorstore",
+      "config": {
+        "inputPorts": [],
+        "outputPorts": ["query_text"],
+        "additionalConfig": {
+          "placeholder": "Inserisci la tua domanda qui...",
+          "multiline": true,
+          "defaultValue": ""
+        }
+      },
+      "position": { "x": 100, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "text_embedder",
+      "node_type": "TextEmbedder",
+      "name": "Generatore Embedding",
+      "description": "Converte il testo della query in un vettore di embedding",
+      "config": {
+        "inputPorts": ["text"],
+        "outputPorts": ["embedding"],
+        "additionalConfig": {
+          "modelName": "sentence-transformer-it",
+          "dimension": 384,
+          "normalize": true
+        }
+      },
+      "position": { "x": 400, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "vector_store",
+      "node_type": "VectorStore",
+      "name": "Ricerca nel VectorStore",
+      "description": "Cerca i documenti più rilevanti nel vectorstore in base all'embedding della query",
+      "config": {
+        "inputPorts": ["query_embedding"],
+        "outputPorts": ["search_results"],
+        "additionalConfig": {
+          "storeName": "chroma_db",
+          "collectionName": "documents",
+          "topK": 5,
+          "minScore": 0.7
+        }
+      },
+      "position": { "x": 700, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "rag_prompt_builder",
+      "node_type": "RAGPromptBuilder",
+      "name": "Costruttore Prompt RAG",
+      "description": "Costruisce un prompt combinando la query originale con i risultati della ricerca",
+      "config": {
+        "inputPorts": ["query", "context_documents"],
+        "outputPorts": ["rag_prompt"],
+        "additionalConfig": {
+          "promptTemplate": "Rispondi alla seguente domanda in base al contesto fornito:\n\nDomanda: {query}\n\nContesto:\n{context}\n\nRisposta:",
+          "contextFormat": "- {document_content}",
+          "contextSeparator": "\n\n"
+        }
+      },
+      "position": { "x": 1000, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "llm_processor",
+      "node_type": "LLMProcessor",
+      "name": "Generazione Risposta",
+      "description": "Genera una risposta alla query utilizzando il prompt RAG",
+      "config": {
+        "inputPorts": ["prompt"],
+        "outputPorts": ["response"],
+        "additionalConfig": {
+          "modelName": "gpt-3.5-turbo",
+          "temperature": 0.3,
+          "maxTokens": 1024
+        }
+      },
+      "position": { "x": 1300, "y": 100 },
+      "width": 200,
+      "height": 100
+    },
+    {
+      "node_id": "text_output",
+      "node_type": "TextOutput",
+      "name": "Output Risposta",
+      "description": "Visualizza la risposta generata dal modello",
+      "config": {
+        "inputPorts": ["text"],
+        "outputPorts": [],
+        "additionalConfig": {
+          "format": "markdown",
+          "title": "Risposta:"
+        }
+      },
+      "position": { "x": 1600, "y": 100 },
+      "width": 200,
+      "height": 100
+    }
+  ],
+  "connections": [
+    {
+      "from_node_id": "text_input",
+      "to_node_id": "text_embedder",
+      "from_port": "query_text",
+      "to_port": "text"
+    },
+    {
+      "from_node_id": "text_embedder",
+      "to_node_id": "vector_store",
+      "from_port": "embedding",
+      "to_port": "query_embedding"
+    },
+    {
+      "from_node_id": "text_input",
+      "to_node_id": "rag_prompt_builder",
+      "from_port": "query_text",
+      "to_port": "query"
+    },
+    {
+      "from_node_id": "vector_store",
+      "to_node_id": "rag_prompt_builder",
+      "from_port": "search_results",
+      "to_port": "context_documents"
+    },
+    {
+      "from_node_id": "rag_prompt_builder",
+      "to_node_id": "llm_processor",
+      "from_port": "rag_prompt",
+      "to_port": "prompt"
+    },
+    {
+      "from_node_id": "llm_processor",
+      "to_node_id": "text_output",
+      "from_port": "response",
+      "to_port": "text"
+    }
+  ]
+}

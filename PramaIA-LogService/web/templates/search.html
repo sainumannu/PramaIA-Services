@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        /* Stili aggiuntivi per la visualizzazione dei dettagli dei log */
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            color: #856404;
+        }
+        
+        .warning pre {
+            background-color: #fff9e6;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        .modal-content {
+            max-width: 800px;
+            width: 80%;
+        }
+        
+        .log-details pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+        
+        .lifecycle-details {
+            position: relative;
+            padding: 10px;
+            background-color: rgba(142, 68, 173, 0.05);
+            border-radius: 4px;
+            border-left: 4px solid #8e44ad;
+        }
+        
+        .lifecycle-badge {
+            display: inline-block;
+            background-color: #8e44ad;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .actions {
+            margin-top: 10px;
+            margin-bottom: 20px;
+            text-align: right;
+        }
+
+        .btn-danger {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-danger:hover {
+            background-color: #c9302c;
+        }
+
+        .btn-danger:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        
+        /* Stili per le informazioni di documento nei dettagli */
+        .document-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #e8f4fd;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .document-info .btn {
+            background-color: #2196F3;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            text-decoration: none;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .document-info .btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .document-info code {
+            font-family: monospace;
+            background: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>PramaIA LogService</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="/dashboard/" class="active">Ricerca</a></li>
+                <!-- <li><a href="/dashboard/stats">Statistiche</a></li> -->
+                <li><a href="/dashboard/logservice">LogService</a></li>
+                <!-- <li><a href="/dashboard/settings">Impostazioni</a></li> -->
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="search-section">
+            <h2>Ricerca Log</h2>
+            <div class="actions">
+                <button id="reset-logs" class="btn-danger">Reset Log Non Archiviati</button>
+                <button id="reset-all" class="btn-danger" style="margin-left:8px;">Reset Tutto (compresi archivi)</button>
+            </div>
+            <form class="search-form" action="/dashboard/" method="get">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="project">Progetto</label>
+                        <select id="project" name="project">
+                            <option value="">Tutti</option>
+                            <option value="PramaIAServer" {% if project == 'PramaIAServer' %}selected{% endif %}>PramaIAServer</option>
+                            <option value="PramaIA-PDK" {% if project == 'PramaIA-PDK' %}selected{% endif %}>PramaIA-PDK</option>
+                            <option value="PramaIA-Agents" {% if project == 'PramaIA-Agents' %}selected{% endif %}>PramaIA-Agents</option>
+                            <option value="PramaIA-Plugins" {% if project == 'PramaIA-Plugins' %}selected{% endif %}>PramaIA-Plugins</option>
+                            <option value="other" {% if project == 'other' %}selected{% endif %}>Altro</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="level">Livello</label>
+                        <select id="level" name="level">
+                            <option value="">Tutti</option>
+                            <option value="debug" {% if level == 'debug' %}selected{% endif %}>Debug</option>
+                            <option value="info" {% if level == 'info' %}selected{% endif %}>Info</option>
+                            <option value="warning" {% if level == 'warning' %}selected{% endif %}>Warning</option>
+                            <option value="error" {% if level == 'error' %}selected{% endif %}>Error</option>
+                            <option value="critical" {% if level == 'critical' %}selected{% endif %}>Critical</option>
+                            <option value="lifecycle" {% if level == 'lifecycle' %}selected{% endif %}>Lifecycle</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="module">Modulo</label>
+                        <input type="text" id="module" name="module" value="{{ module or '' }}" placeholder="Nome del modulo">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="document_id">ID Documento</label>
+                        <input type="text" id="document_id" name="document_id" value="{{ document_id or '' }}" placeholder="Filtra per ID documento">
+                        <div class="field-hint" style="font-size: 12px; color: #666; margin-top: 4px;">
+                            Cerca nei dettagli un document_id specifico
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="file_name">Nome File o Percorso</label>
+                        <input type="text" id="file_name" name="file_name" value="{{ file_name or '' }}" placeholder="Filtra per nome file o parte del percorso">
+                        <div class="field-hint" style="font-size: 12px; color: #666; margin-top: 4px;">
+                            Cerca file_name, file_path o qualsiasi stringa che contenga il testo inserito
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="search-tip" style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; border-left: 4px solid #ffc107; font-size: 13px;">
+                    <strong>Suggerimento:</strong> Per visualizzare tutti gli eventi di lifecycle di un documento, seleziona "Lifecycle" nel campo "Livello" e cerca con il nome del file o il percorso. Se conosci l'ID del documento, puoi inserirlo direttamente nel campo "ID Documento".
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start_date">Data inizio</label>
+                        <input type="datetime-local" id="start_date" name="start_date" value="{{ start_date or '' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end_date">Data fine</label>
+                        <input type="datetime-local" id="end_date" name="end_date" value="{{ end_date or '' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="limit">Limite risultati</label>
+                        <input type="number" id="limit" name="limit" value="{{ limit }}" min="1" max="1000">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="sort_by">Ordina per</label>
+                        <select id="sort_by" name="sort_by">
+                            <option value="timestamp" {% if sort_by == 'timestamp' %}selected{% endif %}>Data/ora</option>
+                            <option value="level" {% if sort_by == 'level' %}selected{% endif %}>Livello</option>
+                            <option value="project" {% if sort_by == 'project' %}selected{% endif %}>Progetto</option>
+                            <option value="module" {% if sort_by == 'module' %}selected{% endif %}>Modulo</option>
+                            <option value="message" {% if sort_by == 'message' %}selected{% endif %}>Messaggio</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sort_order">Ordinamento</label>
+                        <select id="sort_order" name="sort_order">
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Decrescente (più recenti prima)</option>
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Crescente (più vecchi prima)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn primary">Cerca</button>
+                    <button type="button" class="btn secondary" id="reset-filters">Reimposta</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="results-section">
+            <h2>Risultati</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Progetto</th>
+                            <th>Livello</th>
+                            <th>Modulo</th>
+                            <th>Messaggio</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr class="log-level-{{ log.level }}">
+                            <td>{{ log.timestamp }}</td>
+                            <td>{{ log.project }}</td>
+                            <td>{{ log.level }}</td>
+                            <td>{{ log.module }}</td>
+                            <td>{{ log.message }}</td>
+                            <td>
+                                <button class="btn small" onclick="showDetails('{{ log.id }}')">Dettagli</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="pagination">
+                {% if offset > 0 %}
+                <a href="?project={{ project or '' }}&level={{ level or '' }}&module={{ module or '' }}&document_id={{ document_id or '' }}&file_name={{ file_name or '' }}&start_date={{ start_date or '' }}&end_date={{ end_date or '' }}&sort_by={{ sort_by or 'timestamp' }}&sort_order={{ sort_order or 'desc' }}&limit={{ limit }}&offset={{ offset - limit if offset - limit >= 0 else 0 }}" class="btn">Precedente</a>
+                {% endif %}
+                
+                {% if logs|length >= limit %}
+                <a href="?project={{ project or '' }}&level={{ level or '' }}&module={{ module or '' }}&document_id={{ document_id or '' }}&file_name={{ file_name or '' }}&start_date={{ start_date or '' }}&end_date={{ end_date or '' }}&sort_by={{ sort_by or 'timestamp' }}&sort_order={{ sort_order or 'desc' }}&limit={{ limit }}&offset={{ offset + limit }}" class="btn">Successivo</a>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <div id="log-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Dettagli Log</h3>
+            <div id="log-details-container">
+                <!-- I dettagli del log verranno inseriti qui tramite JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2023 PramaIA LogService</p>
+    </footer>
+
+    <script>
+    // Funzione per mostrare i dettagli del log in un modal
+        function showDetails(logId) {
+            fetch(`/api/logs/${logId}`, {
+                headers: {
+                    'X-API-Key': 'pramaiaadmin_api_key_123456'  // Chiave API admin per accedere a tutti i log
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Errore ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(log => {
+                    const container = document.getElementById('log-details-container');
+                    
+                    // Funzione per visualizzare meglio gli oggetti details/context
+                    function formatJsonDisplay(obj) {
+                        if (!obj) return '<em>Nessun dato</em>';
+                        
+                        // Controlla se l'oggetto è vuoto
+                        if (Object.keys(obj).length === 0) {
+                            return '<em>Oggetto vuoto</em>';
+                        }
+                        
+                        // Estrai informazioni sul documento se presenti
+                        let documentId = null;
+                        let fileName = null;
+                        let filePath = null;
+                        let fileHash = null;
+                        
+                        // Cerca nelle varie possibili posizioni
+                        if (obj.document_id) {
+                            documentId = obj.document_id;
+                        } else if (obj.details && obj.details.document_id) {
+                            documentId = obj.details.document_id;
+                        }
+                        
+                        if (obj.file_name) {
+                            fileName = obj.file_name;
+                        } else if (obj.details && obj.details.file_name) {
+                            fileName = obj.details.file_name;
+                        }
+                        
+                        if (obj.file_path) {
+                            filePath = obj.file_path;
+                        } else if (obj.details && obj.details.file_path) {
+                            filePath = obj.details.file_path;
+                        }
+                        
+                        // Cerca file_hash che può essere utile per tracciare lifecycle
+                        if (obj.file_hash) {
+                            fileHash = obj.file_hash;
+                        } else if (obj.details && obj.details.file_hash) {
+                            fileHash = obj.details.file_hash;
+                        } else if (obj.correlation_id) {
+                            fileHash = obj.correlation_id;
+                        } else if (obj.details && obj.details.correlation_id) {
+                            fileHash = obj.details.correlation_id;
+                        }
+                        
+                        // Se file_name non è ancora stato estratto ma abbiamo un file_path, estraiamo il nome
+                        if (!fileName && filePath) {
+                            // Estrai il nome file dal percorso (ultima parte dopo / o \)
+                            const pathParts = filePath.split(/[\/\\]/);
+                            if (pathParts.length > 0) {
+                                fileName = pathParts[pathParts.length - 1];
+                            }
+                        }
+                        
+                        // Crea bottoni per filtrare facilmente
+                        let documentInfoHTML = '';
+                        
+                        if (documentId || fileName || filePath || fileHash) {
+                            documentInfoHTML = '<div class="document-info" style="margin-bottom: 15px; padding: 10px; background-color: #e8f4fd; border-radius: 4px; border-left: 4px solid #2196F3;">';
+                            
+                            if (documentId) {
+                                documentInfoHTML += `
+                                    <div style="margin-bottom: 8px;">
+                                        <strong>Document ID:</strong> 
+                                        <span style="font-family: monospace; background: #f0f0f0; padding: 2px 4px; border-radius: 3px;">${documentId}</span>
+                                        <a href="?document_id=${documentId}" class="btn small" style="margin-left: 10px; background-color: #2196F3; color: white; padding: 2px 8px;">Filtra per questo documento</a>
+                                        <a href="?level=lifecycle&document_id=${documentId}" class="btn small" style="margin-left: 5px; background-color: #8e44ad; color: white; padding: 2px 8px;">Eventi lifecycle</a>
+                                    </div>`;
+                            }
+                            
+                            if (fileName) {
+                                documentInfoHTML += `
+                                    <div style="margin-bottom: ${filePath ? '8px' : '0'};">
+                                        <strong>Nome file:</strong> 
+                                        <span style="font-family: monospace; background: #f0f0f0; padding: 2px 4px; border-radius: 3px;">${fileName}</span>
+                                        <a href="?file_name=${encodeURIComponent(fileName)}" class="btn small" style="margin-left: 10px; background-color: #2196F3; color: white; padding: 2px 8px;">Filtra per questo file</a>
+                                        <a href="?level=lifecycle&file_name=${encodeURIComponent(fileName)}" class="btn small" style="margin-left: 5px; background-color: #8e44ad; color: white; padding: 2px 8px;">Eventi lifecycle</a>
+                                    </div>`;
+                            }
+                            
+                            if (filePath) {
+                                documentInfoHTML += `
+                                    <div style="margin-bottom: ${fileHash ? '8px' : '0'};">
+                                        <strong>Percorso file:</strong> 
+                                        <span style="font-family: monospace; background: #f0f0f0; padding: 2px 4px; border-radius: 3px; word-break: break-all;">${filePath}</span>
+                                        <a href="?file_name=${encodeURIComponent(filePath)}" class="btn small" style="margin-left: 10px; background-color: #2196F3; color: white; padding: 2px 8px;">Filtra per questo percorso</a>
+                                    </div>`;
+                            }
+                            
+                            if (fileHash) {
+                                documentInfoHTML += `
+                                    <div>
+                                        <strong>File hash/ID correlazione:</strong> 
+                                        <span style="font-family: monospace; background: #f0f0f0; padding: 2px 4px; border-radius: 3px;">${fileHash}</span>
+                                        <a href="?file_name=${encodeURIComponent(fileHash)}" class="btn small" style="margin-left: 10px; background-color: #2196F3; color: white; padding: 2px 8px;">Filtra per questo hash</a>
+                                    </div>`;
+                            }
+                            
+                            documentInfoHTML += '</div>';
+                        }
+                        
+                        // Verifica se è un log di lifecycle
+                        const isLifecycle = obj.log_type === 'lifecycle' || obj.lifecycle_event;
+                        
+                        // Controlla se ci sono campi "undefined"
+                        let hasUndefinedValues = false;
+                        for (const key in obj) {
+                            if (obj[key] === undefined || obj[key] === 'undefined') {
+                                hasUndefinedValues = true;
+                                break;
+                            }
+                        }
+                        
+                        let jsonDisplayHTML = '';
+                        
+                        if (hasUndefinedValues) {
+                            // Se ci sono valori undefined, mostra un messaggio di avviso
+                            jsonDisplayHTML = `<div class="warning">
+                                <p>Attenzione: questo oggetto contiene valori non definiti.</p>
+                                <pre>${JSON.stringify(obj, (key, value) => 
+                                    value === undefined ? "[valore non definito]" : value, 2)}</pre>
+                            </div>`;
+                        } else if (isLifecycle) {
+                            // Se è un log di lifecycle, visualizza con stile speciale
+                            const eventType = obj.lifecycle_event || "sconosciuto";
+                            jsonDisplayHTML = `<div class="lifecycle-details">
+                                <div class="lifecycle-badge">${eventType}</div>
+                                <pre>${JSON.stringify(obj, null, 2)}</pre>
+                            </div>`;
+                        } else {
+                            // Altrimenti, mostra normalmente
+                            jsonDisplayHTML = `<pre>${JSON.stringify(obj, null, 2)}</pre>`;
+                        }
+                        
+                        // Combina le informazioni del documento con la visualizzazione JSON
+                        return documentInfoHTML + jsonDisplayHTML;
+                    }
+                    
+                    container.innerHTML = `
+                        <div class="log-details">
+                            <p><strong>ID:</strong> ${log.id}</p>
+                            <p><strong>Timestamp:</strong> ${log.timestamp}</p>
+                            <p><strong>Progetto:</strong> ${log.project}</p>
+                            <p><strong>Livello:</strong> ${log.level}</p>
+                            <p><strong>Modulo:</strong> ${log.module}</p>
+                            <p><strong>Messaggio:</strong> ${log.message}</p>
+                            <div class="details-section">
+                                <h4>Dettagli</h4>
+                                ${formatJsonDisplay(log.details)}
+                            </div>
+                            <div class="context-section">
+                                <h4>Contesto</h4>
+                                ${formatJsonDisplay(log.context)}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Mostra il modal
+                    const modal = document.getElementById('log-details-modal');
+                    modal.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Errore nel recupero dei dettagli del log:', error);
+                    alert('Errore nel recupero dei dettagli del log: ' + error.message);
+                });
+        }
+        
+        // Chiudi il modal quando l'utente clicca sulla X
+        document.querySelector('.close').addEventListener('click', function() {
+            document.getElementById('log-details-modal').style.display = 'none';
+        });
+        
+        // Chiudi il modal quando l'utente clicca fuori dal modal
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('log-details-modal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Gestione del pulsante di reset dei log
+        document.addEventListener('DOMContentLoaded', function() {
+            const resetLogsButton = document.getElementById('reset-logs');
+            const resetAllButton = document.getElementById('reset-all');
+            const resetFiltersButton = document.getElementById('reset-filters');
+
+            // Funzione per resettare i filtri e ricaricare la pagina senza parametri
+            if (resetFiltersButton) {
+                resetFiltersButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const form = document.querySelector('.search-form');
+                    if (form) {
+                        // Azzera tutti i campi del form
+                        form.reset();
+                        // Ricarica la pagina senza parametri di filtro
+                        window.location.href = '/dashboard/';
+                    }
+                });
+            }
+            
+            if (resetLogsButton) {
+                resetLogsButton.addEventListener('click', async function() {
+                    if (confirm('ATTENZIONE! Stai per eliminare tutti i log non ancora archiviati. Questa operazione è irreversibile. Vuoi continuare?')) {
+                        resetLogsButton.disabled = true;
+                        const originalText = resetLogsButton.textContent;
+                        resetLogsButton.textContent = 'Reset in corso...';
+                        
+                        try {
+                            // Chiamata all'API per resettare tutti i log non archiviati
+                            const response = await fetch('/api/logs/cleanup/unarchived', {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-API-Key': 'pramaiaadmin_api_key_123456' // Usa la chiave amministrativa
+                                },
+                                body: JSON.stringify({})
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error(`Errore ${response.status}: ${response.statusText}`);
+                            }
+                            
+                            const result = await response.json();
+                            
+                            alert(`Reset completato: ${result.deleted_count} log eliminati.`);
+                            
+                            // Ricarica la pagina per aggiornare la lista dei log
+                            window.location.reload();
+                            
+                        } catch (error) {
+                            console.error('Errore durante il reset dei log:', error);
+                            alert('Errore durante il reset dei log: ' + error.message);
+                            
+                            resetLogsButton.disabled = false;
+                            resetLogsButton.textContent = originalText;
+                        }
+                    }
+                });
+            }
+
+            // Pulsante per resettare tutto (inclusi gli archivi)
+            if (resetAllButton) {
+                resetAllButton.addEventListener('click', async function() {
+                    if (confirm('ATTENZIONE! Stai per eliminare TUTTI i log, compresi gli archivi. Questa operazione è irreversibile. Vuoi continuare?')) {
+                        resetAllButton.disabled = true;
+                        const originalText = resetAllButton.textContent;
+                        resetAllButton.textContent = 'Reset globale in corso...';
+
+                        try {
+                            const response = await fetch('/api/logs/cleanup/all', {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-API-Key': 'pramaiaadmin_api_key_123456'
+                                },
+                                body: JSON.stringify({})
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Errore ${response.status}: ${response.statusText}`);
+                            }
+
+                            const result = await response.json();
+                            alert(`Reset completo: ${result.deleted_logs} log eliminati, ${result.deleted_compressed} riferimenti compressi rimossi, ${result.removed_archives} file archivio rimossi.`);
+                            window.location.reload();
+                        } catch (error) {
+                            console.error('Errore durante il reset globale:', error);
+                            alert('Errore durante il reset globale: ' + error.message);
+                            resetAllButton.disabled = false;
+                            resetAllButton.textContent = originalText;
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

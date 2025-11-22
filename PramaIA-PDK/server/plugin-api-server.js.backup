@@ -1,0 +1,940 @@
+// Simple API server to expose PDK plugins as REST endpoints
+// Place this file in PramaIA-PDK/server/plugin-api-server.js
+
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import cors from 'cors';
+import { spawn } from 'child_process';
+import fileUpload from 'express-fileupload';  // Per gestire upload di file
+import EventSourceManager from './event-source-manager.js';  // Import EventSourceManager
+
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PLUGIN_DIR = path.join(__dirname, '../plugins'); // Directory with plugin folders
+
+// Configurazione porta dal environment o default
+const PORT = process.env.PDK_SERVER_PORT || 3001;
+
+// Cache per i plugin caricati
+const pluginCache = new Map();
+
+// Event Source Manager instance
+const eventSourceManager = new EventSourceManager(PLUGIN_DIR);
+
+// Funzione per log dettagliato
+function logRequest(req, res, next) {
+    const start = Date.now();
+    const requestId = Math.random().toString(36).substring(2, 10);
+    
+    console.log(`[${requestId}] ${new Date().toISOString()} - REQUEST ${req.method} ${req.url}`);
+    console.log(`[${requestId}] Headers:`, JSON.stringify(req.headers));
+    
+    if (req.body && Object.keys(req.body).length > 0) {
+        console.log(`[${requestId}] Body:`, JSON.stringify(req.body));
+    }
+    
+    // Cattura risposta
+    const originalSend = res.send;
+    res.send = function(body) {
+        const responseTime = Date.now() - start;
+        console.log(`[${requestId}] RESPONSE ${res.statusCode} - ${responseTime}ms`);
+        
+        // Log breve della risposta (limitata per evitare output eccessivo)
+        try {
+            const responsePreview = typeof body === 'string' && body.length > 500 
+                ? body.substring(0, 500) + '... [truncated]' 
+                : body;
+            console.log(`[${requestId}] Response preview:`, responsePreview);
+        } catch (e) {
+            console.log(`[${requestId}] Response cannot be logged:`, e.message);
+        }
+        
+        return originalSend.apply(res, arguments);
+    };
+    
+    next();
+}
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));  // Per gestire form data
+app.use(fileUpload({
+  createParentPath: true,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+  abortOnLimit: true,
+  useTempFiles: true,
+  tempFileDir: './tmp/'
+})); // Per gestire file uploads
+app.use(logRequest); // Aggiungi middleware di logging
+
+// Funzione per eseguire plugin Python
+async function executePythonPlugin(pluginId, nodeId, inputs, config) {
+    return new Promise((resolve, reject) => {
+        const pluginPath = path.join(PLUGIN_DIR, pluginId, 'src', 'plugin.py');
+        
+        if (!fs.existsSync(pluginPath)) {
+            reject(new Error(`Plugin ${pluginId} non trovato`));
+            return;
+        }
+        
+        // Prepara i dati per il plugin Python
+        const inputData = JSON.stringify({
+            node_id: nodeId,
+            inputs: inputs,
+            config: config
+        });
+        
+        // Esegue il plugin Python
+        const pythonProcess = spawn('python', ['-c', `
+import sys
+import json
+import asyncio
+sys.path.append('${path.join(PLUGIN_DIR, pluginId, 'src').replace(/\\/g, '\\\\')}')
+
+try:
+    from plugin import process_node
+    
+    # Legge input da stdin
+    input_data = json.loads('${inputData.replace(/'/g, "\\'")}')
+    
+    # Esegue il nodo
+    async def main():
+        result = await process_node(
+            input_data['node_id'],
+            input_data['inputs'], 
+            input_data['config']
+        )
+        print(json.dumps(result))
+    
+    asyncio.run(main())
+    
+except Exception as e:
+    error_result = {"error": str(e), "success": False}
+    print(json.dumps(error_result))
+`]);
+        
+        let output = '';
+        let errorOutput = '';
+        
+        pythonProcess.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+        
+        pythonProcess.stderr.on('data', (data) => {
+            errorOutput += data.toString();
+        });
+        
+        pythonProcess.on('close', (code) => {
+            if (code === 0) {
+                try {
+                    const result = JSON.parse(output.trim());
+                    resolve(result);
+                } catch (e) {
+                    reject(new Error(`Errore parsing output: ${e.message}`));
+                }
+            } else {
+                reject(new Error(`Plugin fallito (code ${code}): ${errorOutput}`));
+            }
+        });
+        
+        pythonProcess.on('error', (error) => {
+            reject(new Error(`Errore esecuzione Python: ${error.message}`));
+        });
+    });
+}
+
+// List all plugins (folders with plugin.json)
+app.get('/plugins', (req, res) => {
+    console.log(`GET all plugins list request received`);
+    const plugins = [];
+    fs.readdirSync(PLUGIN_DIR).forEach(folder => {
+        const manifestPath = path.join(PLUGIN_DIR, folder, 'plugin.json');
+        if (fs.existsSync(manifestPath)) {
+            try {
+                const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+                console.log(`  - Found plugin: ${folder} (${manifest.name})`);
+                plugins.push({
+                    id: folder,
+                    name: manifest.name,
+                    description: manifest.description,
+                    version: manifest.version,
+                    author: manifest.author,
+                    nodes: manifest.nodes || [],
+                    manifest
+                });
+            } catch (e) {
+                console.error(`Errore lettura plugin ${folder}:`, e);
+            }
+        }
+    });
+    console.log(`Returning ${plugins.length} plugins`);
+    res.json(plugins);
+});
+
+// Endpoint API standard per plugin con supporto filtri tag
+app.get('/api/plugins', (req, res) => {
+    console.log(`GET /api/plugins endpoint accessed`);
+    const { tags, exclude_tags, mode = 'OR' } = req.query;
+    
+    const plugins = [];
+    fs.readdirSync(PLUGIN_DIR).forEach(folder => {
+        const manifestPath = path.join(PLUGIN_DIR, folder, 'plugin.json');
+        if (fs.existsSync(manifestPath)) {
+            try {
+                const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+                const plugin = {
+                    id: folder,
+                    name: manifest.name,
+                    description: manifest.description,
+                    version: manifest.version,
+                    author: manifest.author,
+                    license: manifest.license,
+                    tags: manifest.tags || [],
+                    nodes: manifest.nodes || [],
+                    configSchema: manifest.configSchema,
+                    type: manifest.type || 'node'
+                };
+                plugins.push(plugin);
+            } catch (e) {
+                console.error(`Errore lettura plugin ${folder}:`, e);
+            }
+        }
+    });
+    
+    // Applica filtri tag
+    let filteredPlugins = plugins;
+    
+    // Filtro per tag inclusi
+    if (tags) {
+        const tagList = tags.split(',').map(t => t.trim().toLowerCase());
+        filteredPlugins = filteredPlugins.filter(plugin => {
+            const pluginTags = (plugin.tags || []).map(t => t.toLowerCase());
+            
+            if (mode.toLowerCase() === 'and') {
+                return tagList.every(tag => pluginTags.includes(tag));
+            } else {
+                return tagList.some(tag => pluginTags.includes(tag));
+            }
+        });
+    }
+    
+    // Filtro per tag esclusi
+    if (exclude_tags) {
+        const excludeList = exclude_tags.split(',').map(t => t.trim().toLowerCase());
+        filteredPlugins = filteredPlugins.filter(plugin => {
+            const pluginTags = (plugin.tags || []).map(t => t.toLowerCase());
+            return !excludeList.some(tag => pluginTags.includes(tag));
+        });
+    }
+    console.log(`Returning ${filteredPlugins.length} plugins from /api/plugins endpoint`);
+    res.json({ plugins: filteredPlugins });
+});
+
+// Get all available tags from plugins and event sources
+app.get('/api/tags', (req, res) => {
+    console.log('GET /api/tags - Retrieving all available tags');
+    try {
+        const allTags = new Set();
+        const tagStats = {};
+        
+        // Raccogli tag dai plugin
+        fs.readdirSync(PLUGIN_DIR).forEach(folder => {
+            const manifestPath = path.join(PLUGIN_DIR, folder, 'plugin.json');
+            if (fs.existsSync(manifestPath)) {
+                try {
+                    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+                    
+                    // Tag del plugin
+                    (manifest.tags || []).forEach(tag => {
+                        allTags.add(tag);
+                        tagStats[tag] = (tagStats[tag] || 0) + 1;
+                    });
+                    
+                    // Tag dei nodi (se è un plugin node)
+                    if (manifest.nodes) {
+                        manifest.nodes.forEach(node => {
+                            (node.tags || []).forEach(tag => {
+                                allTags.add(tag);
+                                tagStats[tag] = (tagStats[tag] || 0) + 1;
+                            });
+                        });
+                    }
+                    
+                    // Tag degli event types (se è un event source)
+                    if (manifest.eventTypes) {
+                        manifest.eventTypes.forEach(eventType => {
+                            (eventType.tags || []).forEach(tag => {
+                                allTags.add(tag);
+                                tagStats[tag] = (tagStats[tag] || 0) + 1;
+                            });
+                        });
+                    }
+                } catch (e) {
+                    console.error(`Errore lettura plugin ${folder}:`, e);
+                }
+            }
+        });
+        
+        // Converti in formato statistiche
+        const tagList = Array.from(allTags).sort();
+        const statistics = tagList.map(tag => ({
+            tag,
+            count: tagStats[tag],
+            percentage: ((tagStats[tag] / Object.keys(tagStats).length) * 100).toFixed(1)
+        })).sort((a, b) => b.count - a.count);
+        
+        res.json({
+            tags: tagList,
+            count: tagList.length,
+            statistics
+        });
+    } catch (error) {
+        console.error('Error retrieving tags:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get details for a specific plugin
+app.get('/plugins/:id', (req, res) => {
+    console.log(`GET plugin details for: ${req.params.id}`);
+    const manifestPath = path.join(PLUGIN_DIR, req.params.id, 'plugin.json');
+    if (!fs.existsSync(manifestPath)) {
+        console.error(`Plugin manifest not found: ${manifestPath}`);
+        return res.status(404).json({ error: 'Plugin not found' });
+    }
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    // Includi configSchema in root se presente
+    const response = {
+        id: req.params.id,
+        name: manifest.name,
+        description: manifest.description,
+        nodes: manifest.nodes || [],
+        configSchema: manifest.configSchema || null,
+        manifest
+    };
+    console.log(`Plugin details: ${manifest.name}, nodes: ${manifest.nodes?.length || 0}`);
+    res.json(response);
+});
+
+// (Optional) Execute a node
+app.post('/plugins/:id/execute', async (req, res) => {
+    try {
+        console.log("Richiesta ricevuta:", req.headers['content-type']);
+        console.log("Body:", req.body);
+
+        let nodeId, inputs, config;
+        
+        // Gestione dei dati JSON che potrebbero essere nel formato json diretto o form
+        if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+            console.log("Rilevato multipart/form-data");
+            // Se è un form multipart, controlla se c'è un campo json
+            if (req.body.json) {
+                try {
+                    const jsonData = JSON.parse(req.body.json);
+                    nodeId = jsonData.nodeId;
+                    inputs = jsonData.inputs || {};
+                    config = jsonData.config || {};
+                    
+                    // Gestisci i file caricati se presenti
+                    if (req.files && req.files.file) {
+                        // Aggiorna gli input con i file
+                        inputs.file = req.files.file;
+                    }
+                    
+                    console.log("Dati estratti dal campo json del form:", { nodeId, inputs, config });
+                } catch (e) {
+                    console.error("Errore parsing JSON dal campo form:", e);
+                    return res.status(400).json({ 
+                        success: false,
+                        error: 'JSON non valido nel campo form' 
+                    });
+                }
+            } else {
+                // Form data senza campo json
+                nodeId = req.body.nodeId;
+                inputs = req.body.inputs ? JSON.parse(req.body.inputs) : {};
+                config = req.body.config ? JSON.parse(req.body.config) : {};
+            }
+        } else {
+            // Formato JSON standard
+            ({ nodeId, inputs, config } = req.body);
+        }
+        
+        if (!nodeId) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'nodeId richiesto' 
+            });
+        }
+        
+        console.log(`Esecuzione plugin ${req.params.id}, nodo ${nodeId} con inputs:`, inputs);
+        const result = await executePythonPlugin(req.params.id, nodeId, inputs || {}, config || {});
+        console.log("Risultato dell'esecuzione del plugin:", result);
+        
+        // Aggiungiamo un ID documento generato se non esiste
+        if (result && !result.id && !result.document_id) {
+            // Genera un ID univoco per il documento basato sul timestamp e un numero casuale
+            const documentId = `doc_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+            console.log(`Nessun ID documento trovato, genero ID: ${documentId}`);
+            
+            // Aggiungi l'ID al risultato
+            result.document_id = documentId;
+        }
+        
+        res.json({ success: true, result });
+        
+    } catch (error) {
+        console.error(`Errore esecuzione plugin ${req.params.id}:`, error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+// Nuovo endpoint per ottenere tutti i nodi disponibili
+app.get('/api/nodes', (req, res) => {
+    console.log(`\n🚀 [PDK-SERVER] GET /api/nodes - DETAILED ICON DEBUG`);
+    console.log(`📋 [PDK-SERVER] Request headers:`, req.headers);
+    const allNodes = [];
+    
+    fs.readdirSync(PLUGIN_DIR).forEach(folder => {
+        const manifestPath = path.join(PLUGIN_DIR, folder, 'plugin.json');
+        if (fs.existsSync(manifestPath)) {
+            try {
+                console.log(`📁 [PDK-SERVER] Reading plugin manifest: ${manifestPath}`);
+                const manifestRaw = fs.readFileSync(manifestPath, 'utf-8');
+                console.log(`📄 [PDK-SERVER] Raw manifest content (first 200 chars): ${manifestRaw.substring(0, 200)}...`);
+                
+                const manifest = JSON.parse(manifestRaw);
+                if (manifest.nodes && Array.isArray(manifest.nodes)) {
+                    console.log(`📦 [PDK-SERVER] Plugin "${folder}" has ${manifest.nodes.length} nodes`);
+                    manifest.nodes.forEach((node, index) => {
+                        console.log(`\n🔍 [PDK-SERVER] === NODE ${index + 1}: ${node.name} ===`);
+                        console.log(`🎨 [PDK-SERVER] Icon FROM FILE: "${node.icon}"`);
+                        console.log(`🔢 [PDK-SERVER] Icon CHAR CODES: [${node.icon ? Array.from(node.icon).map(c => c.charCodeAt(0)).join(',') : 'NO ICON'}]`);
+                        console.log(`🌟 [PDK-SERVER] Icon LENGTH: ${node.icon ? node.icon.length : 0}`);
+                        console.log(`🔤 [PDK-SERVER] Icon IS STRING: ${typeof node.icon === 'string'}`);
+                        
+                        // Verifica presenza di configSchema
+                        const hasConfigSchema = node.configSchema && 
+                                              typeof node.configSchema === 'object' && 
+                                              node.configSchema.properties && 
+                                              Object.keys(node.configSchema.properties).length > 0;
+                                              
+                        console.log(`⚙️ [PDK-SERVER] ConfigSchema presente: ${hasConfigSchema ? 'SÌ' : 'NO'}`);
+                        if (hasConfigSchema) {
+                            console.log(`⚙️ [PDK-SERVER] ConfigSchema properties: ${Object.keys(node.configSchema.properties).length}`);
+                            console.log(`⚙️ [PDK-SERVER] ConfigSchema property names: ${Object.keys(node.configSchema.properties).join(', ')}`);
+                            console.log(`⚙️ [PDK-SERVER] ConfigSchema title: ${node.configSchema.title || 'Nessun titolo'}`);
+                        }
+
+                        // Debug per identificare nodi con titoli configSchema errati
+                        if (hasConfigSchema && node.configSchema.title && 
+                           !node.configSchema.title.includes(node.name)) {
+                            console.log(`⚠️ [PDK-SERVER] POSSIBILE ERRORE: Il titolo del configSchema "${node.configSchema.title}" non contiene il nome del nodo "${node.name}"`);
+                        }
+
+                        // DEBUG SPECIALE per LLM Processor
+                        if (node.name === "LLM Processor") {
+                            console.log("\n\n🔍 [PDK-SERVER] ==================== DEBUG LLM PROCESSOR ORIGINALE ====================");
+                            console.log("📋 [PDK-SERVER] Node ID:", node.id);
+                            console.log("📋 [PDK-SERVER] Schema ORIGINALE:", JSON.stringify(node.configSchema, null, 2));
+                            console.log("📋 [PDK-SERVER] Proprietà:", node.configSchema ? Object.keys(node.configSchema) : 'SCHEMA NULL');
+                            
+                            if (node.configSchema && node.configSchema.properties) {
+                                console.log("📋 [PDK-SERVER] Proprietà dello schema:");
+                                Object.keys(node.configSchema.properties).forEach(key => {
+                                    console.log(`   - ${key}: ${JSON.stringify(node.configSchema.properties[key])}`);
+                                });
+                            }
+                            console.log("🔍 [PDK-SERVER] ==============================================================\n\n");
+                        }
+                        
+                        // Se il nodo non ha configSchema valido, creiamo uno schema di base
+                        if (!hasConfigSchema) {
+                            console.log(`⚠️ [PDK-SERVER] ConfigSchema non trovato o non valido per il nodo ${node.name}, creazione schema base`);
+                            node.configSchema = {
+                                "title": `Configurazione ${node.name}`,
+                                "type": "object",
+                                "properties": {
+                                    "description": {
+                                        "type": "string",
+                                        "title": "Descrizione",
+                                        "description": "Descrizione personalizzata per questo nodo",
+                                        "default": node.description || ""
+                                    },
+                                    "custom_name": {
+                                        "type": "string", 
+                                        "title": "Nome personalizzato",
+                                        "description": "Nome personalizzato per identificare questo nodo",
+                                        "default": node.name || ""
+                                    }
+                                }
+                            };
+                        }
+                        
+                        const enrichedNode = {
+                            ...node,
+                            pluginId: folder,
+                            pluginName: manifest.name
+                        };
+                        
+                        console.log(`📤 [PDK-SERVER] Node AFTER enrichment - Icon: "${enrichedNode.icon}"`);
+                        console.log(`📤 [PDK-SERVER] Node AFTER enrichment - Char codes: [${enrichedNode.icon ? Array.from(enrichedNode.icon).map(c => c.charCodeAt(0)).join(',') : 'NO ICON'}]`);
+                        
+                        // Verifica configSchema dopo l'arricchimento
+                        const configProperties = enrichedNode.configSchema && 
+                                              enrichedNode.configSchema.properties ? 
+                                              Object.keys(enrichedNode.configSchema.properties) : 
+                                              [];
+                        console.log(`📤 [PDK-SERVER] Node AFTER enrichment - ConfigSchema: ${configProperties.length > 0 ? 'PRESENTE' : 'MANCANTE'}`);
+                        console.log(`📤 [PDK-SERVER] Node AFTER enrichment - ConfigSchema properties: ${configProperties.join(', ')}`);
+                        
+                        // DEBUG EXTRA per LLM Processor
+                        if (enrichedNode.name === "LLM Processor") {
+                            console.log("\n\n🔍 [PDK-SERVER] ==================== DEBUG LLM PROCESSOR ARRICCHITO ====================");
+                            console.log("📋 [PDK-SERVER] Node ID:", enrichedNode.id);
+                            console.log("📋 [PDK-SERVER] configSchema:", JSON.stringify(enrichedNode.configSchema, null, 2));
+                            console.log("📋 [PDK-SERVER] configSchema.properties keys:", configProperties);
+                            
+                            // Conserviamo i dati originali in una proprietà debug
+                            enrichedNode.configSchema._debug = {
+                                nodeId: enrichedNode.id,
+                                nodeName: enrichedNode.name,
+                                nodeType: enrichedNode.type,
+                                pluginId: enrichedNode.pluginId,
+                                originalTitle: enrichedNode.configSchema.title
+                            };
+                            
+                            console.log("📋 [PDK-SERVER] Debug data added:", JSON.stringify(enrichedNode.configSchema._debug));
+                            console.log("🔍 [PDK-SERVER] ==============================================================\n\n");
+                        }
+                        
+                        // Soluzione DRASTICA: ricostruiamo completamente lo schema di configurazione
+                        // Manteniamo le proprietà originali ma assicuriamo che il titolo e l'associazione con il nodo siano corretti
+                        if (enrichedNode.configSchema && enrichedNode.configSchema.properties) {
+                            const originalProperties = enrichedNode.configSchema.properties;
+                            const originalType = enrichedNode.configSchema.type || 'object';
+                            
+                            // Ricostruisci lo schema
+                            enrichedNode.configSchema = {
+                                // Forzato ad essere univoco per questo nodo
+                                "title": `Configurazione ${enrichedNode.name} (ID: ${enrichedNode.id})`,
+                                "type": originalType,
+                                "properties": originalProperties,
+                                // Aggiungi riferimenti espliciti al nodo
+                                "nodeId": enrichedNode.id,
+                                "nodeName": enrichedNode.name,
+                                "uniqueKey": `${enrichedNode.pluginId}_${enrichedNode.id}_${Date.now()}`
+                            };
+                            
+                            console.log(`🛠️ [PDK-SERVER] Schema di configurazione RICOSTRUITO per ${enrichedNode.name}`);
+                            console.log(`📤 [PDK-SERVER] Nuovo titolo: "${enrichedNode.configSchema.title}"`);
+                            console.log(`� [PDK-SERVER] Chiave unica: "${enrichedNode.configSchema.uniqueKey}"`);
+                        }
+                        
+                        allNodes.push(enrichedNode);
+                    });
+                } else {
+                    console.log(`⚠️ [PDK-SERVER] No nodes found in plugin: ${folder}`);
+                }
+            } catch (e) {
+                console.error(`❌ [PDK-SERVER] Error reading manifest ${folder}:`, e);
+            }
+        }
+    });
+    
+    console.log(`\n📊 [PDK-SERVER] RESPONSE PREPARATION:`);
+    console.log(`📊 [PDK-SERVER] Total nodes to return: ${allNodes.length}`);
+    
+    // Log delle prime 3 icone per debug
+    allNodes.slice(0, 3).forEach((node, index) => {
+        console.log(`📊 [PDK-SERVER] Node ${index + 1} FINAL ICON: "${node.icon}" [chars: ${node.icon ? Array.from(node.icon).map(c => c.charCodeAt(0)).join(',') : 'NO ICON'}]`);
+    });
+    
+    const responseData = { nodes: allNodes };
+    
+    // Log del JSON stringificato per vedere se si corrompe qui
+    const jsonString = JSON.stringify(responseData);
+    console.log(`📤 [PDK-SERVER] JSON string length: ${jsonString.length}`);
+    console.log(`📤 [PDK-SERVER] JSON first 300 chars: ${jsonString.substring(0, 300)}...`);
+    
+    // Cerchiamo le prime emoji nel JSON per vedere se sono integre
+    const iconMatches = jsonString.match(/"icon":"[^"]*"/g);
+    if (iconMatches && iconMatches.length > 0) {
+        console.log(`📤 [PDK-SERVER] Found ${iconMatches.length} icon fields in JSON:`);
+        iconMatches.slice(0, 5).forEach((match, i) => {
+            console.log(`📤 [PDK-SERVER] Icon ${i + 1} in JSON: ${match}`);
+        });
+    }
+    
+    // Forza encoding UTF-8 per preservare le emoji
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    console.log(`📤 [PDK-SERVER] Response headers set - Content-Type: application/json; charset=utf-8`);
+    console.log(`📤 [PDK-SERVER] Sending response...`);
+    
+    res.json(responseData);
+});
+
+// Endpoint per ottenere i nodi di un plugin specifico
+app.get('/api/plugins/:id/nodes', (req, res) => {
+    console.log(`GET /api/plugins/${req.params.id}/nodes - Getting nodes for specific plugin`);
+    const manifestPath = path.join(PLUGIN_DIR, req.params.id, 'plugin.json');
+    if (!fs.existsSync(manifestPath)) {
+        console.error(`Plugin manifest not found: ${manifestPath}`);
+        return res.status(404).json({ error: 'Plugin not found' });
+    }
+    
+    try {
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+        let nodes = manifest.nodes || [];
+        
+        // Assicuriamoci che ogni nodo abbia un configSchema valido
+        nodes = nodes.map(node => {
+            // Verifica presenza di configSchema
+            const hasConfigSchema = node.configSchema && 
+                                  typeof node.configSchema === 'object' && 
+                                  node.configSchema.properties && 
+                                  Object.keys(node.configSchema.properties).length > 0;
+            
+            // Se non ha configSchema, aggiungiamo uno schema base
+            if (!hasConfigSchema) {
+                console.log(`⚠️ [PDK-SERVER] Adding default configSchema to node ${node.name} in plugin ${req.params.id}`);
+                return {
+                    ...node,
+                    configSchema: {
+                        "title": `Configurazione ${node.name}`,
+                        "type": "object",
+                        "properties": {
+                            "description": {
+                                "type": "string",
+                                "title": "Descrizione",
+                                "description": "Descrizione personalizzata per questo nodo",
+                                "default": node.description || ""
+                            },
+                            "custom_name": {
+                                "type": "string", 
+                                "title": "Nome personalizzato",
+                                "description": "Nome personalizzato per identificare questo nodo",
+                                "default": node.name || ""
+                            }
+                        },
+                        "nodeId": node.id,  // Forziamo l'ID del nodo nel configSchema
+                        "nodeName": node.name  // Forziamo il nome del nodo nel configSchema
+                    }
+                };
+            }
+            
+            // Anche se ha configSchema, assicuriamo che il titolo sia corretto e che contenga l'ID del nodo
+            if (node.configSchema) {
+                // Correzione del titolo se necessario
+                if (!node.configSchema.title || !node.configSchema.title.includes(node.name)) {
+                    console.log(`🔧 [PDK-SERVER] Correzione titolo configSchema per ${node.name} in plugin ${req.params.id}`);
+                    node.configSchema.title = `Configurazione ${node.name}`;
+                }
+                
+                // Aggiungiamo ID e nome del nodo al configSchema
+                node.configSchema.nodeId = node.id;
+                node.configSchema.nodeName = node.name;
+            }
+            
+            return node;
+        });
+        
+        const response = {
+            pluginId: req.params.id,
+            pluginName: manifest.name,
+            nodes: nodes
+        };
+        
+        console.log(`Found ${nodes.length} nodes for plugin ${req.params.id}`);
+        res.json(response);
+    } catch (e) {
+        console.error(`Error reading manifest ${req.params.id}:`, e);
+        res.status(500).json({ error: 'Errore lettura manifest' });
+    }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    console.log(`Health check request received`);
+    const availablePlugins = fs.readdirSync(PLUGIN_DIR).filter(folder => {
+        const manifestPath = path.join(PLUGIN_DIR, folder, 'plugin.json');
+        return fs.existsSync(manifestPath);
+    });
+    
+    const response = { 
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        plugins_dir: PLUGIN_DIR,
+        available_plugins: availablePlugins.length,
+        plugin_list: availablePlugins
+    };
+    
+    console.log(`Health check: ${availablePlugins.length} plugins available`);
+    res.json(response);
+});
+
+// ============================================================================
+// Event Sources Endpoints
+// ============================================================================
+
+// Get all available event sources with tag filtering
+app.get('/api/event-sources', (req, res) => {
+    console.log('GET /api/event-sources - Retrieving all event sources');
+    const { tags, exclude_tags, mode = 'OR' } = req.query;
+    
+    try {
+        let sources = eventSourceManager.getAvailableSources();
+        
+        // Applica filtri tag
+        if (tags) {
+            const tagList = tags.split(',').map(t => t.trim().toLowerCase());
+            sources = sources.filter(source => {
+                const sourceTags = (source.tags || []).map(t => t.toLowerCase());
+                
+                if (mode.toLowerCase() === 'and') {
+                    return tagList.every(tag => sourceTags.includes(tag));
+                } else {
+                    return tagList.some(tag => sourceTags.includes(tag));
+                }
+            });
+        }
+        
+        // Filtro per tag esclusi
+        if (exclude_tags) {
+            const excludeList = exclude_tags.split(',').map(t => t.trim().toLowerCase());
+            sources = sources.filter(source => {
+                const sourceTags = (source.tags || []).map(t => t.toLowerCase());
+                return !excludeList.some(tag => sourceTags.includes(tag));
+            });
+        }
+        
+        console.log(`Found ${sources.length} event sources (after filtering)`);
+        res.json(sources);
+    } catch (error) {
+        console.error('Error retrieving event sources:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get specific event source details
+app.get('/api/event-sources/:id', (req, res) => {
+    const sourceId = req.params.id;
+    console.log(`GET /api/event-sources/${sourceId} - Getting event source details`);
+    
+    try {
+        const sources = eventSourceManager.getAvailableSources();
+        const source = sources.find(s => s.id === sourceId);
+        
+        if (!source) {
+            return res.status(404).json({ error: `Event source ${sourceId} not found` });
+        }
+        
+        // Add detailed status
+        const detailedStatus = eventSourceManager.getDetailedSourceStatus(sourceId);
+        const enrichedSource = {
+            ...source,
+            ...detailedStatus
+        };
+        
+        res.json(enrichedSource);
+    } catch (error) {
+        console.error(`Error retrieving event source ${sourceId}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Start an event source
+app.post('/api/event-sources/:id/start', async (req, res) => {
+    const sourceId = req.params.id;
+    const config = req.body.config || {};
+    
+    console.log(`POST /api/event-sources/${sourceId}/start - Starting event source with config:`, config);
+    
+    try {
+        await eventSourceManager.startSource(sourceId, config);
+        res.json({ 
+            success: true, 
+            message: `Event source ${sourceId} started successfully`,
+            status: 'running'
+        });
+    } catch (error) {
+        console.error(`Error starting event source ${sourceId}:`, error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+// Stop an event source
+app.post('/api/event-sources/:id/stop', async (req, res) => {
+    const sourceId = req.params.id;
+    
+    console.log(`POST /api/event-sources/${sourceId}/stop - Stopping event source`);
+    
+    try {
+        await eventSourceManager.stopSource(sourceId);
+        res.json({ 
+            success: true, 
+            message: `Event source ${sourceId} stopped successfully`,
+            status: 'stopped'
+        });
+    } catch (error) {
+        console.error(`Error stopping event source ${sourceId}:`, error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+// Get event source status
+app.get('/api/event-sources/:id/status', (req, res) => {
+    const sourceId = req.params.id;
+    
+    console.log(`GET /api/event-sources/${sourceId}/status - Getting status`);
+    
+    try {
+        const status = eventSourceManager.getDetailedSourceStatus(sourceId);
+        res.json(status);
+    } catch (error) {
+        console.error(`Error getting status for event source ${sourceId}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get event types for a specific event source
+app.get('/api/event-sources/:id/event-types', (req, res) => {
+    const sourceId = req.params.id;
+    
+    console.log(`GET /api/event-sources/${sourceId}/event-types - Getting event types`);
+    
+    try {
+        const sources = eventSourceManager.getAvailableSources();
+        const source = sources.find(s => s.id === sourceId);
+        
+        if (!source) {
+            return res.status(404).json({ error: `Event source ${sourceId} not found` });
+        }
+        
+        res.json(source.eventTypes || []);
+    } catch (error) {
+        console.error(`Error getting event types for ${sourceId}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Alias endpoint for compatibility - same as event-types
+app.get('/api/event-sources/:id/events', (req, res) => {
+    const sourceId = req.params.id;
+    
+    console.log(`GET /api/event-sources/${sourceId}/events - Getting events (alias for event-types)`);
+    
+    try {
+        const sources = eventSourceManager.getAvailableSources();
+        const source = sources.find(s => s.id === sourceId);
+        
+        if (!source) {
+            return res.status(404).json({ error: `Event source ${sourceId} not found` });
+        }
+        
+        // Return in the format expected by the frontend
+        res.json({ eventTypes: source.eventTypes || [] });
+    } catch (error) {
+        console.error(`Error getting events for ${sourceId}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get all event types from all event sources
+app.get('/api/event-sources/events/all', (req, res) => {
+    console.log('GET /api/event-sources/events/all - Getting all event types from all sources');
+    
+    try {
+        const sources = eventSourceManager.getAvailableSources();
+        const allEventTypes = [];
+        
+        sources.forEach(source => {
+            if (source.eventTypes && source.eventTypes.length > 0) {
+                source.eventTypes.forEach(eventType => {
+                    allEventTypes.push({
+                        ...eventType,
+                        sourceId: source.id,
+                        sourceName: source.name
+                    });
+                });
+            }
+        });
+        
+        res.json({ eventTypes: allEventTypes });
+    } catch (error) {
+        console.error('Error getting all event types:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Event listener setup for forwarding events to webhook or other integrations
+eventSourceManager.on('eventReceived', (eventData) => {
+    console.log(`[EventManager] Event received from ${eventData.sourceId}:`, eventData);
+    // Here you could forward events to PramaIA core system
+    // or trigger workflows based on the events
+});
+
+// Graceful shutdown handling
+process.on('SIGINT', async () => {
+    console.log('Received SIGINT, gracefully shutting down...');
+    await eventSourceManager.stopAll();
+    process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+    console.log('Received SIGTERM, gracefully shutting down...');
+    await eventSourceManager.stopAll();
+    process.exit(0);
+});
+
+app.listen(PORT, () => {
+    console.log(`\n==========================================`);
+    console.log(`Plugin API server running on http://localhost:${PORT}`);
+    console.log(`Server time: ${new Date().toISOString()}`);
+    console.log(`Plugin directory: ${PLUGIN_DIR}`);
+    
+    // Conta e mostra i plugin disponibili (nodi e event sources)
+    const availablePlugins = fs.readdirSync(PLUGIN_DIR)
+        .filter(folder => {
+            const manifestPath = path.join(PLUGIN_DIR, folder, 'plugin.json');
+            return fs.existsSync(manifestPath);
+        });
+    
+    console.log(`Available plugins (${availablePlugins.length}):`);
+    availablePlugins.forEach(plugin => {
+        try {
+            const manifestPath = path.join(PLUGIN_DIR, plugin, 'plugin.json');
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+            
+            if (manifest.type === 'event-source') {
+                console.log(`  - ${plugin}: [EVENT SOURCE] ${manifest.name} (${manifest.eventTypes?.length || 0} event types)`);
+            } else {
+                console.log(`  - ${plugin}: [PLUGIN] ${manifest.name} (${manifest.nodes?.length || 0} nodes)`);
+            }
+        } catch (e) {
+            console.log(`  - ${plugin}: [Error reading manifest]`);
+        }
+    });
+    
+    // Show available event sources
+    const eventSources = eventSourceManager.getAvailableSources();
+    console.log(`Available event sources (${eventSources.length}):`);
+    eventSources.forEach(source => {
+        console.log(`  - ${source.id}: ${source.name} (${source.eventTypes?.length || 0} event types)`);
+    });
+    
+    console.log(`==========================================\n`);
+    console.log(`Server is now ready to accept connections. Waiting for requests...`);
+});

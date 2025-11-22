@@ -1,0 +1,233 @@
+{
+  "name": "core-output-plugin",
+  "display_name": "Output Core",
+  "version": "1.0.0",
+  "description": "Plugin con i nodi di output per i workflow PramaIA",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "text_output",
+      "name": "Text Output",
+      "type": "output",
+      "category": "Output",
+      "description": "Nodo per visualizzare output testuale all'utente",
+      "icon": "📝",
+      "color": "#4CAF50",
+      "entry": "src/text_output_processor.py",
+      "inputs": [
+        {
+          "name": "text",
+          "type": "string",
+          "description": "Testo da visualizzare",
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "description": "Titolo opzionale",
+          "required": false
+        }
+      ],
+      "outputs": [],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Text Output",
+        "properties": {
+          "format": {
+            "type": "string",
+            "title": "Formato",
+            "description": "Formato di visualizzazione del testo",
+            "enum": ["plain", "markdown", "html"],
+            "default": "markdown"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template",
+            "description": "Template opzionale per il testo (usa {{text}} per il contenuto)",
+            "default": ""
+          }
+        }
+      },
+      "defaultConfig": {
+        "format": "markdown",
+        "template": ""
+      }
+    },
+    {
+      "id": "file_output",
+      "name": "File Output",
+      "type": "output",
+      "category": "Output",
+      "description": "Nodo per salvare output su file",
+      "icon": "💾",
+      "color": "#2196F3",
+      "entry": "src/file_output_processor.py",
+      "inputs": [
+        {
+          "name": "content",
+          "type": "any",
+          "description": "Contenuto da salvare nel file",
+          "required": true
+        },
+        {
+          "name": "filename",
+          "type": "string",
+          "description": "Nome del file (opzionale, altrimenti usa il nome specificato nella configurazione)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "path",
+          "type": "string",
+          "description": "Percorso completo del file salvato"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione File Output",
+        "properties": {
+          "default_filename": {
+            "type": "string",
+            "title": "Nome file di default",
+            "description": "Nome file da usare se non specificato negli input",
+            "default": "output.txt"
+          },
+          "directory": {
+            "type": "string",
+            "title": "Directory",
+            "description": "Directory dove salvare il file (relativa alla directory del workflow)",
+            "default": "outputs"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "title": "Sovrascrivi",
+            "description": "Sovrascrivi il file se esiste già",
+            "default": true
+          }
+        },
+        "required": ["default_filename"]
+      },
+      "defaultConfig": {
+        "default_filename": "output.txt",
+        "directory": "outputs",
+        "overwrite": true
+      }
+    },
+    {
+      "id": "email_output",
+      "name": "Email Output",
+      "type": "output",
+      "category": "Output",
+      "description": "Nodo per inviare output via email",
+  "icon": "📧",
+      "color": "#FF9800",
+      "entry": "src/email_output_processor.py",
+      "inputs": [
+        {
+          "name": "content",
+          "type": "string",
+          "description": "Contenuto dell'email",
+          "required": true
+        },
+        {
+          "name": "subject",
+          "type": "string",
+          "description": "Oggetto dell'email",
+          "required": false
+        },
+        {
+          "name": "recipient",
+          "type": "string",
+          "description": "Destinatario dell'email (opzionale, altrimenti usa quello configurato)",
+          "required": false
+        },
+        {
+          "name": "attachments",
+          "type": "array",
+          "description": "Lista di file da allegare",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "status",
+          "type": "object",
+          "description": "Stato dell'invio dell'email"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Email Output",
+        "properties": {
+          "smtp_server": {
+            "type": "string",
+            "title": "Server SMTP",
+            "description": "Server SMTP per l'invio delle email",
+            "default": ""
+          },
+          "smtp_port": {
+            "type": "integer",
+            "title": "Porta SMTP",
+            "description": "Porta per il server SMTP",
+            "default": 587
+          },
+          "smtp_username": {
+            "type": "string",
+            "title": "Username SMTP",
+            "description": "Username per l'autenticazione SMTP",
+            "default": ""
+          },
+          "smtp_password": {
+            "type": "string",
+            "title": "Password SMTP",
+            "description": "Password per l'autenticazione SMTP",
+            "default": ""
+          },
+          "default_recipient": {
+            "type": "string",
+            "title": "Destinatario di default",
+            "description": "Indirizzo email del destinatario di default",
+            "default": ""
+          },
+          "default_subject": {
+            "type": "string",
+            "title": "Oggetto di default",
+            "description": "Oggetto dell'email di default",
+            "default": "Output dal workflow PramaIA"
+          },
+          "from_name": {
+            "type": "string",
+            "title": "Nome mittente",
+            "description": "Nome visualizzato del mittente",
+            "default": "PramaIA Workflow"
+          },
+          "from_email": {
+            "type": "string",
+            "title": "Email mittente",
+            "description": "Indirizzo email del mittente",
+            "default": ""
+          }
+        },
+        "required": ["smtp_server", "smtp_username", "smtp_password", "default_recipient", "from_email"]
+      },
+      "defaultConfig": {
+        "smtp_server": "",
+        "smtp_port": 587,
+        "smtp_username": "",
+        "smtp_password": "",
+        "default_recipient": "",
+        "default_subject": "Output dal workflow PramaIA",
+        "from_name": "PramaIA Workflow",
+        "from_email": ""
+      }
+    }
+  ],
+  "dependencies": {
+    "smtplib": "*",
+    "email": "*"
+  }
+}

@@ -1,0 +1,203 @@
+{
+  "name": "workflow-scheduler-plugin",
+  "version": "1.0.0",
+  "description": "Plugin per la schedulazione dell'esecuzione dei workflow",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "documentation": {
+    "markdown": "DOCUMENTATION.md",
+    "text": "DOCUMENTATION.txt"
+  },
+  "nodes": [
+    {
+      "id": "workflow_scheduler",
+      "name": "Workflow Scheduler",
+      "type": "control",
+      "category": "Workflow Control",
+      "description": "Consente di programmare l'esecuzione di un workflow secondo vari criteri temporali",
+      "icon": "⏱️",
+      "color": "#4682B4",
+      "inputs": [
+        {
+          "name": "trigger",
+          "type": "any",
+          "required": false,
+          "description": "Segnale di trigger opzionale per avviare lo scheduler"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "any",
+          "description": "Output da passare al nodo successivo quando viene attivato lo scheduler"
+        },
+        {
+          "name": "metadata",
+          "type": "json",
+          "description": "Metadati dell'esecuzione schedulata (timestamp, iteration, etc.)"
+        }
+      ],
+      "configSchema": {
+  "title": "Configurazione Workflow Scheduler",
+        "type": "object",
+        "properties": {
+          "schedule_type": {
+            "type": "string",
+            "title": "Tipo di schedulazione",
+            "enum": ["interval", "cron", "date", "event"],
+            "enumNames": ["Intervallo", "Espressione Cron", "Data specifica", "Evento"],
+            "default": "interval"
+          },
+          "interval": {
+            "type": "object",
+            "title": "Configurazione intervallo",
+            "properties": {
+              "value": {
+                "type": "integer",
+                "title": "Valore",
+                "default": 5
+              },
+              "unit": {
+                "type": "string",
+                "title": "Unità",
+                "enum": ["seconds", "minutes", "hours", "days"],
+                "enumNames": ["Secondi", "Minuti", "Ore", "Giorni"],
+                "default": "minutes"
+              }
+            },
+            "dependencies": {
+              "schedule_type": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "schedule_type": {
+                        "enum": ["interval"]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "cron_expression": {
+            "type": "string",
+            "title": "Espressione Cron",
+            "default": "0 * * * *",
+            "description": "Formato: minuto ora giorno-del-mese mese giorno-della-settimana",
+            "dependencies": {
+              "schedule_type": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "schedule_type": {
+                        "enum": ["cron"]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "specific_date": {
+            "type": "string",
+            "title": "Data e ora specifiche",
+            "format": "date-time",
+            "dependencies": {
+              "schedule_type": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "schedule_type": {
+                        "enum": ["date"]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "event_name": {
+            "type": "string",
+            "title": "Nome evento",
+            "default": "workflow_trigger",
+            "dependencies": {
+              "schedule_type": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "schedule_type": {
+                        "enum": ["event"]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Data di inizio",
+            "format": "date-time",
+            "description": "Quando iniziare la schedulazione (opzionale)"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "Data di fine",
+            "format": "date-time",
+            "description": "Quando terminare la schedulazione (opzionale)"
+          },
+          "max_executions": {
+            "type": "integer",
+            "title": "Numero massimo di esecuzioni",
+            "description": "Limitare il numero di esecuzioni (0 = illimitato)",
+            "default": 0,
+            "minimum": 0
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Fuso orario",
+            "default": "Europe/Rome",
+            "description": "Fuso orario per la schedulazione (es. Europe/Rome, UTC)"
+          },
+          "skip_immediate": {
+            "type": "boolean",
+            "title": "Salta prima esecuzione",
+            "default": false,
+            "description": "Se attivo, la prima esecuzione viene saltata"
+          },
+          "execution_tracking": {
+            "type": "object",
+            "title": "Monitoraggio esecuzioni",
+            "properties": {
+              "store_history": {
+                "type": "boolean",
+                "title": "Mantieni storico esecuzioni",
+                "default": true
+              },
+              "max_history_items": {
+                "type": "integer",
+                "title": "Numero massimo di elementi nello storico",
+                "default": 100,
+                "minimum": 1
+              },
+              "notify_on_execution": {
+                "type": "boolean",
+                "title": "Notifica ad ogni esecuzione",
+                "default": false
+              },
+              "notify_on_error": {
+                "type": "boolean",
+                "title": "Notifica in caso di errore",
+                "default": true
+              }
+            }
+          }
+        },
+        "required": ["schedule_type"]
+      },
+      "entry": "src/workflow_scheduler_processor.js"
+    }
+  ]
+}

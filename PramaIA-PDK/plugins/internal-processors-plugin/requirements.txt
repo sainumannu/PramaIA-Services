@@ -1,0 +1,2 @@
+# Internal Processors Plugin Requirements
+pramaialog>=1.0.0

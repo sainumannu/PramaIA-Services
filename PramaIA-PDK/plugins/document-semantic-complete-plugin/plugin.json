@@ -1,0 +1,695 @@
+{
+  "name": "document-semantic-complete-plugin",
+  "version": "1.0.0",
+  "description": "Plugin completo per workflow semantico di documenti con pipeline end-to-end",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "document_input_node",
+      "name": "Document Input",
+      "type": "input",
+      "category": "Document Semantic",
+      "description": "Riceve file documento per elaborazione semantica",
+      "icon": "📄",
+      "color": "#FF8C00",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "file_output",
+          "type": "file",
+          "description": "File documento ricevuto"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Document Input",
+        "type": "object",
+        "properties": {
+          "accept_multiple": {
+            "type": "boolean",
+            "title": "Accetta file multipli",
+            "default": false
+          },
+          "max_file_size": {
+            "type": "string",
+            "title": "Dimensione massima file",
+            "default": "10MB",
+            "enum": [
+              "5MB",
+              "10MB",
+              "20MB",
+              "50MB",
+              "100MB"
+            ]
+          },
+          "allowed_types": {
+            "type": "array",
+            "title": "Tipi di file permessi",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "pdf",
+              "doc",
+              "docx",
+              "odt",
+              "txt",
+              "xls",
+              "xlsx",
+              "ods"
+            ]
+          },
+          "file_path": {
+            "type": "string",
+            "title": "Percorso File",
+            "description": "Percorso del file documento",
+            "default": ""
+          },
+          "extract_text": {
+            "type": "boolean",
+            "title": "Estrai Testo",
+            "description": "Estrai il testo dal documento",
+            "default": true
+          },
+          "extract_images": {
+            "type": "boolean",
+            "title": "Estrai Immagini",
+            "description": "Estrai le immagini dal documento",
+            "default": false
+          },
+          "pages": {
+            "type": "string",
+            "title": "Pagine",
+            "description": "Pagine da estrarre (es. 1-5,7,9-11)",
+            "default": "all"
+          }
+        },
+        "nodeId": "document_input_node",
+        "nodeName": "Document Input"
+      },
+      "entry": "src/document_input_processor.py"
+    },
+    {
+      "id": "pdf_text_extractor",
+      "name": "PDF Text Extractor",
+      "type": "processing",
+      "category": "Document Semantic",
+      "description": "Estrae testo dal file PDF",
+      "icon": "📤",
+      "color": "#9932CC",
+      "inputs": [
+        {
+          "name": "pdf_file",
+          "type": "file",
+          "required": true,
+          "description": "File PDF da processare"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text_output",
+          "type": "text",
+          "description": "Testo estratto dal PDF"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione PDF Text Extractor",
+        "type": "object",
+        "properties": {
+          "preserve_layout": {
+            "type": "boolean",
+            "title": "Preserva layout",
+            "default": true
+          },
+          "extract_images": {
+            "type": "boolean",
+            "title": "Estrai immagini",
+            "default": false
+          },
+          "chunk_overlap": {
+            "type": "integer",
+            "title": "Sovrapposizione chunk",
+            "minimum": 0,
+            "maximum": 500,
+            "default": 200
+          },
+          "extraction_method": {
+            "type": "string",
+            "title": "Metodo Estrazione",
+            "description": "Metodo di estrazione del testo",
+            "enum": [
+              "text",
+              "ocr",
+              "hybrid"
+            ],
+            "default": "text"
+          },
+          "ocr_enabled": {
+            "type": "boolean",
+            "title": "OCR Abilitato",
+            "description": "Usa OCR per estrarre testo da immagini",
+            "default": false
+          },
+          "language": {
+            "type": "string",
+            "title": "Lingua",
+            "description": "Lingua del testo per OCR",
+            "enum": [
+              "ita",
+              "eng",
+              "fra",
+              "deu",
+              "spa"
+            ],
+            "default": "ita"
+          },
+          "pages": {
+            "type": "string",
+            "title": "Pagine",
+            "description": "Pagine da estrarre (es. 1-5,7,9-11)",
+            "default": "all"
+          }
+        },
+        "nodeId": "pdf_text_extractor",
+        "nodeName": "PDF Text Extractor"
+      },
+      "entry": "src/pdf_text_extractor_processor.py"
+    },
+    {
+      "id": "text_chunker",
+      "name": "Text Chunker",
+      "type": "processing",
+      "category": "Document Semantic",
+      "description": "Divide il testo in chunks per elaborazione",
+      "icon": "✂️",
+      "color": "#FFD700",
+      "inputs": [
+        {
+          "name": "text_input",
+          "type": "text",
+          "required": true,
+          "description": "Testo da dividere in chunks"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "chunks_output",
+          "type": "json",
+          "description": "Array di chunks di testo"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Text Chunker",
+        "type": "object",
+        "properties": {
+          "chunk_size": {
+            "type": "number",
+            "title": "Dimensione chunk",
+            "minimum": 100,
+            "maximum": 4000,
+            "default": 1000
+          },
+          "chunk_overlap": {
+            "type": "number",
+            "title": "Sovrapposizione chunk",
+            "minimum": 0,
+            "maximum": 500,
+            "default": 200
+          },
+          "separator": {
+            "type": "string",
+            "title": "Separatore",
+            "default": "\n\n",
+            "enum": [
+              "\n\n",
+              "\n",
+              ".",
+              " "
+            ]
+          },
+          "split_by": {
+            "type": "string",
+            "title": "Dividi Per",
+            "description": "Criterio di divisione del testo",
+            "enum": [
+              "character",
+              "word",
+              "sentence",
+              "paragraph"
+            ],
+            "default": "paragraph"
+          }
+        },
+        "nodeId": "text_chunker",
+        "nodeName": "Text Chunker"
+      },
+      "entry": "src/text_chunker_processor.py"
+    },
+    {
+      "id": "text_embedder",
+      "name": "Text Embedder",
+      "type": "processing",
+      "category": "Document Semantic",
+      "description": "Genera embeddings vettoriali per i chunks",
+      "icon": "🧠",
+      "color": "#20B2AA",
+      "inputs": [
+        {
+          "name": "text_chunks",
+          "type": "json",
+          "required": true,
+          "description": "Array di chunks di testo"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "embeddings_output",
+          "type": "json",
+          "description": "Embeddings vettoriali"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Text Embedder",
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello embedding",
+            "default": "sentence-transformers/all-MiniLM-L6-v2",
+            "enum": [
+              "sentence-transformers/all-MiniLM-L6-v2",
+              "sentence-transformers/all-mpnet-base-v2",
+              "text-embedding-ada-002",
+              "text-embedding-3-small"
+            ]
+          },
+          "batch_size": {
+            "type": "number",
+            "title": "Dimensione batch",
+            "minimum": 1,
+            "maximum": 128,
+            "default": 32
+          },
+          "normalize_embeddings": {
+            "type": "boolean",
+            "title": "Normalizza embeddings",
+            "default": true
+          },
+          "normalize": {
+            "type": "boolean",
+            "title": "Normalizza",
+            "description": "Normalizza gli embedding",
+            "default": true
+          }
+        },
+        "nodeId": "text_embedder",
+        "nodeName": "Text Embedder"
+      },
+      "entry": "src/text_embedder_processor.py"
+    },
+    {
+      "id": "chroma_vector_store",
+      "name": "ChromaDB Writer",
+      "type": "processing",
+      "category": "Document Semantic",
+      "description": "Salva embeddings nel database vettoriale",
+      "icon": "💾",
+      "color": "#4169E1",
+      "inputs": [
+        {
+          "name": "embeddings_input",
+          "type": "json",
+          "required": true,
+          "description": "Embeddings da salvare"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "storage_result",
+          "type": "json",
+          "description": "Risultato salvataggio"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione ChromaDB Writer",
+        "type": "object",
+        "nodeId": "chroma_vector_store",
+        "nodeName": "ChromaDB Writer",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "title": "Nome collezione",
+            "default": "documents"
+          },
+          "persist_directory": {
+            "type": "string",
+            "title": "Directory persistenza",
+            "default": "./chroma_db"
+          },
+          "distance_metric": {
+            "type": "string",
+            "title": "Metrica distanza",
+            "default": "cosine",
+            "enum": [
+              "cosine",
+              "euclidean",
+              "manhattan"
+            ]
+          },
+          "embedding_model": {
+            "type": "string",
+            "title": "Modello Embedding",
+            "description": "Modello da utilizzare per generare gli embedding",
+            "enum": [
+              "text-embedding-ada-002",
+              "all-MiniLM-L6-v2",
+              "multi-qa-MiniLM-L6-cos-v1"
+            ],
+            "default": "text-embedding-ada-002"
+          },
+          "chunk_size": {
+            "type": "number",
+            "title": "Dimensione Chunk",
+            "description": "Numero di caratteri per ogni chunk di testo",
+            "minimum": 100,
+            "maximum": 8000,
+            "default": 1000
+          },
+          "metadata_fields": {
+            "type": "array",
+            "title": "Campi Metadata",
+            "description": "Campi da includere nei metadati (uno per riga)",
+            "default": [
+              "source",
+              "page"
+            ]
+          }
+        }
+      },
+      "entry": "src/chroma_writer_processor.py"
+    },
+    {
+      "id": "query_input_node",
+      "name": "Query Input",
+      "type": "input",
+      "category": "Document Semantic",
+      "description": "Riceve query utente per ricerca semantica",
+      "icon": "❓",
+      "color": "#1E90FF",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "query_output",
+          "type": "text",
+          "description": "Query dell'utente"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Query Input",
+        "type": "object",
+        "properties": {
+          "input_type": {
+            "type": "string",
+            "title": "Tipo input",
+            "default": "text",
+            "enum": [
+              "text",
+              "textarea"
+            ]
+          },
+          "max_length": {
+            "type": "integer",
+            "title": "Lunghezza massima",
+            "minimum": 50,
+            "maximum": 2000,
+            "default": 500
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Campo obbligatorio",
+            "default": true
+          },
+          "default_query": {
+            "type": "string",
+            "title": "Query Predefinita",
+            "description": "Query predefinita",
+            "default": ""
+          },
+          "placeholder": {
+            "type": "string",
+            "title": "Placeholder",
+            "description": "Testo placeholder per il campo di input",
+            "default": "Inserisci la tua domanda..."
+          },
+          "history_size": {
+            "type": "number",
+            "title": "Dimensione Cronologia",
+            "description": "Numero di query da memorizzare nella cronologia",
+            "default": 10
+          }
+        },
+        "nodeId": "query_input_node",
+        "nodeName": "Query Input"
+      },
+      "entry": "src/query_input_processor.py"
+    },
+    {
+      "id": "chroma_retriever",
+      "name": "ChromaDB Retriever",
+      "type": "processing",
+      "category": "Document Semantic",
+      "description": "Ricerca semantica nel database vettoriale",
+      "icon": "🔎",
+      "color": "#00CED1",
+      "inputs": [
+        {
+          "name": "query_input",
+          "type": "text",
+          "required": true,
+          "description": "Query di ricerca"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "documents_output",
+          "type": "json",
+          "description": "Documenti trovati"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione ChromaDB Retriever",
+        "type": "object",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "title": "Nome collezione",
+            "default": "documents"
+          },
+          "top_k": {
+            "type": "integer",
+            "title": "Numero risultati",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5
+          },
+          "score_threshold": {
+            "type": "number",
+            "title": "Soglia similarità",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          },
+          "search_k": {
+            "type": "number",
+            "title": "Parametro K",
+            "description": "Numero di documenti da recuperare",
+            "default": 10
+          },
+          "similarity_threshold": {
+            "type": "number",
+            "title": "Soglia Similarità",
+            "description": "Soglia minima di similarità (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          },
+          "include_metadata": {
+            "type": "boolean",
+            "title": "Includi Metadata",
+            "description": "Includi i metadata nei risultati",
+            "default": true
+          }
+        },
+        "nodeId": "chroma_retriever",
+        "nodeName": "ChromaDB Retriever"
+      },
+      "entry": "src/chroma_retriever_processor.py"
+    },
+    {
+      "id": "llm_processor",
+      "name": "LLM Processor",
+      "type": "processing",
+      "category": "Document Semantic",
+      "description": "Genera risposta usando LLM con contesto",
+      "icon": "🤖",
+      "color": "#32CD32",
+      "inputs": [
+        {
+          "name": "context_input",
+          "type": "json",
+          "required": true,
+          "description": "Contesto da documenti"
+        },
+        {
+          "name": "question_input",
+          "type": "text",
+          "required": true,
+          "description": "Domanda dell'utente"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response_output",
+          "type": "text",
+          "description": "Risposta generata"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione LLM Processor",
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello LLM",
+            "default": "ollama/llama3.2",
+            "enum": [
+              "ollama/llama3.2",
+              "gpt-3.5-turbo",
+              "gpt-4",
+              "claude-3-haiku",
+              "claude-3-sonnet",
+              "gemini-pro"
+            ]
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperatura",
+            "minimum": 0,
+            "maximum": 2,
+            "default": 0.7
+          },
+          "max_tokens": {
+            "type": "number",
+            "title": "Token massimi",
+            "minimum": 100,
+            "maximum": 4000,
+            "default": 1000
+          },
+          "system_prompt": {
+            "type": "string",
+            "title": "Prompt di sistema",
+            "default": "Sei un assistente esperto. Rispondi alla domanda basandoti esclusivamente sul contesto fornito dai documenti."
+          }
+        },
+        "nodeId": "llm_processor",
+        "nodeName": "LLM Processor"
+      },
+      "entry": "src/llm_processor_processor.py"
+    },
+    {
+      "id": "document_results_formatter",
+      "name": "Results Formatter",
+      "type": "output",
+      "category": "Document Semantic",
+      "description": "Formatta la risposta finale",
+      "icon": "📝",
+      "color": "#DC143C",
+      "inputs": [
+        {
+          "name": "content_input",
+          "type": "text",
+          "required": true,
+          "description": "Contenuto da formattare"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "formatted_output",
+          "type": "text",
+          "description": "Output formattato"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Results Formatter",
+        "type": "object",
+        "properties": {
+          "output_format": {
+            "type": "string",
+            "title": "Formato output",
+            "default": "markdown",
+            "enum": [
+              "text",
+              "markdown",
+              "html",
+              "json"
+            ]
+          },
+          "include_sources": {
+            "type": "boolean",
+            "title": "Includi sorgenti",
+            "default": true
+          },
+          "include_metadata": {
+            "type": "boolean",
+            "title": "Includi metadati",
+            "default": true
+          },
+          "max_snippet_length": {
+            "type": "integer",
+            "title": "Lunghezza max estratti",
+            "minimum": 50,
+            "maximum": 500,
+            "default": 200
+          },
+          "format": {
+            "type": "string",
+            "title": "Formato",
+            "description": "Formato dell'output",
+            "enum": [
+              "text",
+              "html",
+              "markdown",
+              "json"
+            ],
+            "default": "text"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template",
+            "description": "Template per formattare i risultati",
+            "format": "textarea",
+            "default": "{{content}}"
+          },
+          "highlight_matches": {
+            "type": "boolean",
+            "title": "Evidenzia Corrispondenze",
+            "description": "Evidenzia le corrispondenze nei risultati",
+            "default": true
+          }
+        },
+        "nodeId": "document_results_formatter",
+        "nodeName": "Results Formatter"
+      },
+      "entry": "src/response_formatter_processor.py"
+    }
+  ],
+  "dependencies": {
+    "sentence-transformers": "^2.2.2",
+    "chromadb": "^0.4.0",
+    "PyPDF2": "^3.0.1",
+    "openai": "^1.0.0",
+    "anthropic": "^0.5.0"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "internal-processors-plugin",
+  "version": "1.0.0",
+  "description": "Plugin interno per processori di testo e utilità generali",
+  "main": "src/plugin.py",
+  "scripts": {
+    "test": "python -m pytest tests/",
+    "validate": "python -c 'import src.plugin; print(\"Plugin validato con successo\")'",
+    "serve": "python -m src.plugin"
+  },
+  "keywords": [
+    "text",
+    "processing",
+    "utilities",
+    "internal"
+  ],
+  "author": "PramaIA System",
+  "license": "MIT",
+  "pdk": {
+    "version": "^1.0.0",
+    "engine": "python", 
+    "entry_point": "src/plugin.py",
+    "config_schema": "plugin.json",
+    "node_types": [
+      "text_joiner",
+      "text_filter",
+      "user_context_provider"
+    ]
+  },
+  "dependencies": {}
+}

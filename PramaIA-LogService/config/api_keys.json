@@ -1,0 +1,40 @@
+{
+    "server_key": {
+        "name": "PramaIAServer",
+        "key": "pramaialog_0ilipf1flzkgvh6m",
+        "projects": [
+            "PramaIAServer"
+        ],
+        "expiry": null,
+        "regenerated": "2025-10-05T22:58:41.016030"
+    },
+    "pdk_key": {
+        "name": "PramaIA-PDK",
+        "key": "pramaialog_o6hlpft585hkykgb",
+        "projects": [
+            "PramaIA-PDK"
+        ],
+        "expiry": null,
+        "regenerated": "2025-10-05T20:12:11.029545"
+    },
+    "agents_key": {
+        "name": "PramaIA-Agents",
+        "key": "pramaiaagents_api_key_123456",
+        "projects": [
+            "PramaIA-Agents"
+        ],
+        "expiry": null
+    },
+    "admin_key": {
+        "name": "Admin",
+        "key": "pramaiaadmin_api_key_123456",
+        "projects": [
+            "PramaIAServer",
+            "PramaIA-PDK",
+            "PramaIA-Agents",
+            "PramaIA-Plugins",
+            "other"
+        ],
+        "expiry": null
+    }
+}

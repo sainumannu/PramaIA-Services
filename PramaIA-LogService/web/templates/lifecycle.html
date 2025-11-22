@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciclo di Vita Documento - PramaIA LogService</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        /* Stili specifici per il visualizzatore del ciclo di vita */
+        .timeline {
+            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+        
+        .timeline::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            background-color: #8e44ad;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -3px;
+        }
+        
+        .timeline-container {
+            padding: 10px 40px;
+            position: relative;
+            background-color: inherit;
+            width: 50%;
+        }
+        
+        .timeline-container::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            right: -10px;
+            background-color: white;
+            border: 4px solid #8e44ad;
+            top: 15px;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .left {
+            left: 0;
+        }
+        
+        .right {
+            left: 50%;
+        }
+        
+        .left::before {
+            content: " ";
+            height: 0;
+            position: absolute;
+            top: 22px;
+            width: 0;
+            z-index: 1;
+            right: 30px;
+            border: medium solid #f8f9fa;
+            border-width: 10px 0 10px 10px;
+            border-color: transparent transparent transparent #f8f9fa;
+        }
+        
+        .right::before {
+            content: " ";
+            height: 0;
+            position: absolute;
+            top: 22px;
+            width: 0;
+            z-index: 1;
+            left: 30px;
+            border: medium solid #f8f9fa;
+            border-width: 10px 10px 10px 0;
+            border-color: transparent #f8f9fa transparent transparent;
+        }
+        
+        .right::after {
+            left: -10px;
+        }
+        
+        .timeline-content {
+            padding: 20px 30px;
+            background-color: white;
+            position: relative;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .timeline-content h3 {
+            margin-top: 0;
+            color: #8e44ad;
+        }
+        
+        .timeline-content .date {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .event-type {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #8e44ad;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        /* Stati specifici del ciclo di vita */
+        .event-detected { background-color: #3498db; }
+        .event-modified { background-color: #f39c12; }
+        .event-transmitted { background-color: #2ecc71; }
+        .event-processed { background-color: #9b59b6; }
+        .event-stored { background-color: #1abc9c; }
+        .event-error { background-color: #e74c3c; }
+        
+        /* Filtri */
+        .filter-form {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .filter-form .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .filter-form .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .filter-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .filter-form input, .filter-form select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background-color: #8e44ad;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .document-summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .document-summary h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .document-summary dl {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+        }
+
+        .document-summary dt {
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        .document-summary dd {
+            margin-left: 0;
+        }
+
+        .event-details {
+            margin-top: 10px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        .event-details pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        /* Responsive timeline */
+        @media screen and (max-width: 768px) {
+            .timeline::after {
+                left: 31px;
+            }
+            
+            .timeline-container {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            
+            .timeline-container::before {
+                left: 60px;
+                border: medium solid white;
+                border-width: 10px 10px 10px 0;
+                border-color: transparent white transparent transparent;
+            }
+        
+            .left::after, .right::after {
+                left: 21px;
+            }
+        
+            .right {
+                left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>PramaIA LogService</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="/dashboard/">Ricerca</a></li>
+                <li><a href="/dashboard/lifecycle" class="active">Ciclo di Vita</a></li>
+                <li><a href="/dashboard/logservice">LogService</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section>
+            <h2>Ciclo di Vita Documenti</h2>
+            
+            <div class="filter-form">
+                <form id="lifecycle-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="search-type">Cerca per</label>
+                        <select id="search-type" name="search-type">
+                            <option value="document_id">Document ID</option>
+                            <option value="file_name">Nome File</option>
+                            <option value="file_hash">File Hash</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="search-value">Valore</label>
+                        <input type="text" id="search-value" name="search-value" placeholder="Inserisci ID documento, nome file o hash">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="log-level">Livello di Log</label>
+                        <select id="log-level" name="log-level">
+                            <option value="all">Tutti i livelli</option>
+                            <option value="lifecycle" selected>Solo LIFECYCLE</option>
+                            <option value="info">INFO</option>
+                            <option value="warning">WARNING</option>
+                            <option value="error">ERROR</option>
+                            <option value="critical">CRITICAL</option>
+                            <option value="debug">DEBUG</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="event-type">Tipo di Evento</label>
+                        <select id="event-type" name="event-type">
+                            <option value="all">Tutti gli eventi</option>
+                            <option value="detected">Rilevamento file</option>
+                            <option value="modified">Modifica file</option>
+                            <option value="transmitted">Trasmissione</option>
+                            <option value="processed">Elaborazione</option>
+                            <option value="stored">Archiviazione</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start-date">Data inizio</label>
+                        <input type="datetime-local" id="start-date" name="start-date">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end-date">Data fine</label>
+                        <input type="datetime-local" id="end-date" name="end-date">
+                    </div>
+                </div>                    <div class="form-actions">
+                        <button type="button" id="btn-search" class="btn-primary">Cerca</button>
+                        <button type="button" id="btn-reset" class="btn-secondary">Reimposta</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="document-summary" class="document-summary" style="display: none;">
+                <h3>Riepilogo Documento</h3>
+                <dl>
+                    <dt>ID Documento:</dt>
+                    <dd id="summary-id">-</dd>
+                    
+                    <dt>Nome File:</dt>
+                    <dd id="summary-filename">-</dd>
+                    
+                    <dt>File Hash:</dt>
+                    <dd id="summary-hash">-</dd>
+                    
+                    <dt>Primo Evento:</dt>
+                    <dd id="summary-first-event">-</dd>
+                    
+                    <dt>Ultimo Evento:</dt>
+                    <dd id="summary-last-event">-</dd>
+                    
+                    <dt>Totale Eventi:</dt>
+                    <dd id="summary-total">-</dd>
+                    
+                    <dt>Stato Corrente:</dt>
+                    <dd id="summary-status">-</dd>
+                </dl>
+            </div>
+            
+            <div id="timeline" class="timeline">
+                <!-- Gli eventi del ciclo di vita verranno inseriti qui dinamicamente -->
+                <div id="timeline-placeholder" style="text-align: center; padding: 50px; color: #999;">
+                    Seleziona un documento per visualizzare il suo ciclo di vita
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 PramaIA LogService</p>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnSearch = document.getElementById('btn-search');
+        const btnReset = document.getElementById('btn-reset');
+        const searchType = document.getElementById('search-type');
+        const searchValue = document.getElementById('search-value');
+        const startDate = document.getElementById('start-date');
+        const endDate = document.getElementById('end-date');
+        const timeline = document.getElementById('timeline');
+        const timelinePlaceholder = document.getElementById('timeline-placeholder');
+        const documentSummary = document.getElementById('document-summary');
+        
+        // Imposta le date predefinite: da un mese fa a oggi
+        const today = new Date();
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        
+        startDate.value = oneMonthAgo.toISOString().substring(0, 16);
+        endDate.value = today.toISOString().substring(0, 16);
+        
+        // Funzione per resettare il form
+        btnReset.addEventListener('click', function() {
+            document.getElementById('lifecycle-form').reset();
+            startDate.value = oneMonthAgo.toISOString().substring(0, 16);
+            endDate.value = today.toISOString().substring(0, 16);
+            timeline.innerHTML = timelinePlaceholder.outerHTML;
+            documentSummary.style.display = 'none';
+        });
+        
+        // Funzione per eseguire la ricerca
+        btnSearch.addEventListener('click', function() {
+            const type = searchType.value;
+            const value = searchValue.value;
+            const logLevel = document.getElementById('log-level').value;
+            const eventType = document.getElementById('event-type').value;
+            
+            if (!value) {
+                alert('Inserisci un valore di ricerca');
+                return;
+            }
+            
+            // Costruisci l'URL in base al tipo di ricerca
+            let apiUrl;
+            switch (type) {
+                case 'document_id':
+                    apiUrl = `/api/lifecycle/document/${encodeURIComponent(value)}`;
+                    break;
+                case 'file_name':
+                    apiUrl = `/api/lifecycle/file/${encodeURIComponent(value)}`;
+                    break;
+                case 'file_hash':
+                    apiUrl = `/api/lifecycle/hash/${encodeURIComponent(value)}`;
+                    break;
+                default:
+                    alert('Tipo di ricerca non valido');
+                    return;
+            }
+            
+            // Aggiungi parametri di data se specificati
+            const params = [];
+            if (startDate.value) {
+                params.push(`start_date=${encodeURIComponent(startDate.value)}`);
+            }
+            if (endDate.value) {
+                params.push(`end_date=${encodeURIComponent(endDate.value)}`);
+            }
+            
+            // Aggiungi parametro per il livello di log (solo se è diverso da "all")
+            if (logLevel !== 'all') {
+                params.push(`level=${encodeURIComponent(logLevel)}`);
+            }
+            
+            if (params.length > 0) {
+                apiUrl += `?${params.join('&')}`;
+            }
+            
+            // Richiedi i dati
+            fetch(apiUrl, {
+                headers: {
+                    'X-API-Key': 'pramaiaadmin_api_key_123456'  // Chiave API per debugging
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Errore ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(logs => {
+                // Filtra i log in base al livello selezionato
+                let filteredLogs = logs;
+                
+                // Applica filtro per livello di log se non è "all"
+                if (logLevel !== 'all') {
+                    filteredLogs = filteredLogs.filter(log => {
+                        return log.level === logLevel;
+                    });
+                }
+                
+                // Applica filtro per tipo di evento se non è "all"
+                if (eventType !== 'all') {
+                    filteredLogs = filteredLogs.filter(log => {
+                        if (log.details && log.details.lifecycle_event) {
+                            return log.details.lifecycle_event.includes(eventType);
+                        }
+                        return false;
+                    });
+                }
+                
+                if (filteredLogs.length === 0) {
+                    timeline.innerHTML = `
+                        <div style="text-align: center; padding: 50px; color: #999;">
+                            Nessun log del ciclo di vita trovato per questo documento con i filtri selezionati
+                        </div>
+                    `;
+                    documentSummary.style.display = 'none';
+                    return;
+                }
+                
+                // Aggiorna il riepilogo del documento (usando i log originali non filtrati per avere un quadro completo)
+                updateDocumentSummary(logs);
+                
+                // Crea la timeline con i log filtrati
+                createTimeline(filteredLogs);
+                documentSummary.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Errore durante la ricerca:', error);
+                timeline.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #e74c3c;">
+                        Errore durante la ricerca: ${error.message}
+                    </div>
+                `;
+                documentSummary.style.display = 'none';
+            });
+        });
+        
+        // Funzione per aggiornare il riepilogo del documento
+        function updateDocumentSummary(logs) {
+            // Estrai le informazioni più recenti sul documento
+            const latestLog = logs[logs.length - 1];
+            const firstLog = logs[0];
+            
+            // Estrai document_id, file_name, e file_hash dal log più recente
+            let documentId = '-';
+            let fileName = '-';
+            let fileHash = '-';
+            let currentStatus = '-';
+            
+            if (latestLog.details) {
+                documentId = latestLog.details.document_id || '-';
+                fileName = latestLog.details.file_name || '-';
+                fileHash = latestLog.details.file_hash || '-';
+                
+                // Determina lo stato corrente in base all'ultimo evento
+                if (latestLog.details.lifecycle_event) {
+                    const event = latestLog.details.lifecycle_event;
+                    if (event.includes('stored')) {
+                        currentStatus = 'Archiviato';
+                    } else if (event.includes('processed')) {
+                        currentStatus = 'Elaborato';
+                    } else if (event.includes('transmitted')) {
+                        currentStatus = 'Trasmesso';
+                    } else if (event.includes('modified') && latestLog.details.modification_type === 'deleted') {
+                        currentStatus = 'Cancellato';
+                    } else if (event.includes('modified')) {
+                        currentStatus = 'Modificato';
+                    } else if (event.includes('detected')) {
+                        currentStatus = 'Rilevato';
+                    } else {
+                        currentStatus = event;
+                    }
+                    
+                    if (latestLog.details.status) {
+                        currentStatus += ` (${latestLog.details.status})`;
+                    }
+                }
+            }
+            
+            // Imposta i valori nel riepilogo
+            document.getElementById('summary-id').textContent = documentId;
+            document.getElementById('summary-filename').textContent = fileName;
+            document.getElementById('summary-hash').textContent = fileHash;
+            document.getElementById('summary-first-event').textContent = firstLog.timestamp;
+            document.getElementById('summary-last-event').textContent = latestLog.timestamp;
+            document.getElementById('summary-total').textContent = logs.length;
+            document.getElementById('summary-status').textContent = currentStatus;
+        }
+        
+        // Funzione per creare la timeline
+        function createTimeline(logs) {
+            timeline.innerHTML = ''; // Cancella il contenuto precedente
+            
+            logs.forEach((log, index) => {
+                // Determina il tipo di evento
+                let eventType = '';
+                let eventClass = '';
+                
+                if (log.details && log.details.lifecycle_event) {
+                    eventType = log.details.lifecycle_event;
+                    
+                    if (eventType.includes('detected')) {
+                        eventClass = 'event-detected';
+                    } else if (eventType.includes('modified')) {
+                        eventClass = 'event-modified';
+                    } else if (eventType.includes('transmitted')) {
+                        eventClass = 'event-transmitted';
+                    } else if (eventType.includes('processed')) {
+                        eventClass = 'event-processed';
+                    } else if (eventType.includes('stored')) {
+                        eventClass = 'event-stored';
+                    }
+                } else if (log.details && log.details.event_type) {
+                    eventType = log.details.event_type;
+                } else {
+                    eventType = 'unknown';
+                }
+                
+                if (log.message && log.message.toLowerCase().includes('error')) {
+                    eventClass = 'event-error';
+                }
+                
+                // Crea l'elemento della timeline
+                const container = document.createElement('div');
+                container.className = `timeline-container ${index % 2 === 0 ? 'left' : 'right'}`;
+                
+                const content = document.createElement('div');
+                content.className = 'timeline-content';
+                
+                // Crea l'intestazione dell'evento
+                let title = log.message || 'Evento del ciclo di vita';
+                
+                // Aggiungi dettagli in base al tipo di evento
+                let details = '';
+                if (log.details) {
+                    if (log.details.document_id) {
+                        details += `<p>Document ID: ${log.details.document_id}</p>`;
+                    }
+                    
+                    if (log.details.file_name) {
+                        details += `<p>File: ${log.details.file_name}</p>`;
+                    }
+                    
+                    if (log.details.file_path) {
+                        details += `<p>Percorso: ${log.details.file_path}</p>`;
+                    }
+                    
+                    if (log.details.status) {
+                        details += `<p>Stato: ${log.details.status}</p>`;
+                    }
+                    
+                    if (log.details.target_system) {
+                        details += `<p>Sistema target: ${log.details.target_system}</p>`;
+                    }
+                    
+                    if (log.details.processor_id) {
+                        details += `<p>Processore: ${log.details.processor_id}</p>`;
+                    }
+                    
+                    if (log.details.storage_system) {
+                        details += `<p>Sistema di archiviazione: ${log.details.storage_system}</p>`;
+                    }
+                    
+                    // Aggiungi dettagli completi in un formato collassabile
+                    details += `
+                        <div class="event-details">
+                            <p><strong>Dettagli completi:</strong></p>
+                            <pre>${JSON.stringify(log.details, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+                
+                content.innerHTML = `
+                    <span class="date">${log.timestamp}</span>
+                    <span class="event-type ${eventClass}">${eventType}</span>
+                    <h3>${title}</h3>
+                    ${details}
+                `;
+                
+                container.appendChild(content);
+                timeline.appendChild(container);
+            });
+        }
+    });
+    </script>
+</body>
+</html>

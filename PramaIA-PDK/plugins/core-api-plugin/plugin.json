@@ -1,0 +1,371 @@
+{
+  "name": "core-api-plugin",
+  "display_name": "API Core",
+  "version": "1.0.0",
+  "description": "Plugin con i nodi per interagire con API esterne nei workflow PramaIA",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "http_request",
+      "name": "HTTP Request",
+      "type": "api",
+      "category": "API",
+      "description": "Nodo per effettuare richieste HTTP verso API esterne",
+  "icon": "🔌",
+      "color": "#E91E63",
+      "entry": "src/http_request_processor.py",
+      "inputs": [
+        {
+          "name": "url",
+          "type": "string",
+          "description": "URL dell'endpoint API",
+          "required": true
+        },
+        {
+          "name": "headers",
+          "type": "object",
+          "description": "Headers HTTP (opzionale)",
+          "required": false
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "description": "Parametri query string (opzionale)",
+          "required": false
+        },
+        {
+          "name": "body",
+          "type": "any",
+          "description": "Corpo della richiesta (opzionale)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "object",
+          "description": "Risposta completa dell'API"
+        },
+        {
+          "name": "data",
+          "type": "any",
+          "description": "Dati estratti dalla risposta"
+        },
+        {
+          "name": "status",
+          "type": "number",
+          "description": "Status code HTTP"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione HTTP Request API",
+        "properties": {
+          "method": {
+            "type": "string",
+            "title": "Metodo HTTP",
+            "description": "Metodo HTTP da utilizzare",
+            "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+            "default": "GET"
+          },
+          "timeout": {
+            "type": "number",
+            "title": "Timeout",
+            "description": "Timeout della richiesta in secondi",
+            "default": 30
+          },
+          "retry_count": {
+            "type": "integer",
+            "title": "Tentativi",
+            "description": "Numero di tentativi in caso di errore",
+            "default": 0
+          },
+          "follow_redirects": {
+            "type": "boolean",
+            "title": "Segui redirect",
+            "description": "Segui automaticamente i redirect HTTP",
+            "default": true
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content-Type",
+            "description": "Content-Type per la richiesta",
+            "enum": ["application/json", "application/x-www-form-urlencoded", "multipart/form-data", "text/plain"],
+            "default": "application/json"
+          },
+          "error_on_failure": {
+            "type": "boolean",
+            "title": "Errore se fallisce",
+            "description": "Genera un errore se la richiesta fallisce (status >= 400)",
+            "default": true
+          },
+          "default_headers": {
+            "type": "object",
+            "title": "Headers di default",
+            "description": "Headers HTTP da includere in ogni richiesta",
+            "default": {}
+          },
+          "authentication": {
+            "type": "object",
+            "title": "Autenticazione",
+            "description": "Configurazione per l'autenticazione",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "Tipo di autenticazione",
+                "description": "Metodo di autenticazione da utilizzare",
+                "enum": ["none", "basic", "bearer", "api_key"],
+                "default": "none"
+              },
+              "username": {
+                "type": "string",
+                "title": "Username",
+                "description": "Username per autenticazione basic"
+              },
+              "password": {
+                "type": "string",
+                "title": "Password",
+                "description": "Password per autenticazione basic"
+              },
+              "token": {
+                "type": "string",
+                "title": "Token",
+                "description": "Token per autenticazione bearer"
+              },
+              "api_key": {
+                "type": "string",
+                "title": "API Key",
+                "description": "Chiave API per autenticazione API key"
+              },
+              "api_key_name": {
+                "type": "string",
+                "title": "Nome API Key",
+                "description": "Nome del parametro per l'API key",
+                "default": "api_key"
+              },
+              "api_key_location": {
+                "type": "string",
+                "title": "Posizione API Key",
+                "description": "Dove includere l'API key",
+                "enum": ["header", "query", "cookie"],
+                "default": "header"
+              }
+            }
+          }
+        },
+        "required": ["method"]
+      },
+      "defaultConfig": {
+        "method": "GET",
+        "timeout": 30,
+        "retry_count": 0,
+        "follow_redirects": true,
+        "content_type": "application/json",
+        "error_on_failure": true,
+        "default_headers": {},
+        "authentication": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "id": "api_key_manager",
+      "name": "API Key Manager",
+      "type": "api",
+      "category": "API",
+      "description": "Nodo per gestire e fornire chiavi API in modo sicuro",
+      "icon": "🔑",
+      "color": "#F44336",
+      "entry": "src/api_key_manager_processor.py",
+      "inputs": [
+        {
+          "name": "key_name",
+          "type": "string",
+          "description": "Nome della chiave API da utilizzare (opzionale, altrimenti usa quella configurata)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "api_key",
+          "type": "string",
+          "description": "Chiave API richiesta"
+        },
+        {
+          "name": "headers",
+          "type": "object",
+          "description": "Headers HTTP preconfigurati con la chiave API"
+        },
+        {
+          "name": "auth_config",
+          "type": "object",
+          "description": "Configurazione completa per l'autenticazione"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione API Key Manager API",
+        "properties": {
+          "api_service": {
+            "type": "string",
+            "title": "Servizio API",
+            "description": "Nome del servizio API (es. 'OpenAI', 'Google', ecc.)",
+            "default": ""
+          },
+          "default_key_name": {
+            "type": "string",
+            "title": "Nome chiave predefinita",
+            "description": "Nome della chiave API da utilizzare se non specificato negli input",
+            "default": ""
+          },
+          "key_location": {
+            "type": "string",
+            "title": "Posizione chiave",
+            "description": "Dove inserire la chiave API",
+            "enum": ["header", "query", "body", "basic_auth", "bearer_token"],
+            "default": "header"
+          },
+          "header_name": {
+            "type": "string",
+            "title": "Nome header",
+            "description": "Nome dell'header HTTP quando key_location=header",
+            "default": "Authorization"
+          },
+          "header_prefix": {
+            "type": "string",
+            "title": "Prefisso header",
+            "description": "Prefisso per il valore dell'header (es. 'Bearer ')",
+            "default": ""
+          },
+          "query_param_name": {
+            "type": "string",
+            "title": "Nome parametro query",
+            "description": "Nome del parametro query quando key_location=query",
+            "default": "api_key"
+          },
+          "body_field_name": {
+            "type": "string",
+            "title": "Nome campo body",
+            "description": "Nome del campo nel body quando key_location=body",
+            "default": "api_key"
+          },
+          "store_keys": {
+            "type": "object",
+            "title": "Chiavi API memorizzate",
+            "description": "Mappa di nomi di chiavi e valori",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {}
+          }
+        },
+        "required": ["api_service", "key_location"]
+      },
+      "defaultConfig": {
+        "api_service": "",
+        "default_key_name": "",
+        "key_location": "header",
+        "header_name": "Authorization",
+        "header_prefix": "",
+        "query_param_name": "api_key",
+        "body_field_name": "api_key",
+        "store_keys": {}
+      }
+    },
+    {
+      "id": "webhook_handler",
+      "name": "Webhook Handler",
+      "type": "api",
+      "category": "API",
+      "description": "Nodo per ricevere e gestire webhook da sistemi esterni",
+      "icon": "📲",
+      "color": "#9C27B0",
+      "entry": "src/webhook_handler_processor.py",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "payload",
+          "type": "object",
+          "description": "Payload ricevuto dal webhook"
+        },
+        {
+          "name": "headers",
+          "type": "object",
+          "description": "Headers HTTP ricevuti"
+        },
+        {
+          "name": "method",
+          "type": "string",
+          "description": "Metodo HTTP utilizzato"
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "description": "Timestamp di ricezione"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Webhook Handler API",
+        "properties": {
+          "endpoint_path": {
+            "type": "string",
+            "title": "Percorso endpoint",
+            "description": "Percorso dell'endpoint webhook (es. '/webhook/my-service')",
+            "default": "/webhook/custom"
+          },
+          "allowed_methods": {
+            "type": "array",
+            "title": "Metodi consentiti",
+            "description": "Metodi HTTP consentiti per questo webhook",
+            "items": {
+              "type": "string",
+              "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+            },
+            "default": ["POST"]
+          },
+          "secret_token": {
+            "type": "string",
+            "title": "Token segreto",
+            "description": "Token segreto per validare il webhook (opzionale)",
+            "default": ""
+          },
+          "token_header_name": {
+            "type": "string",
+            "title": "Nome header token",
+            "description": "Nome dell'header HTTP per il token segreto",
+            "default": "X-Webhook-Token"
+          },
+          "response_code": {
+            "type": "integer",
+            "title": "Codice risposta",
+            "description": "Codice HTTP da restituire dopo la ricezione",
+            "default": 200
+          },
+          "response_body": {
+            "type": "string",
+            "title": "Corpo risposta",
+            "description": "Corpo della risposta da restituire dopo la ricezione",
+            "default": "{\"status\":\"success\"}"
+          }
+        },
+        "required": ["endpoint_path"]
+      },
+      "defaultConfig": {
+        "endpoint_path": "/webhook/custom",
+        "allowed_methods": ["POST"],
+        "secret_token": "",
+        "token_header_name": "X-Webhook-Token",
+        "response_code": 200,
+        "response_body": "{\"status\":\"success\"}"
+      }
+    }
+  ],
+  "dependencies": {
+    "aiohttp": ">=3.8.0",
+    "pydantic": ">=1.8.0"
+  }
+}

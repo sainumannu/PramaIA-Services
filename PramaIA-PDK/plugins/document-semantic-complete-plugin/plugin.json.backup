@@ -1,0 +1,474 @@
+{
+  "name": "pdf-semantic-complete-plugin",
+  "version": "1.0.0",
+  "description": "Plugin completo per workflow PDF semantico con pipeline end-to-end",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "pdf_input_node",
+      "name": "PDF Input",
+      "type": "input",
+      "category": "PDF Semantic",
+      "description": "Riceve file PDF per elaborazione semantica",
+      "icon": "📄",
+      "color": "#FF8C00",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "file_output",
+          "type": "file",
+          "description": "File PDF ricevuto"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione PDF Input",
+        "type": "object",
+        "properties": {
+          "accept_multiple": {
+            "type": "boolean",
+            "title": "Accetta file multipli",
+            "default": false
+          },
+          "max_file_size": {
+            "type": "string",
+            "title": "Dimensione massima file",
+            "default": "10MB",
+            "enum": ["5MB", "10MB", "20MB", "50MB", "100MB"]
+          },
+          "allowed_types": {
+            "type": "array",
+            "title": "Tipi di file permessi",
+            "items": { "type": "string" },
+            "default": ["pdf"]
+          }
+        }
+      },
+      "entry": "src/pdf_input_processor.py"
+    },
+    {
+      "id": "pdf_text_extractor",
+      "name": "PDF Text Extractor",
+      "type": "processing",
+      "category": "PDF Semantic",
+      "description": "Estrae testo dal file PDF",
+      "icon": "🔤",
+      "color": "#9932CC",
+      "inputs": [
+        {
+          "name": "pdf_file",
+          "type": "file",
+          "required": true,
+          "description": "File PDF da processare"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text_output",
+          "type": "text",
+          "description": "Testo estratto dal PDF"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione PDF Text Extractor",
+        "type": "object",
+        "properties": {
+          "preserve_layout": {
+            "type": "boolean",
+            "title": "Preserva layout",
+            "default": true
+          },
+          "extract_images": {
+            "type": "boolean",
+            "title": "Estrai immagini",
+            "default": false
+          },
+          "chunk_overlap": {
+            "type": "integer",
+            "title": "Sovrapposizione chunk",
+            "minimum": 0,
+            "maximum": 500,
+            "default": 200
+          }
+        }
+      },
+      "entry": "src/pdf_text_extractor_processor.py"
+    },
+    {
+      "id": "text_chunker",
+      "name": "Text Chunker",
+      "type": "processing",
+      "category": "PDF Semantic",
+      "description": "Divide il testo in chunks per elaborazione",
+      "icon": "✂️",
+      "color": "#FFD700",
+      "inputs": [
+        {
+          "name": "text_input",
+          "type": "text",
+          "required": true,
+          "description": "Testo da dividere in chunks"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "chunks_output",
+          "type": "json",
+          "description": "Array di chunks di testo"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Text Chunker",
+        "type": "object",
+        "properties": {
+          "chunk_size": {
+            "type": "integer",
+            "title": "Dimensione chunk",
+            "minimum": 100,
+            "maximum": 4000,
+            "default": 1000
+          },
+          "chunk_overlap": {
+            "type": "integer",
+            "title": "Sovrapposizione chunk",
+            "minimum": 0,
+            "maximum": 500,
+            "default": 200
+          },
+          "separator": {
+            "type": "string",
+            "title": "Separatore",
+            "default": "\n\n",
+            "enum": ["\n\n", "\n", ".", " "]
+          }
+        }
+      },
+      "entry": "src/text_chunker_processor.py"
+    },
+    {
+      "id": "text_embedder",
+      "name": "Text Embedder",
+      "type": "processing",
+      "category": "PDF Semantic",
+      "description": "Genera embeddings vettoriali per i chunks",
+      "icon": "🧠",
+      "color": "#20B2AA",
+      "inputs": [
+        {
+          "name": "text_chunks",
+          "type": "json",
+          "required": true,
+          "description": "Array di chunks di testo"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "embeddings_output",
+          "type": "json",
+          "description": "Embeddings vettoriali"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Text Embedder",
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello embedding",
+            "default": "sentence-transformers/all-MiniLM-L6-v2",
+            "enum": [
+              "sentence-transformers/all-MiniLM-L6-v2",
+              "sentence-transformers/all-mpnet-base-v2",
+              "text-embedding-ada-002",
+              "text-embedding-3-small"
+            ]
+          },
+          "batch_size": {
+            "type": "integer",
+            "title": "Dimensione batch",
+            "minimum": 1,
+            "maximum": 128,
+            "default": 32
+          },
+          "normalize_embeddings": {
+            "type": "boolean",
+            "title": "Normalizza embeddings",
+            "default": true
+          }
+        }
+      },
+      "entry": "src/text_embedder_processor.py"
+    },
+    {
+      "id": "chroma_vector_store",
+      "name": "ChromaDB Writer",
+      "type": "processing",
+      "category": "PDF Semantic",
+      "description": "Salva embeddings nel database vettoriale",
+      "icon": "💾",
+      "color": "#4169E1",
+      "inputs": [
+        {
+          "name": "embeddings_input",
+          "type": "json",
+          "required": true,
+          "description": "Embeddings da salvare"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "storage_result",
+          "type": "json",
+          "description": "Risultato salvataggio"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione ChromaDB Writer",
+        "type": "object",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "title": "Nome collezione",
+            "default": "pdf_documents"
+          },
+          "persist_directory": {
+            "type": "string",
+            "title": "Directory persistenza",
+            "default": "./chroma_db"
+          },
+          "distance_metric": {
+            "type": "string",
+            "title": "Metrica distanza",
+            "default": "cosine",
+            "enum": ["cosine", "euclidean", "manhattan"]
+          }
+        }
+      },
+      "entry": "src/chroma_writer_processor.py"
+    },
+    {
+      "id": "query_input_node",
+      "name": "Query Input",
+      "type": "input",
+      "category": "PDF Semantic",
+      "description": "Riceve query utente per ricerca semantica",
+      "icon": "❓",
+      "color": "#1E90FF",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "query_output",
+          "type": "text",
+          "description": "Query dell'utente"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Query Input",
+        "type": "object",
+        "properties": {
+          "input_type": {
+            "type": "string",
+            "title": "Tipo input",
+            "default": "text",
+            "enum": ["text", "textarea"]
+          },
+          "max_length": {
+            "type": "integer",
+            "title": "Lunghezza massima",
+            "minimum": 50,
+            "maximum": 2000,
+            "default": 500
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Campo obbligatorio",
+            "default": true
+          }
+        }
+      },
+      "entry": "src/query_input_processor.py"
+    },
+    {
+      "id": "chroma_retriever",
+      "name": "ChromaDB Retriever",
+      "type": "processing",
+      "category": "PDF Semantic",
+      "description": "Ricerca semantica nel database vettoriale",
+      "icon": "🔍",
+      "color": "#00CED1",
+      "inputs": [
+        {
+          "name": "query_input",
+          "type": "text",
+          "required": true,
+          "description": "Query di ricerca"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "documents_output",
+          "type": "json",
+          "description": "Documenti trovati"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione ChromaDB Retriever",
+        "type": "object",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "title": "Nome collezione",
+            "default": "pdf_documents"
+          },
+          "top_k": {
+            "type": "integer",
+            "title": "Numero risultati",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5
+          },
+          "score_threshold": {
+            "type": "number",
+            "title": "Soglia similarità",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          }
+        }
+      },
+      "entry": "src/chroma_retriever_processor.py"
+    },
+    {
+      "id": "llm_processor",
+      "name": "LLM Processor",
+      "type": "processing",
+      "category": "PDF Semantic",
+      "description": "Genera risposta usando LLM con contesto",
+      "icon": "🤖",
+      "color": "#32CD32",
+      "inputs": [
+        {
+          "name": "context_input",
+          "type": "json",
+          "required": true,
+          "description": "Contesto da documenti"
+        },
+        {
+          "name": "question_input",
+          "type": "text",
+          "required": true,
+          "description": "Domanda dell'utente"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response_output",
+          "type": "text",
+          "description": "Risposta generata"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione LLM Processor",
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Modello LLM",
+            "default": "ollama/llama3.2",
+            "enum": [
+              "ollama/llama3.2",
+              "gpt-3.5-turbo",
+              "gpt-4",
+              "claude-3-haiku",
+              "claude-3-sonnet",
+              "gemini-pro"
+            ]
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperatura",
+            "minimum": 0,
+            "maximum": 2,
+            "default": 0.7
+          },
+          "max_tokens": {
+            "type": "integer",
+            "title": "Token massimi",
+            "minimum": 100,
+            "maximum": 4000,
+            "default": 1000
+          },
+          "system_prompt": {
+            "type": "string",
+            "title": "Prompt di sistema",
+            "default": "Sei un assistente esperto. Rispondi alla domanda basandoti esclusivamente sul contesto fornito dai documenti PDF."
+          }
+        }
+      },
+      "entry": "src/llm_processor_processor.py"
+    },
+    {
+      "id": "pdf_results_formatter",
+      "name": "Results Formatter",
+      "type": "output",
+      "category": "PDF Semantic",
+      "description": "Formatta la risposta finale",
+      "icon": "📝",
+      "color": "#DC143C",
+      "inputs": [
+        {
+          "name": "content_input",
+          "type": "text",
+          "required": true,
+          "description": "Contenuto da formattare"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "formatted_output",
+          "type": "text",
+          "description": "Output formattato"
+        }
+      ],
+      "configSchema": {
+        "title": "Configurazione Results Formatter",
+        "type": "object",
+        "properties": {
+          "output_format": {
+            "type": "string",
+            "title": "Formato output",
+            "default": "markdown",
+            "enum": ["text", "markdown", "html", "json"]
+          },
+          "include_sources": {
+            "type": "boolean",
+            "title": "Includi sorgenti",
+            "default": true
+          },
+          "include_metadata": {
+            "type": "boolean",
+            "title": "Includi metadati",
+            "default": true
+          },
+          "max_snippet_length": {
+            "type": "integer",
+            "title": "Lunghezza max estratti",
+            "minimum": 50,
+            "maximum": 500,
+            "default": 200
+          }
+        }
+      },
+      "entry": "src/results_formatter_processor.py"
+    }
+  ],
+  "dependencies": {
+    "sentence-transformers": "^2.2.2",
+    "chromadb": "^0.4.0",
+    "PyPDF2": "^3.0.1",
+    "openai": "^1.0.0",
+    "anthropic": "^0.5.0"
+  }
+}

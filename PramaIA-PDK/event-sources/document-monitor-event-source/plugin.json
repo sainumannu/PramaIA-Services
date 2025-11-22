@@ -1,0 +1,192 @@
+{
+  "id": "document-monitor-event-source",
+  "name": "document-monitor-event-source",
+  "version": "1.0.0",
+  "description": "Event source per monitoraggio documenti - rileva creazione, modifica e cancellazione di file in cartelle specificate",
+  "type": "event-source",
+  "lifecycle": "persistent",
+  
+  "tags": ["document", "file-monitor", "filesystem", "file-changes", "folder-watch"],
+  
+  "entryPoint": "src/event_source.py",
+  "eventTypes": [
+    {
+      "id": "document_file_added",
+      "name": "Document File Added",
+      "description": "Triggered when a new document file is created or found during initial scan",
+      "outputs": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Full absolute path to the document file"
+        },
+        {
+          "name": "file_name",
+          "type": "string",
+          "description": "Name of the document file"
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "description": "Unique identifier generated for this document"
+        },
+        {
+          "name": "file_size",
+          "type": "number",
+          "description": "Size of the file in bytes"
+        },
+        {
+          "name": "detected_at",
+          "type": "string",
+          "description": "ISO timestamp when the file was detected"
+        }
+      ]
+    },
+    {
+      "id": "document_file_modified",
+      "name": "Document File Modified", 
+      "description": "Triggered when an existing document file is modified",
+      "outputs": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Full absolute path to the document file"
+        },
+        {
+          "name": "file_name",
+          "type": "string",
+          "description": "Name of the document file"
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "description": "Unique identifier generated for this document"
+        },
+        {
+          "name": "file_size",
+          "type": "number",
+          "description": "New size of the file in bytes"
+        },
+        {
+          "name": "modified_at",
+          "type": "string",
+          "description": "ISO timestamp when the file was modified"
+        }
+      ]
+    },
+    {
+      "id": "document_file_deleted",
+      "name": "Document File Deleted",
+      "description": "Triggered when a document file is deleted",
+      "outputs": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Full absolute path to the deleted document file"
+        },
+        {
+          "name": "file_name",
+          "type": "string", 
+          "description": "Name of the deleted document file"
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "description": "Unique identifier generated for this document"
+        },
+        {
+          "name": "deleted_at",
+          "type": "string",
+          "description": "ISO timestamp when the file was deleted"
+        }
+      ]
+    },
+    {
+      "id": "any_change",
+      "name": "Any Document Change",
+      "description": "Triggered for any document change (create, modify, delete) - useful for catch-all workflows",
+      "outputs": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Full absolute path to the document file"
+        },
+        {
+          "name": "file_name",
+          "type": "string",
+          "description": "Name of the document file"
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "description": "Unique identifier generated for this document"
+        },
+        {
+          "name": "change_type",
+          "type": "string",
+          "description": "Type of change: 'created', 'modified', or 'deleted'"
+        },
+        {
+          "name": "detected_at",
+          "type": "string",
+          "description": "ISO timestamp when the change was detected"
+        },
+        {
+          "name": "file_size",
+          "type": "number",
+          "description": "Size of the file in bytes (null for deleted files)"
+        }
+      ]
+    }
+  ],
+  "configSchema": {
+    "title": "Document Monitor Configuration",
+    "type": "object",
+    "properties": {
+      "monitor_path": {
+        "type": "string",
+        "title": "Monitor Path",
+        "description": "Path to the directory to monitor for document changes",
+        "default": "/tmp/document_monitor"
+      },
+      "recursive": {
+        "type": "boolean",
+        "title": "Recursive Monitoring",
+        "description": "Whether to monitor subdirectories recursively",
+        "default": true
+      },
+      "file_extensions": {
+        "type": "array",
+        "title": "File Extensions",
+        "description": "List of file extensions to monitor",
+        "items": {
+          "type": "string"
+        },
+        "default": [".pdf", ".doc", ".docx", ".odt", ".txt", ".xls", ".xlsx", ".ods"]
+      },
+      "ignore_hidden": {
+        "type": "boolean",
+        "title": "Ignore Hidden Files",
+        "description": "Whether to ignore files starting with dot (.)",
+        "default": true
+      },
+      "debounce_time": {
+        "type": "number",
+        "title": "Debounce Time (seconds)",
+        "description": "Time to wait before processing rapid successive events on the same file",
+        "default": 2,
+        "minimum": 0,
+        "maximum": 60
+      },
+      "max_file_size": {
+        "type": "number",
+        "title": "Max File Size (MB)",
+        "description": "Maximum file size in MB to process (0 = no limit)",
+        "default": 100,
+        "minimum": 0,
+        "maximum": 1000
+      }
+    },
+    "required": ["monitor_path"]
+  }
+}

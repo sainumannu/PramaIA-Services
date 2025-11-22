@@ -1,0 +1,215 @@
+{
+  "id": "pdf-monitor-event-source",
+  "name": "pdf-monitor-event-source",
+  "version": "1.0.0",
+  "description": "Event source per monitoraggio cartelle PDF - integrato nel sistema PDK",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "type": "event-source",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  
+  "lifecycle": "persistent",
+  
+  "tags": ["document", "monitoring", "file-system", "automation"],
+  
+  "eventTypes": [
+    {
+      "id": "document_file_added",
+      "name": "Document File Added",
+      "description": "Triggered when a new document file is added to the monitored folder",
+      "icon": "📄",
+      "tags": ["file-added", "new-document", "ingest", "trigger"],
+      "outputs": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Absolute path to the new document file"
+        },
+        {
+          "name": "file_name",
+          "type": "string", 
+          "description": "Name of the document file"
+        },
+        {
+          "name": "file_size",
+          "type": "number",
+          "description": "Size of the file in bytes"
+        },
+        {
+          "name": "detected_at",
+          "type": "string",
+          "description": "ISO timestamp when the file was detected"
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "description": "Unique document ID generated for the file"
+        }
+      ]
+    },
+    {
+      "id": "document_file_modified",
+      "name": "Document File Modified",
+      "description": "Triggered when an existing document file in the monitored folder is modified",
+      "icon": "✏️",
+      "tags": ["file-modified", "document-updated", "change-detection"],
+      "outputs": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Absolute path to the modified document file"
+        },
+        {
+          "name": "file_name",
+          "type": "string",
+          "description": "Name of the document file"
+        },
+        {
+          "name": "file_size",
+          "type": "number",
+          "description": "New size of the file in bytes"
+        },
+        {
+          "name": "modified_at",
+          "type": "string",
+          "description": "ISO timestamp when the modification was detected"
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "description": "Document ID of the modified file"
+        }
+      ]
+    },
+    {
+      "id": "document_file_deleted",
+      "name": "Document File Deleted", 
+      "description": "Triggered when a document file is removed from the monitored folder",
+      "icon": "🗑️",
+      "tags": ["file-deleted", "document-removed", "cleanup"],
+      "outputs": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Path to the deleted document file"
+        },
+        {
+          "name": "file_name",
+          "type": "string",
+          "description": "Name of the deleted document file"
+        },
+        {
+          "name": "deleted_at",
+          "type": "string",
+          "description": "ISO timestamp when the deletion was detected"
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "description": "Document ID of the deleted file"
+        }
+      ]
+    },
+    {
+      "id": "any_change",
+      "name": "Qualsiasi Modifica",
+      "description": "Triggered when any change occurs in the monitored folder (file added, modified, or deleted)",
+      "icon": "🔄",
+      "tags": ["any-change", "comprehensive-monitoring", "all-events"],
+      "outputs": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Absolute path to the changed document file"
+        },
+        {
+          "name": "file_name",
+          "type": "string",
+          "description": "Name of the document file"
+        },
+        {
+          "name": "change_type",
+          "type": "string",
+          "description": "Type of change: 'created', 'modified', or 'deleted'",
+          "enum": ["created", "modified", "deleted"]
+        },
+        {
+          "name": "detected_at",
+          "type": "string",
+          "description": "ISO timestamp when the change was detected"
+        },
+        {
+          "name": "file_size",
+          "type": "number",
+          "description": "Size of the file in bytes (null for deleted files)"
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "description": "Unique document ID for the file"
+        }
+      ]
+    }
+  ],
+  
+  "configSchema": {
+    "title": "Document Monitor Configuration",
+    "type": "object",
+    "properties": {
+      "monitor_path": {
+        "type": "string",
+        "title": "Cartella da monitorare",
+        "description": "Percorso assoluto della cartella da monitorare per documenti",
+        "default": ""
+      },
+      "recursive": {
+        "type": "boolean",
+        "title": "Monitoraggio ricorsivo",
+        "description": "Se monitorare anche le sottocartelle",
+        "default": true
+      },
+      "file_extensions": {
+        "type": "array",
+        "title": "Estensioni file da monitorare",
+        "description": "Lista delle estensioni file da monitorare",
+        "items": { "type": "string" },
+        "default": [".pdf", ".doc", ".docx", ".odt", ".txt", ".xls", ".xlsx", ".ods"]
+      },
+      "ignore_hidden": {
+        "type": "boolean",
+        "title": "Ignora file nascosti",
+        "description": "Se ignorare i file che iniziano con punto",
+        "default": true
+      },
+      "debounce_time": {
+        "type": "number",
+        "title": "Tempo di debounce (secondi)",
+        "description": "Tempo di attesa prima di processare un evento per evitare duplicati",
+        "default": 2,
+        "minimum": 1,
+        "maximum": 30
+      },
+      "max_file_size": {
+        "type": "number",
+        "title": "Dimensione massima file (MB)",
+        "description": "Dimensione massima dei file da processare in MB (0 = nessun limite)",
+        "default": 100,
+        "minimum": 0
+      }
+    },
+    "required": ["monitor_path"]
+  },
+  
+  "entry": "src/event_source.py",
+  
+  "dependencies": {
+    "watchdog": ">=3.0.0",
+    "asyncio": "*",
+    "pathlib": "*",
+    "json": "*",
+    "time": "*",
+    "os": "*",
+    "hashlib": "*"
+  }
+}

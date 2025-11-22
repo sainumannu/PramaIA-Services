@@ -1,0 +1,62 @@
+WORKFLOW SCHEDULER
+=================
+
+ID Plugin: workflow-scheduler-plugin
+Versione: 1.0.0
+Tipo: control
+Categoria: Workflow Control
+
+DESCRIZIONE
+-----------
+Scheduler per l'esecuzione programmata di workflow in base a intervalli, 
+espressioni cron, date specifiche o eventi.
+
+INGRESSI/USCITE
+---------------
+- Ingresso: trigger (opzionale)
+- Uscite: output, metadata
+
+MODALITÀ DI SCHEDULAZIONE
+-------------------------
+1. Intervallo: Ripetizione a intervalli regolari
+   {
+     "schedule_type": "interval",
+     "interval": { "value": 10, "unit": "minutes" }
+   }
+
+2. Cron: Schedulazione basata su espressioni cron
+   {
+     "schedule_type": "cron",
+     "cron_expression": "0 9 * * 1-5"
+   }
+
+3. Data: Esecuzione a data/ora specifica
+   {
+     "schedule_type": "date",
+     "specific_date": "2025-12-31T23:59:59"
+   }
+
+4. Evento: Esecuzione in risposta a un evento
+   {
+     "schedule_type": "event",
+     "event_name": "nuovo_documento"
+   }
+
+OPZIONI AGGIUNTIVE
+-----------------
+- start_date: Data di inizio schedulazione
+- end_date: Data di fine schedulazione
+- max_executions: Numero massimo di esecuzioni (0=illimitato)
+- timezone: Fuso orario (default: Europe/Rome)
+- skip_immediate: Salta prima esecuzione immediata
+
+MONITORAGGIO
+-----------
+- store_history: Mantiene lo storico delle esecuzioni
+- max_history_items: Numero massimo elementi nello storico
+- notify_on_execution: Notifica ad ogni esecuzione
+- notify_on_error: Notifica in caso di errore
+
+REQUISITI
+---------
+- PDK versione: 1.0.0 o superiore

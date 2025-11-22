@@ -1,0 +1,167 @@
+{
+  "name": "internal-processors-plugin",
+  "version": "1.0.0",
+  "description": "Plugin interno per processori di testo e utilità generali",
+  "author": "PramaIA System",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "tags": [
+    "internal",
+    "core",
+    "text-processing",
+    "utility"
+  ],
+  "nodes": [
+    {
+      "id": "text_joiner",
+      "name": "Text Joiner",
+      "type": "processing",
+      "category": "Text",
+      "description": "Unisce array di testi con un separatore",
+      "icon": "📎",
+      "color": "#28A745",
+      "tags": [
+        "text",
+        "join",
+        "merge",
+        "utility"
+      ],
+      "inputs": [
+        {
+          "name": "texts",
+          "type": "array",
+          "required": true,
+          "description": "Array di testi da unire"
+        },
+        {
+          "name": "separator",
+          "type": "string",
+          "required": false,
+          "description": "Separatore tra i testi",
+          "default": "\n"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "text",
+          "description": "Testo unito"
+        },
+        {
+          "name": "count",
+          "type": "number",
+          "description": "Numero di testi uniti"
+        }
+      ],
+      "async": false,
+      "processing_time": "fast",
+      "configSchema": {
+    "title": "Configurazione Text Joiner",
+        "type": "object",
+        "nodeId": "text_joiner",
+        "nodeName": "Text Joiner",
+        "properties": {
+          "separator": {
+            "type": "string",
+            "title": "Separatore",
+            "description": "Carattere o testo da inserire tra gli input",
+            "default": " "
+          },
+          "format": {
+            "type": "string",
+            "title": "Formato output",
+            "description": "Formato dell'output combinato",
+            "enum": [
+              "text",
+              "json",
+              "csv"
+            ],
+            "default": "text"
+          }
+        }
+      }
+    },
+    {
+      "id": "text_filter",
+      "name": "Text Filter",
+      "type": "processing",
+      "category": "Text",
+      "description": "Filtra testi basandosi su criteri",
+      "icon": "🔍",
+      "color": "#17A2B8",
+      "tags": [
+        "text",
+        "filter",
+        "validation",
+        "clean"
+      ],
+      "inputs": [
+        {
+          "name": "texts",
+          "type": "array",
+          "required": true,
+          "description": "Array di testi da filtrare"
+        },
+        {
+          "name": "min_length",
+          "type": "number",
+          "required": false,
+          "description": "Lunghezza minima del testo",
+          "default": 10
+        },
+        {
+          "name": "filter_empty",
+          "type": "boolean",
+          "required": false,
+          "description": "Filtra testi vuoti",
+          "default": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "filtered_texts",
+          "type": "array",
+          "description": "Testi filtrati"
+        },
+        {
+          "name": "filtered_count",
+          "type": "number",
+          "description": "Numero di testi dopo il filtro"
+        }
+      ],
+      "async": false,
+      "processing_time": "fast"
+    },
+    {
+      "id": "user_context_provider",
+      "name": "User Context Provider",
+      "type": "input",
+      "category": "Context",
+      "description": "Fornisce informazioni di contesto utente",
+      "icon": "👤",
+      "color": "#6F42C1",
+      "tags": [
+        "context",
+        "user",
+        "metadata",
+        "system"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "description": "ID dell'utente corrente"
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "description": "Timestamp corrente"
+        }
+      ],
+      "async": false,
+      "processing_time": "fast"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "email-monitor-event-source",
+  "name": "email-monitor-event-source",
+  "version": "1.0.0",
+  "description": "Event source per monitoraggio email IMAP/POP3 - supporta filtri, allegati e processing automatico",
+  "type": "event-source",
+  "lifecycle": "persistent",
+  "entryPoint": "src/event_source.py",
+  "eventTypes": [
+    {
+      "id": "email_received",
+      "name": "Email Received",
+      "description": "Triggered when a new email matching filters is received",
+      "outputs": [
+        { "name": "email_id", "type": "string", "description": "Unique email ID from the mail server" },
+        { "name": "message_id", "type": "string", "description": "Email Message-ID header" },
+        { "name": "subject", "type": "string", "description": "Email subject line" },
+        { "name": "sender", "type": "object", "description": "Sender information (name, email)" },
+        { "name": "recipients", "type": "array", "description": "List of recipients (to, cc, bcc)" },
+        { "name": "body_text", "type": "string", "description": "Plain text body of the email" },
+        { "name": "body_html", "type": "string", "description": "HTML body of the email (if available)" },
+        { "name": "attachments", "type": "array", "description": "List of email attachments with metadata" },
+        { "name": "headers", "type": "object", "description": "Important email headers" },
+        { "name": "received_at", "type": "string", "description": "ISO timestamp when email was received by server" },
+        { "name": "processed_at", "type": "string", "description": "ISO timestamp when email was processed by event source" },
+        { "name": "folder", "type": "string", "description": "Mail folder where email was found" },
+        { "name": "tags", "type": "array", "description": "Automatically assigned tags based on filters" }
+      ]
+    }
+  ],
+  "configSchema": { "title": "Email Monitor Configuration", "type": "object" }
+}

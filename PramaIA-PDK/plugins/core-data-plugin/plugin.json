@@ -1,0 +1,241 @@
+{
+  "name": "core-data-plugin",
+  "display_name": "Data Core",
+  "version": "1.0.0",
+  "description": "Plugin con i nodi di elaborazione dati per i workflow PramaIA",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "json_processor",
+      "name": "JSON Processor",
+      "type": "data",
+      "category": "Data",
+      "description": "Nodo per elaborare e manipolare dati JSON",
+  "icon": "🧪",
+      "color": "#9C27B0",
+      "entry": "src/json_processor.py",
+      "inputs": [
+        {
+          "name": "data",
+          "type": "any",
+          "description": "Dati JSON da elaborare",
+          "required": true
+        },
+        {
+          "name": "path",
+          "type": "string",
+          "description": "Percorso JSON opzionale per estrazione (es. 'results.items[0].title')",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "any",
+          "description": "Risultato dell'elaborazione JSON"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione JSON Processor Data",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operazione",
+            "description": "Tipo di operazione da eseguire sui dati JSON",
+            "enum": ["extract", "transform", "filter", "merge"],
+            "default": "extract"
+          },
+          "extraction_path": {
+            "type": "string",
+            "title": "Percorso di estrazione",
+            "description": "Percorso per estrarre valori (usato se operation=extract e path input non specificato)",
+            "default": ""
+          },
+          "filter_condition": {
+            "type": "string",
+            "title": "Condizione filtro",
+            "description": "Espressione di condizione per filtrare (usato se operation=filter)",
+            "default": ""
+          },
+          "transform_template": {
+            "type": "string",
+            "title": "Template di trasformazione",
+            "description": "Template per trasformare i dati (usato se operation=transform)",
+            "default": ""
+          },
+          "default_value": {
+            "type": "string",
+            "title": "Valore di default",
+            "description": "Valore da restituire se l'estrazione fallisce",
+            "default": ""
+          }
+        }
+      },
+      "defaultConfig": {
+        "operation": "extract",
+        "extraction_path": "",
+        "filter_condition": "",
+        "transform_template": "",
+        "default_value": ""
+      }
+    },
+    {
+      "id": "csv_processor",
+      "name": "CSV Processor",
+      "type": "data",
+      "category": "Data",
+      "description": "Nodo per elaborare e manipolare dati CSV",
+  "icon": "🗃️",
+      "color": "#673AB7",
+      "entry": "src/csv_processor.py",
+      "inputs": [
+        {
+          "name": "data",
+          "type": "string",
+          "description": "Dati CSV in formato stringa o percorso file CSV",
+          "required": true
+        },
+        {
+          "name": "query",
+          "type": "string",
+          "description": "Query SQL-like opzionale per filtrare/selezionare dati",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "array",
+          "description": "Risultato dell'elaborazione CSV come array di oggetti"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione CSV Processor Data",
+        "properties": {
+          "has_header": {
+            "type": "boolean",
+            "title": "Ha intestazione",
+            "description": "Il CSV ha una riga di intestazione",
+            "default": true
+          },
+          "delimiter": {
+            "type": "string",
+            "title": "Delimitatore",
+            "description": "Carattere delimitatore per il CSV",
+            "default": ","
+          },
+          "output_format": {
+            "type": "string",
+            "title": "Formato output",
+            "description": "Formato dei dati di output",
+            "enum": ["array", "json", "csv"],
+            "default": "array"
+          },
+          "filter_expression": {
+            "type": "string",
+            "title": "Espressione filtro",
+            "description": "Espressione per filtrare le righe",
+            "default": ""
+          },
+          "selected_columns": {
+            "type": "string",
+            "title": "Colonne selezionate",
+            "description": "Elenco di colonne da includere nell'output, separate da virgola",
+            "default": ""
+          }
+        }
+      },
+      "defaultConfig": {
+        "has_header": true,
+        "delimiter": ",",
+        "output_format": "array",
+        "filter_expression": "",
+        "selected_columns": ""
+      }
+    },
+    {
+      "id": "data_merger",
+      "name": "Data Merger",
+      "type": "data",
+      "category": "Data",
+      "description": "Nodo per unire più fonti di dati",
+  "icon": "🧯",
+      "color": "#3F51B5",
+      "entry": "src/data_merger.py",
+      "inputs": [
+        {
+          "name": "data1",
+          "type": "any",
+          "description": "Prima fonte di dati",
+          "required": true
+        },
+        {
+          "name": "data2",
+          "type": "any",
+          "description": "Seconda fonte di dati",
+          "required": true
+        },
+        {
+          "name": "data3",
+          "type": "any",
+          "description": "Terza fonte di dati (opzionale)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "any",
+          "description": "Risultato dell'unione dei dati"
+        }
+      ],
+      "configSchema": {
+  "type": "object",
+  "title": "Configurazione Data Merger Data",
+        "properties": {
+          "merge_type": {
+            "type": "string",
+            "title": "Tipo di unione",
+            "description": "Modalità di unione dei dati",
+            "enum": ["concat", "join", "zip", "merge_objects"],
+            "default": "concat"
+          },
+          "join_key": {
+            "type": "string",
+            "title": "Chiave di join",
+            "description": "Chiave da usare per unire i dati (per join)",
+            "default": "id"
+          },
+          "join_type": {
+            "type": "string",
+            "title": "Tipo di join",
+            "description": "Tipo di join da eseguire",
+            "enum": ["inner", "left", "right", "full"],
+            "default": "inner"
+          },
+          "flatten_result": {
+            "type": "boolean",
+            "title": "Risultato piatto",
+            "description": "Appiattisce il risultato in un array singolo",
+            "default": false
+          }
+        }
+      },
+      "defaultConfig": {
+        "merge_type": "concat",
+        "join_key": "id",
+        "join_type": "inner",
+        "flatten_result": false
+      }
+    }
+  ],
+  "dependencies": {
+    "pandas": ">=1.0.0",
+    "jsonpath-ng": ">=1.5.0"
+  }
+}

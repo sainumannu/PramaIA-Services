@@ -1,0 +1,48 @@
+{
+    "nodeType": "vectorstore-writer",
+    "title": "Vectorstore Writer",
+    "description": "Salva documenti ed embeddings usando il servizio VectorstoreService",
+    "icon": "database-add",
+    "category": "Vectorstore",
+    "version": "1.0.0",
+    "inputs": [
+        {
+            "name": "embeddings_input",
+            "title": "Embeddings Input",
+            "description": "Input contenente embeddings e testi",
+            "type": "object",
+            "required": true
+        }
+    ],
+    "outputs": [
+        {
+            "name": "storage_result",
+            "title": "Storage Result",
+            "description": "Risultato del salvataggio",
+            "type": "object"
+        },
+        {
+            "name": "documents_saved",
+            "title": "Documents Saved",
+            "description": "Numero di documenti salvati",
+            "type": "number"
+        }
+    ],
+    "config": [
+        {
+            "name": "collection_name",
+            "title": "Collection Name",
+            "description": "Nome della collezione dove salvare i documenti",
+            "type": "string",
+            "defaultValue": "documents"
+        },
+        {
+            "name": "service_url",
+            "title": "Service URL",
+            "description": "URL del servizio VectorstoreService",
+            "type": "string",
+            "defaultValue": "http://localhost:8090"
+        }
+    ],
+    "processorPath": "src/vectorstore_writer_processor.py"
+}

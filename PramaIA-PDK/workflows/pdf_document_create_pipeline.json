@@ -1,0 +1,370 @@
+{
+  "workflow_id": "pdf_document_create_pipeline",
+  "name": "PDF Document CREATE Pipeline",
+  "description": "Pipeline completa per l'inserimento di documenti PDF con gestione dual-storage (metadati + semantico) usando architettura Backend + PDK",
+  "is_active": true,
+  "is_public": true,
+  "category": "CRUD",
+  "tags": ["pdf", "create", "metadata", "semantic", "pdk", "dual-storage"],
+  "architecture": "backend_pdk_distributed",
+  "nodes": [
+    {
+      "node_id": "pdf_input_validator",
+      "node_type": "file_input",
+      "name": "PDF Input Validator",
+      "description": "Validazione file PDF e controlli di sicurezza (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": [],
+        "outputPorts": ["validated_pdf", "file_metadata", "validation_result"],
+        "additionalConfig": {
+          "max_file_size": "50MB",
+          "allowed_mime_types": ["application/pdf"],
+          "virus_scan": true,
+          "content_policy_check": true
+        }
+      },
+      "position": { "x": 100, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "metadata_coordinator",
+      "node_type": "metadata_manager", 
+      "name": "Metadata Coordinator",
+      "description": "Coordina estrazione e gestione metadati strutturati (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["file_metadata", "extracted_metadata"],
+        "outputPorts": ["structured_metadata", "document_id"],
+        "additionalConfig": {
+          "generate_uuid": true,
+          "extract_system_metadata": true,
+          "validate_schema": true
+        }
+      },
+      "position": { "x": 100, "y": 300 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "transaction_manager",
+      "node_type": "event_logger",
+      "name": "Transaction Manager", 
+      "description": "Gestione transazionale per operazioni dual-storage (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["document_id", "metadata_status", "semantic_status"],
+        "outputPorts": ["transaction_id", "operation_status"],
+        "additionalConfig": {
+          "rollback_on_failure": true,
+          "timeout_seconds": 300,
+          "retry_attempts": 3
+        }
+      },
+      "position": { "x": 100, "y": 500 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "database_writer",
+      "node_type": "file_output",
+      "name": "Metadata Database Writer",
+      "description": "Scrittura metadati nel database strutturato (Backend)",
+      "execution_context": "backend", 
+      "config": {
+        "inputPorts": ["structured_metadata", "document_id", "transaction_id"],
+        "outputPorts": ["write_result", "database_id"],
+        "additionalConfig": {
+          "table_name": "pdf_documents",
+          "create_indexes": true,
+          "backup_on_write": false
+        }
+      },
+      "position": { "x": 400, "y": 300 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_pdf_extractor",
+      "node_type": "pdf_text_extractor",
+      "name": "PDF Text Extractor (PDK)",
+      "description": "Estrazione testo avanzata tramite PDK Server con OCR e layout preservation",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["validated_pdf"],
+        "outputPorts": ["extracted_text", "extraction_metadata"],
+        "additionalConfig": {
+          "preserve_layout": true,
+          "enable_ocr": true,
+          "extract_tables": true,
+          "extract_images": false,
+          "language": "auto"
+        }
+      },
+      "position": { "x": 400, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_text_chunker",
+      "node_type": "text_chunker", 
+      "name": "Text Chunker (PDK)",
+      "description": "Segmentazione intelligente del testo per elaborazione semantica (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["extracted_text"],
+        "outputPorts": ["text_chunks", "chunk_metadata"],
+        "additionalConfig": {
+          "chunk_size": 1000,
+          "chunk_overlap": 200,
+          "preserve_sentences": true,
+          "preserve_paragraphs": true,
+          "separator_strategy": "semantic"
+        }
+      },
+      "position": { "x": 700, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_embedder",
+      "node_type": "text_embedder",
+      "name": "Embedding Generator (PDK)",
+      "description": "Generazione embeddings vettoriali tramite modelli transformer (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["text_chunks", "chunk_metadata"],
+        "outputPorts": ["embeddings", "embedding_metadata"],
+        "additionalConfig": {
+          "model": "sentence-transformers/all-MiniLM-L6-v2",
+          "batch_size": 32,
+          "normalize_embeddings": true,
+          "dimensions": 384,
+          "device": "auto"
+        }
+      },
+      "position": { "x": 1000, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_chroma_writer",
+      "node_type": "chroma_vector_store",
+      "name": "Vector Storage Writer (PDK)",
+      "description": "Scrittura embeddings nel database vettoriale ChromaDB (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["embeddings", "embedding_metadata", "document_id"],
+        "outputPorts": ["storage_result", "vector_ids"],
+        "additionalConfig": {
+          "collection_name": "pdf_documents",
+          "persist_directory": "./chroma_db",
+          "distance_metric": "cosine",
+          "create_collection_if_not_exists": true,
+          "batch_size": 100
+        }
+      },
+      "position": { "x": 1300, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "success_coordinator",
+      "node_type": "event_logger",
+      "name": "Success Coordinator",
+      "description": "Coordinamento finale e conferma successo operazione CREATE (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["database_id", "vector_ids", "transaction_id"],
+        "outputPorts": ["final_result", "success_notification"],
+        "additionalConfig": {
+          "send_notifications": true,
+          "update_statistics": true,
+          "log_operation": true
+        }
+      },
+      "position": { "x": 700, "y": 500 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "error_handler",
+      "node_type": "event_logger",
+      "name": "Error Handler & Rollback",
+      "description": "Gestione errori e rollback per mantenere consistenza dual-storage (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["operation_status", "error_details"],
+        "outputPorts": ["rollback_result", "error_notification"],
+        "additionalConfig": {
+          "auto_rollback": true,
+          "cleanup_partial_data": true,
+          "send_error_alerts": true,
+          "retry_failed_operations": true
+        }
+      },
+      "position": { "x": 400, "y": 500 },
+      "width": 220,
+      "height": 100
+    }
+  ],
+  "connections": [
+    {
+      "from_node_id": "pdf_input_validator",
+      "to_node_id": "pdk_pdf_extractor",
+      "from_port": "validated_pdf",
+      "to_port": "validated_pdf"
+    },
+    {
+      "from_node_id": "pdf_input_validator",
+      "to_node_id": "metadata_coordinator",
+      "from_port": "file_metadata", 
+      "to_port": "file_metadata"
+    },
+    {
+      "from_node_id": "pdk_pdf_extractor",
+      "to_node_id": "metadata_coordinator",
+      "from_port": "extraction_metadata",
+      "to_port": "extracted_metadata"
+    },
+    {
+      "from_node_id": "pdk_pdf_extractor",
+      "to_node_id": "pdk_text_chunker",
+      "from_port": "extracted_text",
+      "to_port": "extracted_text"
+    },
+    {
+      "from_node_id": "pdk_text_chunker",
+      "to_node_id": "pdk_embedder",
+      "from_port": "text_chunks",
+      "to_port": "text_chunks"
+    },
+    {
+      "from_node_id": "pdk_text_chunker",
+      "to_node_id": "pdk_embedder",
+      "from_port": "chunk_metadata",
+      "to_port": "chunk_metadata"
+    },
+    {
+      "from_node_id": "metadata_coordinator",
+      "to_node_id": "database_writer",
+      "from_port": "structured_metadata",
+      "to_port": "structured_metadata"
+    },
+    {
+      "from_node_id": "metadata_coordinator",
+      "to_node_id": "database_writer",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "metadata_coordinator",
+      "to_node_id": "pdk_chroma_writer",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "metadata_coordinator",
+      "to_node_id": "transaction_manager",
+      "from_port": "document_id",
+      "to_port": "document_id"
+    },
+    {
+      "from_node_id": "pdk_embedder",
+      "to_node_id": "pdk_chroma_writer",
+      "from_port": "embeddings",
+      "to_port": "embeddings"
+    },
+    {
+      "from_node_id": "pdk_embedder",
+      "to_node_id": "pdk_chroma_writer", 
+      "from_port": "embedding_metadata",
+      "to_port": "embedding_metadata"
+    },
+    {
+      "from_node_id": "transaction_manager",
+      "to_node_id": "database_writer",
+      "from_port": "transaction_id",
+      "to_port": "transaction_id"
+    },
+    {
+      "from_node_id": "database_writer",
+      "to_node_id": "transaction_manager",
+      "from_port": "write_result",
+      "to_port": "metadata_status"
+    },
+    {
+      "from_node_id": "pdk_chroma_writer",
+      "to_node_id": "transaction_manager",
+      "from_port": "storage_result",
+      "to_port": "semantic_status"
+    },
+    {
+      "from_node_id": "database_writer",
+      "to_node_id": "success_coordinator",
+      "from_port": "database_id",
+      "to_port": "database_id"
+    },
+    {
+      "from_node_id": "pdk_chroma_writer",
+      "to_node_id": "success_coordinator",
+      "from_port": "vector_ids",
+      "to_port": "vector_ids"
+    },
+    {
+      "from_node_id": "transaction_manager",
+      "to_node_id": "success_coordinator",
+      "from_port": "transaction_id",
+      "to_port": "transaction_id"
+    },
+    {
+      "from_node_id": "transaction_manager",
+      "to_node_id": "error_handler",
+      "from_port": "operation_status",
+      "to_port": "operation_status"
+    }
+  ],
+  "execution_strategy": {
+    "type": "hybrid_backend_pdk",
+    "backend_orchestration": true,
+    "pdk_processing": true,
+    "transaction_support": true,
+    "error_handling": "rollback_on_failure"
+  },
+  "view_state": {
+    "zoom": 0.8,
+    "pan_x": 0,
+    "pan_y": 0
+  },
+  "metadata": {
+    "version": "2.0",
+    "created_at": "2025-11-15T00:00:00Z",
+    "author": "PramaIA Team",
+    "architecture": "Backend + PDK Distributed",
+    "crud_operation": "CREATE",
+    "storage_types": ["structured_metadata", "vector_embeddings"],
+    "execution_contexts": {
+      "backend_nodes": [
+        "pdf_input_validator",
+        "metadata_coordinator", 
+        "transaction_manager",
+        "database_writer",
+        "success_coordinator",
+        "error_handler"
+      ],
+      "pdk_nodes": [
+        "pdk_pdf_extractor",
+        "pdk_text_chunker",
+        "pdk_embedder",
+        "pdk_chroma_writer"
+      ]
+    },
+    "data_flow": {
+      "input": "PDF File",
+      "backend_storage": "Structured Metadata (SQLite/PostgreSQL)",
+      "pdk_storage": "Vector Embeddings (ChromaDB)",
+      "output": "Dual-storage Success Confirmation"
+    }
+  }
+}

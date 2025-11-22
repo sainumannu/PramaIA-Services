@@ -1,0 +1,135 @@
+{
+  "name": "core-business-processors-plugin",
+  "version": "1.0.0",
+  "description": "Processori business per eventi, parsing file, metadati, documenti, vector store e logging",
+  "author": "PramaIA",
+  "type": "plugin",
+  "tags": ["core", "business", "processing", "events", "files", "metadata", "documents", "vectorstore", "logging"],
+  "enabled": true,
+  "nodes": [
+    {
+      "id": "event_input",
+      "name": "Event Input",
+      "description": "Processore per gestione input eventi workflow",
+      "category": "Input",
+      "icon": "📨",
+      "config_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "id": "file_parsing", 
+      "name": "File Parsing",
+      "description": "Estrazione testo da file PDF con PyPDF2 e pdfplumber",
+      "category": "Processing",
+      "icon": "📄",
+      "config_schema": {
+        "type": "object",
+        "properties": {
+          "max_file_size_mb": {
+            "type": "number",
+            "default": 50,
+            "description": "Dimensione massima file in MB"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "id": "metadata_manager",
+      "name": "Metadata Manager", 
+      "description": "Gestione e arricchimento metadati documenti",
+      "category": "Processing",
+      "icon": "📊",
+      "config_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "id": "document_processor",
+      "name": "Document Processor",
+      "description": "Chunking e preparazione documenti per indicizzazione", 
+      "category": "Processing",
+      "icon": "📝",
+      "config_schema": {
+        "type": "object",
+        "properties": {
+          "chunk_size": {
+            "type": "integer",
+            "default": 512,
+            "description": "Dimensione chunk in caratteri"
+          },
+          "chunk_overlap": {
+            "type": "integer", 
+            "default": 50,
+            "description": "Overlap tra chunk"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "id": "vector_store",
+      "name": "Vector Store Operations",
+      "description": "Operazioni ChromaDB per embedding e ricerca",
+      "category": "Storage", 
+      "icon": "🔍",
+      "config_schema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["index", "search", "update", "delete"],
+            "default": "index",
+            "description": "Operazione da eseguire"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 10,
+            "description": "Limite risultati per operazioni di ricerca"
+          }
+        },
+        "required": ["operation"]
+      }
+    },
+    {
+      "id": "event_logger",
+      "name": "Event Logger",
+      "description": "Sistema logging eventi e audit trail",
+      "category": "Monitoring",
+      "icon": "📋",
+      "config_schema": {
+        "type": "object",
+        "properties": {
+          "log_level": {
+            "type": "string",
+            "enum": ["debug", "info", "warning", "error"],
+            "default": "info",
+            "description": "Livello di logging"
+          },
+          "log_to_file": {
+            "type": "boolean",
+            "default": true,
+            "description": "Scrivi nel file di log"
+          },
+          "log_to_db": {
+            "type": "boolean", 
+            "default": true,
+            "description": "Scrivi nel database audit"
+          }
+        },
+        "required": []
+      }
+    }
+  ],
+  "dependencies": {
+    "PyPDF2": "^3.0.0",
+    "pdfplumber": "^0.7.0", 
+    "chromadb": "^1.3.4",
+    "sentence-transformers": "^5.1.2"
+  }
+}

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    <style>
+        /* Stili per i modals */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+        
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 80%;
+            max-width: 600px;
+        }
+        
+        .close {
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #333;
+        }
+        
+        /* Stili per i form */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input[type="text"],
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .checkbox-group {
+            margin-top: 5px;
+        }
+        
+        .checkbox-group label {
+            display: block;
+            font-weight: normal;
+            margin: 5px 0;
+        }
+        
+        .form-actions {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        .api-key-display {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        
+        /* Stili per i bottoni nella tabella */
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+    </style>
+    </head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>PramaIA LogService</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="/dashboard/">Ricerca</a></li>
+                <!-- <li><a href="/dashboard/stats">Statistiche</a></li> -->
+                <li><a href="/dashboard/logservice" class="active">LogService</a></li>
+                <!-- <li><a href="/dashboard/settings">Impostazioni</a></li> -->
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="logservice-info">
+            <h2>Informazioni sul LogService</h2>
+            <div class="info-cards">
+                <div class="card">
+                    <h3>Stato del Servizio</h3>
+                    <p class="status-indicator {{ 'status-active' if status.is_running else 'status-inactive' }}">
+                        {{ "Attivo" if status.is_running else "Inattivo" }}
+                    </p>
+                    <p>Attivo da: {{ status.uptime }}</p>
+                </div>
+                <div class="card">
+                    <h3>Connessioni</h3>
+                    <p class="big-number">{{ status.active_connections }}</p>
+                    <p>Connessioni totali: {{ status.total_connections }}</p>
+                </div>
+                <div class="card">
+                    <h3>Log ricevuti</h3>
+                    <p class="big-number">{{ status.logs_received_today }}</p>
+                    <p>Oggi (ultimi 24h)</p>
+                </div>
+                <div class="card">
+                    <h3>Database</h3>
+                    <p>Dimensione: {{ status.db_size }}</p>
+                    <p>Log totali: {{ status.total_logs }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="clients-info">
+            <h2>Client Attivi</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Client ID</th>
+                            <th>Progetto</th>
+                            <th>Modulo</th>
+                            <th>Ultimo log</th>
+                            <th>Log inviati</th>
+                            <th>Stato</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in clients %}
+                        <tr>
+                            <td>{{ client.id }}</td>
+                            <td>{{ client.project }}</td>
+                            <td>{{ client.module }}</td>
+                            <td>{{ client.last_log_time }}</td>
+                            <td>{{ client.logs_sent }}</td>
+                            <td class="status-{{ client.status }}">{{ client.status }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="api-keys">
+            <h2>Chiavi API</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Chiave</th>
+                            <th>Progetto</th>
+                            <th>Creata</th>
+                            <th>Ultimo utilizzo</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in api_keys %}
+                        <tr data-key-id="{{ key.id|default('unknown') }}" data-key-name="{{ key.name|default('API Key') }}">
+                            <td>{{ key.name }}</td>
+                            <td><span class="api-key-masked">{{ key.key_masked }}</span></td>
+                            <td>{{ key.project }}</td>
+                            <td>{{ key.created_at }}</td>
+                            <td>{{ key.last_used }}</td>
+                            <td>
+                                <button class="btn-small btn-primary regenerate-key">Rigenera</button>
+                                <button class="btn-small btn-danger delete-key">Elimina</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                </table>
+                <div class="actions">
+                    <button class="btn-primary" id="add-api-key">Aggiungi Chiave API</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="retention-settings">
+            <h2>Impostazioni di Conservazione</h2>
+            <div class="card">
+                <h3>Gestione del Ciclo di Vita dei Log</h3>
+                <form class="settings-form" action="/api/settings/retention" method="post">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="retention_days">Conservazione log (giorni):</label>
+                            <input type="number" id="retention_days" name="retention_days" min="1" max="3650" value="{{ settings.retention_days }}">
+                            <p class="form-help">Numero di giorni per cui conservare i log prima di eliminarli.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="enable_compression">
+                                <input type="checkbox" id="enable_compression" name="enable_compression" {% if settings.enable_log_compression %}checked{% endif %}>
+                                Attiva compressione automatica
+                            </label>
+                            <p class="form-help">Comprimi automaticamente i log più vecchi per risparmiare spazio.</p>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="compress_after_days">Comprimi dopo (giorni):</label>
+                            <input type="number" id="compress_after_days" name="compress_after_days" min="1" max="365" value="{{ settings.compress_logs_older_than_days }}">
+                            <p class="form-help">Comprimi i log più vecchi di questo numero di giorni.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="archive_retention_days">Conservazione archivi (giorni):</label>
+                            <input type="number" id="archive_retention_days" name="archive_retention_days" min="1" max="3650" value="{{ settings.compressed_logs_retention_days }}">
+                            <p class="form-help">Numero di giorni per cui conservare gli archivi compressi.</p>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Salva Impostazioni</button>
+                        <button type="button" class="btn-secondary" id="run-maintenance">Esegui Manutenzione Ora</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="integration-guide">
+            <h2>Guida all'Integrazione</h2>
+            <div class="tabs">
+                <div class="tab-headers">
+                    <button class="tab-btn active" data-tab="js">JavaScript</button>
+                    <button class="tab-btn" data-tab="python">Python</button>
+                    <button class="tab-btn" data-tab="pdk">PDK</button>
+                    <button class="tab-btn" data-tab="server">PramaIAServer</button>
+                </div>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="js">
+                        <h3>Integrazione JavaScript</h3>
+                        <pre><code>// Installa il client
+npm install pramaialog
+
+// Importa e inizializza
+const { PramaIALogger, LogLevel, LogProject } = require('pramaialog');
+
+const logger = new PramaIALogger({
+    apiKey: "your_api_key",
+    project: LogProject.PDK,
+    module: "plugin_name",
+    host: "{{ settings.host if settings.host else 'http://localhost' }}{% if settings.port %}:{{ settings.port }}{% else %}:8081{% endif %}"
+});
+
+// Utilizza il logger
+logger.info("Applicazione avviata");
+logger.error("Errore durante l'elaborazione", 
+    { error: err.message }, 
+    { userId: "admin" });
+</code></pre>
+                    </div>
+                    <div class="tab-pane" id="python">
+                        <h3>Integrazione Python</h3>
+                        <pre><code># Installa il client
+pip install pramaialog
+
+# Importa e inizializza
+from pramaialog import PramaIALogger, LogLevel, LogProject
+
+logger = PramaIALogger(
+    api_key="your_api_key",
+    project=LogProject.SERVER,
+    module="workflow_service",
+    host="{{ settings.host if settings.host else 'http://localhost' }}{% if settings.port %}:{{ settings.port }}{% else %}:8081{% endif %}"
+)
+
+# Utilizza il logger
+logger.info("Servizio avviato")
+logger.error("Errore durante il caricamento", 
+    details={"workflow_id": "123", "error": str(e)},
+    context={"user_id": "admin"})
+</code></pre>
+                    </div>
+                    <div class="tab-pane" id="pdk">
+                        <h3>Integrazione con PDK</h3>
+                        <pre><code>// Usa il LogService dal PDK
+import { LogService, LogLevel } from '../services/log-service.js';
+
+// Ottieni l'istanza singleton
+const logger = LogService.getInstance();
+
+// Ottieni un logger specifico per un modulo
+const moduleLogger = logger.getModuleLogger('NomeTuoModulo');
+
+// Usa il logger
+moduleLogger.info('Messaggio informativo');
+moduleLogger.error('Errore durante l\'elaborazione', 
+    { nodeId: 'node-123', error: e.message },
+    { workflowId: workflow.id });
+</code></pre>
+                    </div>
+                    <div class="tab-pane" id="server">
+                        <h3>Integrazione con PramaIAServer</h3>
+                        <pre><code># Configura il logger nel file utils/logging.py
+from pramaialog import PramaIALogger, LogLevel, LogProject
+
+# Crea un'istanza globale del logger
+logger = PramaIALogger(
+    api_key="your_api_key",
+    project=LogProject.SERVER,
+    module="pramaiaserver",
+    host="{{ settings.host if settings.host else 'http://localhost' }}{% if settings.port %}:{{ settings.port }}{% else %}:8081{% endif %}"
+)
+
+# Nei tuoi file
+from utils.logging import logger
+
+logger.info("API richiesta ricevuta", 
+    details={"endpoint": "/api/workflows"},
+    context={"user_id": user.id})
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    
+    <!-- Modal per la creazione di una nuova API key -->
+    <div id="create-api-key-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Crea Nuova API Key</h3>
+            <form id="create-api-key-form">
+                <div class="form-group">
+                    <label for="key-name">Nome:</label>
+                    <input type="text" id="key-name" name="key-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Progetti:</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="projects" value="PramaIAServer"> PramaIAServer</label>
+                        <label><input type="checkbox" name="projects" value="PramaIA-PDK"> PramaIA-PDK</label>
+                        <label><input type="checkbox" name="projects" value="PramaIA-Agents"> PramaIA-Agents</label>
+                        <label><input type="checkbox" name="projects" value="PramaIA-Plugins"> PramaIA-Plugins</label>
+                        <label><input type="checkbox" name="projects" value="other"> Altro</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="key-expiry">Scadenza (giorni, lasciare vuoto per nessuna scadenza):</label>
+                    <input type="number" id="key-expiry" name="key-expiry" min="1">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Crea</button>
+                    <button type="button" class="btn-secondary modal-cancel">Annulla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal per visualizzare una nuova API key creata -->
+    <div id="show-api-key-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Nuova API Key Creata</h3>
+            <p>La tua nuova API key è stata creata con successo. Assicurati di salvare questa chiave, non sarà più possibile visualizzarla dopo aver chiuso questa finestra.</p>
+            <div class="api-key-display">
+                <p><strong>Nome:</strong> <span id="new-key-name"></span></p>
+                <p><strong>Chiave:</strong> <span id="new-key-value"></span></p>
+                <p><strong>Progetti:</strong> <span id="new-key-projects"></span></p>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="copy-api-key" class="btn-primary">Copia Chiave</button>
+                <button type="button" class="btn-secondary modal-close">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal di conferma eliminazione -->
+    <div id="confirm-delete-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Conferma Eliminazione</h3>
+            <p>Sei sicuro di voler eliminare la API key <strong><span id="delete-key-name"></span></strong>?</p>
+            <p>Questa operazione non può essere annullata.</p>
+            <div class="form-actions">
+                <button type="button" id="confirm-delete-btn" class="btn-danger">Elimina</button>
+                <button type="button" class="btn-secondary modal-cancel">Annulla</button>
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 PramaIA LogService</p>
+    </footer>
+
+    <script>
+        // Tab navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons and panes
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+                    
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    // Show corresponding pane
+                    const tabId = this.dataset.tab;
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Gestione del pulsante "Esegui Manutenzione Ora"
+            const runMaintenanceButton = document.getElementById('run-maintenance');
+            if (runMaintenanceButton) {
+                runMaintenanceButton.addEventListener('click', async function() {
+                    if (confirm('Sei sicuro di voler eseguire la manutenzione ora? Questa operazione può richiedere del tempo.')) {
+                        runMaintenanceButton.disabled = true;
+                        runMaintenanceButton.textContent = 'Manutenzione in corso...';
+                        
+                        try {
+                            const response = await fetch('/maintenance', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                                alert(`Manutenzione completata con successo!\n\nLog compressi: ${result.details.compressed_logs}\nLog eliminati: ${result.details.deleted_logs}\nArchivi eliminati: ${result.details.archived_logs}`);
+                            } else {
+                                alert('Errore durante l\'esecuzione della manutenzione. Controlla i log del server.');
+                            }
+                        } catch (error) {
+                            alert(`Errore: ${error.message}`);
+                        } finally {
+                            runMaintenanceButton.disabled = false;
+                            runMaintenanceButton.textContent = 'Esegui Manutenzione Ora';
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Variabili globali per i modals
+            const createApiKeyModal = document.getElementById('create-api-key-modal');
+            const showApiKeyModal = document.getElementById('show-api-key-modal');
+            const confirmDeleteModal = document.getElementById('confirm-delete-modal');
+            let currentKeyId = null;
+            
+            // Funzione per mostrare un modal
+            function openModal(modal) {
+                if (modal) {
+                    modal.style.display = 'block';
+                }
+            }
+            
+            // Funzione per nascondere un modal
+            function closeModal(modal) {
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            }
+            
+            // Gestione del pulsante "Aggiungi Chiave API"
+            const addKeyButton = document.getElementById('add-api-key');
+            if (addKeyButton) {
+                addKeyButton.addEventListener('click', function() {
+                    openModal(createApiKeyModal);
+                });
+            }
+            
+            // Gestione del form di creazione API key
+            const createKeyForm = document.getElementById('create-api-key-form');
+            if (createKeyForm) {
+                createKeyForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const keyName = document.getElementById('key-name').value;
+                    const keyExpiry = document.getElementById('key-expiry').value;
+                    const projectCheckboxes = document.querySelectorAll('input[name="projects"]:checked');
+                    
+                    const projects = Array.from(projectCheckboxes).map(cb => cb.value);
+                    
+                    if (projects.length === 0) {
+                        alert('Seleziona almeno un progetto');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/settings/api-keys', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-API-Key': 'pramaiaadmin_api_key_123456'  // Usa una chiave API valida per il tuo ambiente
+                            },
+                            body: JSON.stringify({
+                                name: keyName,
+                                projects: projects,
+                                expiry_days: keyExpiry ? parseInt(keyExpiry) : null
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        
+                        const result = await response.json();
+                        
+                        // Mostra la nuova chiave
+                        document.getElementById('new-key-name').textContent = result.name;
+                        document.getElementById('new-key-value').textContent = result.key;
+                        document.getElementById('new-key-projects').textContent = result.projects.join(', ');
+                        
+                        // Nascondi il modal di creazione e mostra quello della chiave
+                        closeModal(createApiKeyModal);
+                        openModal(showApiKeyModal);
+                        
+                        // Resetta il form
+                        createKeyForm.reset();
+                        
+                        // Ricarica la pagina dopo 5 secondi per mostrare la nuova chiave nella tabella
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 5000);
+                        
+                    } catch (error) {
+                        alert(`Errore durante la creazione della API key: ${error.message}`);
+                    }
+                });
+            }
+            
+            // Gestione del pulsante "Copia Chiave"
+            const copyKeyButton = document.getElementById('copy-api-key');
+            if (copyKeyButton) {
+                copyKeyButton.addEventListener('click', function() {
+                    const keyValue = document.getElementById('new-key-value').textContent;
+                    
+                    // Copia la chiave negli appunti
+                    navigator.clipboard.writeText(keyValue)
+                        .then(() => {
+                            alert('API key copiata negli appunti!');
+                        })
+                        .catch(err => {
+                            console.error('Errore durante la copia: ', err);
+                        });
+                });
+            }
+            
+            // Gestione dei pulsanti "Rigenera"
+            const regenerateButtons = document.querySelectorAll('.regenerate-key');
+            regenerateButtons.forEach(button => {
+                button.addEventListener('click', async function() {
+                    const row = this.closest('tr');
+                    const keyId = row.dataset.keyId;
+                    const keyName = row.dataset.keyName;
+                    
+                    if (confirm(`Sei sicuro di voler rigenerare la API key "${keyName}"?`)) {
+                        try {
+                            const response = await fetch(`/api/settings/api-keys/${keyId}/regenerate`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-API-Key': 'pramaiaadmin_api_key_123456'  // Usa una chiave API valida per il tuo ambiente
+                                }
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+                            
+                            const result = await response.json();
+                            
+                            // Mostra la nuova chiave
+                            document.getElementById('new-key-name').textContent = result.name;
+                            document.getElementById('new-key-value').textContent = result.key;
+                            document.getElementById('new-key-projects').textContent = keyName;
+                            
+                            // Aggiorna la chiave mascherata nella tabella
+                            row.querySelector('.api-key-masked').textContent = result.key_masked;
+                            
+                            // Mostra il modal con la nuova chiave
+                            openModal(showApiKeyModal);
+                            
+                        } catch (error) {
+                            alert(`Errore durante la rigenerazione della API key: ${error.message}`);
+                        }
+                    }
+                });
+            });
+            
+            // Gestione dei pulsanti "Elimina"
+            const deleteButtons = document.querySelectorAll('.delete-key');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    const keyId = row.dataset.keyId;
+                    const keyName = row.dataset.keyName;
+                    
+                    // Imposta i dati del modal di conferma
+                    document.getElementById('delete-key-name').textContent = keyName;
+                    currentKeyId = keyId;
+                    
+                    // Mostra il modal di conferma
+                    openModal(confirmDeleteModal);
+                });
+            });
+            
+            // Gestione del pulsante di conferma eliminazione
+            const confirmDeleteButton = document.getElementById('confirm-delete-btn');
+            if (confirmDeleteButton) {
+                confirmDeleteButton.addEventListener('click', async function() {
+                    if (!currentKeyId) {
+                        alert('Errore: ID chiave non valido');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`/api/settings/api-keys/${currentKeyId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-API-Key': 'pramaiaadmin_api_key_123456'  // Usa una chiave API valida per il tuo ambiente
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        
+                        const result = await response.json();
+                        
+                        // Nascondi il modal di conferma
+                        closeModal(confirmDeleteModal);
+                        
+                        // Rimuovi la riga dalla tabella
+                        const row = document.querySelector(`tr[data-key-id="${currentKeyId}"]`);
+                        if (row) {
+                            row.remove();
+                        }
+                        
+                        alert(result.message);
+                        
+                    } catch (error) {
+                        alert(`Errore durante l'eliminazione della API key: ${error.message}`);
+                    } finally {
+                        currentKeyId = null;
+                    }
+                });
+            }
+            
+            // Gestione dei pulsanti di chiusura dei modals
+            document.querySelectorAll('.close, .modal-cancel, .modal-close').forEach(button => {
+                button.addEventListener('click', function() {
+                    closeModal(this.closest('.modal'));
+                });
+            });
+            
+            // Chiudi i modals quando si clicca fuori
+            window.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal')) {
+                    closeModal(event.target);
+                }
+            });
+        });
+    </script>
+    
+</body>
+</html>

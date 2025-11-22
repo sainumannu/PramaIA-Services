@@ -1,0 +1,13 @@
+watchdog
+pdfplumber
+sentence-transformers
+qdrant-client
+fastapi
+uvicorn
+python-dotenv
+requests
+sqlite3
+asyncio
+aiohttp
+# PramaIALogger - Installazione locale dal percorso relativo
+../PramaIA-LogService/clients/python/

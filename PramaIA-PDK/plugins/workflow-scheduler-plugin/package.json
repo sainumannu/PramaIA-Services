@@ -1,0 +1,15 @@
+{
+  "name": "workflow-scheduler-plugin",
+  "version": "1.0.0",
+  "description": "Plugin per la schedulazione dell'esecuzione dei workflow",
+  "type": "module",
+  "main": "src/index.js",
+  "author": "PramaIA Team",
+  "license": "MIT",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@pramaia/plugin-development-kit": "^1.0.0"
+  }
+}

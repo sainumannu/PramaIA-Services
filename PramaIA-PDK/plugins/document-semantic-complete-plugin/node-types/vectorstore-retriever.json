@@ -1,0 +1,69 @@
+{
+    "nodeType": "vectorstore-retriever",
+    "title": "Vectorstore Retriever",
+    "description": "Recupera documenti simili usando il servizio VectorstoreService",
+    "icon": "database-search",
+    "category": "Vectorstore",
+    "version": "1.0.0",
+    "inputs": [
+        {
+            "name": "query_embeddings",
+            "title": "Query Embeddings",
+            "description": "Input contenente query e embeddings",
+            "type": "object",
+            "required": true
+        }
+    ],
+    "outputs": [
+        {
+            "name": "retrieved_documents",
+            "title": "Retrieved Documents",
+            "description": "Documenti recuperati",
+            "type": "array"
+        },
+        {
+            "name": "retrieval_metadata",
+            "title": "Retrieval Metadata",
+            "description": "Metadati dell'operazione di retrieval",
+            "type": "object"
+        }
+    ],
+    "config": [
+        {
+            "name": "collection_name",
+            "title": "Collection Name",
+            "description": "Nome della collezione da cui recuperare i documenti",
+            "type": "string",
+            "defaultValue": "documents"
+        },
+        {
+            "name": "service_url",
+            "title": "Service URL",
+            "description": "URL del servizio VectorstoreService",
+            "type": "string",
+            "defaultValue": "http://localhost:8090"
+        },
+        {
+            "name": "max_results",
+            "title": "Max Results",
+            "description": "Numero massimo di risultati da restituire",
+            "type": "number",
+            "defaultValue": 5
+        },
+        {
+            "name": "similarity_threshold",
+            "title": "Similarity Threshold",
+            "description": "Soglia di similarità minima (0-1)",
+            "type": "number",
+            "defaultValue": 0.7
+        },
+        {
+            "name": "include_metadata",
+            "title": "Include Metadata",
+            "description": "Includere i metadati nei risultati",
+            "type": "boolean",
+            "defaultValue": true
+        }
+    ],
+    "processorPath": "src/vectorstore_retriever_processor.py"
+}

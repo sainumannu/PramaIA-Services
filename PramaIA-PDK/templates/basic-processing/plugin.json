@@ -1,0 +1,36 @@
+{
+  "name": "{{name}}",
+  "version": "1.0.0",
+  "description": "{{description}}",
+  "author": "{{author}}",
+  "license": "MIT",
+  "pdk_version": "^1.0.0",
+  "engine_compatibility": "^1.0.0",
+  "nodes": [
+    {
+      "id": "{{nodeId}}",
+      "name": "{{name}}",
+      "type": "processing",
+      "category": "Data Transform",
+      "description": "{{description}}",
+      "inputs": [
+        {
+          "name": "data",
+          "type": "any",
+          "required": true,
+          "description": "Input data to process"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "any",
+          "description": "Processed data result"
+        }
+      ],
+      "async": true,
+      "timeout": 30000,
+      "retry_count": 0
+    }
+  ]
+}

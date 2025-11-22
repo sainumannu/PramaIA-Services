@@ -1,0 +1,7 @@
+pramaialog.py
+setup.py
+pramaialog.egg-info/PKG-INFO
+pramaialog.egg-info/SOURCES.txt
+pramaialog.egg-info/dependency_links.txt
+pramaialog.egg-info/requires.txt
+pramaialog.egg-info/top_level.txt

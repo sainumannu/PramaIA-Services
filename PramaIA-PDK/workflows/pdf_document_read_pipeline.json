@@ -1,0 +1,399 @@
+{
+  "workflow_id": "pdf_document_read_pipeline",
+  "name": "PDF Document READ Pipeline", 
+  "description": "Pipeline completa per la ricerca e lettura di documenti PDF con query ibrida (metadati + semantico) usando architettura Backend + PDK",
+  "is_active": true,
+  "is_public": true,
+  "category": "CRUD",
+  "tags": ["pdf", "read", "search", "metadata", "semantic", "pdk", "hybrid-query"],
+  "architecture": "backend_pdk_distributed",
+  "nodes": [
+    {
+      "node_id": "query_input_processor",
+      "node_type": "query_input_node",
+      "name": "Query Input Processor",
+      "description": "Elaborazione e validazione query utente (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": [],
+        "outputPorts": ["processed_query", "query_metadata", "query_type"],
+        "additionalConfig": {
+          "max_query_length": 1000,
+          "language_detection": true,
+          "query_sanitization": true,
+          "intent_classification": true
+        }
+      },
+      "position": { "x": 100, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "query_router",
+      "node_type": "json_processor",
+      "name": "Query Router",
+      "description": "Routing intelligente query verso ricerca metadati e/o semantica (Backend)",
+      "execution_context": "backend", 
+      "config": {
+        "inputPorts": ["processed_query", "query_type", "query_metadata"],
+        "outputPorts": ["metadata_query", "semantic_query", "routing_strategy"],
+        "additionalConfig": {
+          "enable_hybrid_search": true,
+          "metadata_query_patterns": ["author:", "date:", "title:", "id:"],
+          "semantic_query_threshold": 0.3,
+          "routing_algorithm": "intelligent"
+        }
+      },
+      "position": { "x": 400, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "metadata_searcher",
+      "node_type": "vector_store", 
+      "name": "Metadata Database Searcher",
+      "description": "Ricerca strutturata nel database metadati (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["metadata_query", "routing_strategy"],
+        "outputPorts": ["metadata_results", "search_metadata"],
+        "additionalConfig": {
+          "table_name": "pdf_documents",
+          "enable_fulltext_search": true,
+          "max_results": 50,
+          "search_indexes": ["title", "author", "content_preview"],
+          "ranking_algorithm": "relevance_score"
+        }
+      },
+      "position": { "x": 700, "y": 50 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_query_embedder",
+      "node_type": "text_embedder",
+      "name": "Query Embedder (PDK)",
+      "description": "Conversione query utente in embedding vettoriale (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["semantic_query"],
+        "outputPorts": ["query_embedding", "embedding_metadata"],
+        "additionalConfig": {
+          "model": "sentence-transformers/all-MiniLM-L6-v2",
+          "normalize_embedding": true,
+          "dimensions": 384,
+          "query_expansion": false
+        }
+      },
+      "position": { "x": 700, "y": 200 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_semantic_search",
+      "node_type": "chroma_retriever",
+      "name": "Semantic Vector Search (PDK)",
+      "description": "Ricerca semantica nel database vettoriale ChromaDB (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["query_embedding", "routing_strategy"],
+        "outputPorts": ["semantic_results", "similarity_scores"],
+        "additionalConfig": {
+          "collection_name": "pdf_documents",
+          "top_k": 20,
+          "score_threshold": 0.6,
+          "distance_metric": "cosine",
+          "include_metadata": true
+        }
+      },
+      "position": { "x": 1000, "y": 200 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "result_merger",
+      "node_type": "data_merger",
+      "name": "Results Merger & Ranker", 
+      "description": "Merge e ranking risultati da ricerca metadati e semantica (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["metadata_results", "semantic_results", "similarity_scores", "search_metadata"],
+        "outputPorts": ["merged_results", "ranking_metadata"],
+        "additionalConfig": {
+          "merge_strategy": "hybrid_weighted",
+          "metadata_weight": 0.4,
+          "semantic_weight": 0.6,
+          "deduplication": true,
+          "max_final_results": 10
+        }
+      },
+      "position": { "x": 1300, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_context_builder",
+      "node_type": "rag_prompt_builder",
+      "name": "Context Builder (PDK)",
+      "description": "Costruzione contesto per generazione risposta con LLM (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["merged_results", "processed_query"],
+        "outputPorts": ["context", "source_documents"],
+        "additionalConfig": {
+          "max_context_length": 4000,
+          "context_template": "Query: {query}\n\nContesto rilevante:\n{documents}",
+          "include_sources": true,
+          "snippet_length": 300
+        }
+      },
+      "position": { "x": 1600, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "pdk_llm_processor",
+      "node_type": "llm_processor",
+      "name": "LLM Response Generator (PDK)",
+      "description": "Generazione risposta contestualizzata tramite LLM (PDK)",
+      "execution_context": "pdk",
+      "config": {
+        "inputPorts": ["context", "processed_query"],
+        "outputPorts": ["llm_response", "generation_metadata"],
+        "additionalConfig": {
+          "model": "ollama/llama3.2",
+          "temperature": 0.7,
+          "max_tokens": 1000,
+          "system_prompt": "Sei un assistente AI specializzato nell'analisi di documenti. Rispondi alla domanda utilizzando esclusivamente le informazioni presenti nei documenti forniti."
+        }
+      },
+      "position": { "x": 1900, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "response_formatter",
+      "node_type": "document_results_formatter", 
+      "name": "Response Formatter",
+      "description": "Formattazione finale risposta con metadati e citazioni (Backend)",
+      "execution_context": "backend",
+      "config": {
+        "inputPorts": ["llm_response", "source_documents", "ranking_metadata", "generation_metadata"],
+        "outputPorts": ["formatted_response", "response_analytics"],
+        "additionalConfig": {
+          "output_format": "markdown",
+          "include_citations": true,
+          "include_confidence_scores": true,
+          "include_source_links": true,
+          "add_related_suggestions": true
+        }
+      },
+      "position": { "x": 2200, "y": 100 },
+      "width": 220,
+      "height": 100
+    },
+    {
+      "node_id": "search_analytics",
+      "node_type": "event_logger",
+      "name": "Search Analytics Tracker",
+      "description": "Tracciamento analytics e miglioramento future ricerche (Backend)",
+      "execution_context": "backend", 
+      "config": {
+        "inputPorts": ["query_metadata", "response_analytics", "ranking_metadata"],
+        "outputPorts": ["analytics_result"],
+        "additionalConfig": {
+          "track_query_performance": true,
+          "update_search_statistics": true,
+          "improve_ranking_algorithm": true,
+          "log_user_interactions": true
+        }
+      },
+      "position": { "x": 1600, "y": 300 },
+      "width": 220,
+      "height": 100
+    }
+  ],
+  "connections": [
+    {
+      "from_node_id": "query_input_processor",
+      "to_node_id": "query_router",
+      "from_port": "processed_query",
+      "to_port": "processed_query"
+    },
+    {
+      "from_node_id": "query_input_processor", 
+      "to_node_id": "query_router",
+      "from_port": "query_type",
+      "to_port": "query_type"
+    },
+    {
+      "from_node_id": "query_input_processor",
+      "to_node_id": "query_router", 
+      "from_port": "query_metadata",
+      "to_port": "query_metadata"
+    },
+    {
+      "from_node_id": "query_router",
+      "to_node_id": "metadata_searcher",
+      "from_port": "metadata_query",
+      "to_port": "metadata_query"
+    },
+    {
+      "from_node_id": "query_router",
+      "to_node_id": "metadata_searcher",
+      "from_port": "routing_strategy", 
+      "to_port": "routing_strategy"
+    },
+    {
+      "from_node_id": "query_router",
+      "to_node_id": "pdk_query_embedder",
+      "from_port": "semantic_query",
+      "to_port": "semantic_query"
+    },
+    {
+      "from_node_id": "pdk_query_embedder",
+      "to_node_id": "pdk_semantic_search",
+      "from_port": "query_embedding",
+      "to_port": "query_embedding"
+    },
+    {
+      "from_node_id": "query_router",
+      "to_node_id": "pdk_semantic_search",
+      "from_port": "routing_strategy",
+      "to_port": "routing_strategy"
+    },
+    {
+      "from_node_id": "metadata_searcher",
+      "to_node_id": "result_merger",
+      "from_port": "metadata_results",
+      "to_port": "metadata_results"
+    },
+    {
+      "from_node_id": "metadata_searcher",
+      "to_node_id": "result_merger", 
+      "from_port": "search_metadata",
+      "to_port": "search_metadata"
+    },
+    {
+      "from_node_id": "pdk_semantic_search",
+      "to_node_id": "result_merger",
+      "from_port": "semantic_results",
+      "to_port": "semantic_results"
+    },
+    {
+      "from_node_id": "pdk_semantic_search",
+      "to_node_id": "result_merger",
+      "from_port": "similarity_scores",
+      "to_port": "similarity_scores"
+    },
+    {
+      "from_node_id": "result_merger",
+      "to_node_id": "pdk_context_builder",
+      "from_port": "merged_results",
+      "to_port": "merged_results"
+    },
+    {
+      "from_node_id": "query_input_processor",
+      "to_node_id": "pdk_context_builder",
+      "from_port": "processed_query",
+      "to_port": "processed_query"
+    },
+    {
+      "from_node_id": "pdk_context_builder",
+      "to_node_id": "pdk_llm_processor",
+      "from_port": "context",
+      "to_port": "context"
+    },
+    {
+      "from_node_id": "query_input_processor",
+      "to_node_id": "pdk_llm_processor",
+      "from_port": "processed_query",
+      "to_port": "processed_query"
+    },
+    {
+      "from_node_id": "pdk_llm_processor",
+      "to_node_id": "response_formatter",
+      "from_port": "llm_response",
+      "to_port": "llm_response"
+    },
+    {
+      "from_node_id": "pdk_llm_processor",
+      "to_node_id": "response_formatter",
+      "from_port": "generation_metadata",
+      "to_port": "generation_metadata"
+    },
+    {
+      "from_node_id": "pdk_context_builder", 
+      "to_node_id": "response_formatter",
+      "from_port": "source_documents",
+      "to_port": "source_documents"
+    },
+    {
+      "from_node_id": "result_merger",
+      "to_node_id": "response_formatter",
+      "from_port": "ranking_metadata",
+      "to_port": "ranking_metadata"
+    },
+    {
+      "from_node_id": "query_input_processor",
+      "to_node_id": "search_analytics",
+      "from_port": "query_metadata", 
+      "to_port": "query_metadata"
+    },
+    {
+      "from_node_id": "response_formatter",
+      "to_node_id": "search_analytics",
+      "from_port": "response_analytics",
+      "to_port": "response_analytics"
+    },
+    {
+      "from_node_id": "result_merger",
+      "to_node_id": "search_analytics",
+      "from_port": "ranking_metadata",
+      "to_port": "ranking_metadata"
+    }
+  ],
+  "execution_strategy": {
+    "type": "hybrid_backend_pdk",
+    "backend_orchestration": true,
+    "pdk_processing": true,
+    "parallel_execution": true,
+    "query_optimization": "adaptive"
+  },
+  "view_state": {
+    "zoom": 0.6,
+    "pan_x": -100,
+    "pan_y": 0
+  },
+  "metadata": {
+    "version": "2.0",
+    "created_at": "2025-11-15T00:00:00Z",
+    "author": "PramaIA Team",
+    "architecture": "Backend + PDK Distributed",
+    "crud_operation": "READ",
+    "search_types": ["metadata_structured", "semantic_vector", "hybrid_merged"],
+    "execution_contexts": {
+      "backend_nodes": [
+        "query_input_processor",
+        "query_router",
+        "metadata_searcher",
+        "result_merger", 
+        "response_formatter",
+        "search_analytics"
+      ],
+      "pdk_nodes": [
+        "pdk_query_embedder",
+        "pdk_semantic_search",
+        "pdk_context_builder",
+        "pdk_llm_processor"
+      ]
+    },
+    "data_flow": {
+      "input": "User Query (Text)",
+      "backend_search": "Structured Metadata Search",
+      "pdk_search": "Semantic Vector Search", 
+      "merge": "Hybrid Results Ranking",
+      "output": "Contextualized Response with Citations"
+    }
+  }
+}

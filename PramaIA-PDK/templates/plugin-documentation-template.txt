@@ -1,0 +1,45 @@
+NOME PLUGIN
+==========
+
+ID Plugin: nome-plugin
+Versione: x.y.z
+Tipo: input/processing/output/control
+Categoria: Categoria del nodo
+
+DESCRIZIONE
+-----------
+Breve descrizione delle funzionalità del plugin.
+
+INGRESSI/USCITE
+--------------
+- Ingresso1: Descrizione
+- Ingresso2: Descrizione
+- Uscita1: Descrizione
+- Uscita2: Descrizione
+
+CONFIGURAZIONE
+-------------
+Parametro1: Descrizione
+Parametro2: Descrizione
+
+ESEMPIO
+-------
+{
+  "id": "esempio_nodo",
+  "type": "pdk_nome-plugin_nome_nodo",
+  "config": {
+    "param1": "valore1",
+    "param2": {
+      "subparam1": "valore"
+    }
+  }
+}
+
+NOTE
+----
+- Nota 1
+- Nota 2
+
+REQUISITI
+---------
+- PDK versione: x.y.z o superiore

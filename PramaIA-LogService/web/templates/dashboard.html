@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <!-- <script src="/static/js/charts.min.js"></script> -->
+
+    <style>
+        .actions {
+            margin-top: 10px;
+            margin-bottom: 20px;
+            text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn-danger {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-danger:hover {
+            background-color: #c9302c;
+        }
+        .btn-danger:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        .btn-warning {
+            background-color: #f0ad4e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-warning:hover {
+            background-color: #ec971f;
+        }
+        .btn-warning:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+    </style>
+    </head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>PramaIA LogService</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="/dashboard" class="active">Dashboard</a></li>
+                <li><a href="/dashboard/search">Ricerca</a></li>
+                <!-- <li><a href="/dashboard/stats">Statistiche</a></li> -->
+                <li><a href="/dashboard/logservice">LogService</a></li>
+                <!-- <li><a href="/dashboard/settings">Impostazioni</a></li> -->
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="overview">
+            <h2>Panoramica</h2>
+            <div class="stats-cards">
+                <div class="card">
+                    <h3>Totale Log</h3>
+                    <p class="big-number">{{ stats.total_logs }}</p>
+                </div>
+                <div class="card">
+                    <h3>Errori</h3>
+                    <p class="big-number">{{ stats.logs_by_level.get('error', 0) + stats.logs_by_level.get('critical', 0) }}</p>
+                </div>
+                <div class="card">
+                    <h3>Avvisi</h3>
+                    <p class="big-number">{{ stats.logs_by_level.get('warning', 0) }}</p>
+                </div>
+                <div class="card">
+                    <h3>Info</h3>
+                    <p class="big-number">{{ stats.logs_by_level.get('info', 0) }}</p>
+                </div>
+            </div>
+            
+            <!-- Grafici temporaneamente disabilitati
+            <div class="charts-container">
+                <div class="chart">
+                    <h3>Log per livello</h3>
+                    <canvas id="levelChart"></canvas>
+                </div>
+                <div class="chart">
+                    <h3>Log per progetto</h3>
+                    <canvas id="projectChart"></canvas>
+                </div>
+            </div>
+            -->
+        </section>
+
+        <section class="recent-logs">
+            <h2>Log Recenti</h2>
+            <div class="actions">
+                <button id="reset-recent-logs" class="btn-warning">Reset Log Recenti (24h)</button>
+                <button id="reset-all-logs" class="btn-danger">Reset Tutti i Log</button>
+            </div>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Progetto</th>
+                            <th>Livello</th>
+                            <th>Modulo</th>
+                            <th>Messaggio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr class="log-level-{{ log.level }}">
+                            <td>{{ log.timestamp }}</td>
+                            <td>{{ log.project }}</td>
+                            <td>{{ log.level }}</td>
+                            <td>{{ log.module }}</td>
+                            <td>{{ log.message }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 PramaIA LogService</p>
+    </footer>
+
+    <!-- Script temporaneamente disabilitati per problemi di compatibilità
+    <script>
+        // Dati per i grafici
+        const levelData = {
+            labels: ['Debug', 'Info', 'Warning', 'Error', 'Critical'],
+            datasets: [{
+                label: 'Log per Livello',
+                data: [
+                    {{ stats.logs_by_level.debug }},
+                    {{ stats.logs_by_level.info }},
+                    {{ stats.logs_by_level.warning }},
+                    {{ stats.logs_by_level.error }},
+                    {{ stats.logs_by_level.critical }}
+                ],
+                backgroundColor: [
+                    '#4CAF50',
+                    '#2196F3',
+                    '#FFC107',
+                    '#FF5722',
+                    '#F44336'
+                ]
+            }]
+        };
+
+        const projectData = {
+            labels: ['Server', 'PDK', 'Agents', 'Plugins', 'Other'],
+            datasets: [{
+                label: 'Log per Progetto',
+                data: [
+                    {{ stats.logs_by_project.PramaIAServer }},
+                    {{ stats.logs_by_project['PramaIA-PDK'] }},
+                    {{ stats.logs_by_project['PramaIA-Agents'] }},
+                    {{ stats.logs_by_project['PramaIA-Plugins'] }},
+                    {{ stats.logs_by_project.other }}
+                ],
+                backgroundColor: [
+                    '#673AB7',
+                    '#3F51B5',
+                    '#009688',
+                    '#795548',
+                    '#607D8B'
+                ]
+            }]
+        };
+
+        // Configurazione grafici
+        window.addEventListener('load', function() {
+            const levelCtx = document.getElementById('levelChart').getContext('2d');
+            new Chart(levelCtx, {
+                type: 'pie',
+                data: levelData,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Log per Livello'
+                        }
+                    }
+                }
+            });
+
+            const projectCtx = document.getElementById('projectChart').getContext('2d');
+            new Chart(projectCtx, {
+                type: 'pie',
+                data: projectData,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Log per Progetto'
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+    -->
+
+    <script>
+        // Funzionalità per i pulsanti di reset dei log
+        document.addEventListener('DOMContentLoaded', function() {
+            const resetRecentButton = document.getElementById('reset-recent-logs');
+            const resetAllButton = document.getElementById('reset-all-logs');
+            
+            // Funzione per reset logs (ultimi N giorni)
+            async function resetLogsRecent(days, button, confirmMessage) {
+                if (confirm(confirmMessage)) {
+                    button.disabled = true;
+                    const originalText = button.textContent;
+                    button.textContent = 'Reset in corso...';
+                    
+                    try {
+                        // Usa l'endpoint reset per i log recenti
+                        const response = await fetch('/api/logs/reset', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-API-Key': 'pramaiaadmin_api_key_123456'  // Usa una chiave API valida per il tuo ambiente
+                            },
+                            body: JSON.stringify({ days: days })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        alert(`Reset completato: ${result.message}`);
+                        
+                        // Ricarica la pagina per mostrare i cambiamenti
+                        window.location.reload();
+                        
+                    } catch (error) {
+                        alert(`Errore durante il reset dei log: ${error.message}`);
+                        button.disabled = false;
+                        button.textContent = originalText;
+                    }
+                }
+            }
+            
+            // Funzione per eliminare TUTTI i log (usa cleanup con days_to_keep=0)
+            async function cleanupAllLogs(button, confirmMessage) {
+                if (confirm(confirmMessage)) {
+                    button.disabled = true;
+                    const originalText = button.textContent;
+                    button.textContent = 'Reset in corso...';
+                    
+                    try {
+                        // Usa l'endpoint cleanup con days_to_keep=0 per eliminare tutti i log
+                        const response = await fetch('/api/logs/cleanup', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-API-Key': 'pramaiaadmin_api_key_123456'  // Usa una chiave API valida per il tuo ambiente
+                            },
+                            body: JSON.stringify({ days_to_keep: 0 })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        alert(`Reset completato: ${result.message}`);
+                        
+                        // Ricarica la pagina per mostrare i cambiamenti
+                        window.location.reload();
+                        
+                    } catch (error) {
+                        alert(`Errore durante il reset dei log: ${error.message}`);
+                        button.disabled = false;
+                        button.textContent = originalText;
+                    }
+                }
+            }
+            
+            // Configura il pulsante per i log recenti (24 ore)
+            if (resetRecentButton) {
+                resetRecentButton.addEventListener('click', function() {
+                    resetLogsRecent(1, resetRecentButton, 'Sei sicuro di voler resettare i log delle ultime 24 ore? Questa operazione non può essere annullata.');
+                });
+            }
+            
+            // Configura il pulsante per tutti i log
+            if (resetAllButton) {
+                resetAllButton.addEventListener('click', function() {
+                    cleanupAllLogs(resetAllButton, 'ATTENZIONE! Stai per eliminare TUTTI i log dal database. Questa operazione è irreversibile. Vuoi continuare?');
+                });
+            }
+        });
+    </script>
+    </body>
+</html>

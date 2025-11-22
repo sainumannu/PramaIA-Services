@@ -1,0 +1,249 @@
+{
+  "id": "webhook-event-source",
+  "name": "webhook-event-source",
+  "version": "1.0.0",
+  "description": "Event source per ricezione webhook HTTP - supporta autenticazione, filtri e trasformazioni payload",
+  "type": "event-source",
+  "lifecycle": "persistent",
+  
+  "tags": ["webhook", "http", "api", "integration", "external"],
+  
+  "entryPoint": "src/event_source.py",
+  "eventTypes": [
+    {
+      "id": "webhook_received",
+      "name": "Webhook Received",
+      "description": "Triggered when a webhook HTTP request is received",
+      "outputs": [
+        {
+          "name": "webhook_id",
+          "type": "string",
+          "description": "Unique ID generated for this webhook call"
+        },
+        {
+          "name": "method",
+          "type": "string",
+          "description": "HTTP method used (GET, POST, PUT, etc.)"
+        },
+        {
+          "name": "url_path",
+          "type": "string",
+          "description": "URL path of the webhook endpoint"
+        },
+        {
+          "name": "headers",
+          "type": "object",
+          "description": "HTTP headers received with the request"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "description": "JSON payload received in the request body"
+        },
+        {
+          "name": "query_params",
+          "type": "object",
+          "description": "URL query parameters"
+        },
+        {
+          "name": "source_ip",
+          "type": "string",
+          "description": "IP address of the webhook sender"
+        },
+        {
+          "name": "received_at",
+          "type": "string",
+          "description": "ISO timestamp when the webhook was received"
+        },
+        {
+          "name": "signature_valid",
+          "type": "boolean",
+          "description": "Whether the webhook signature is valid (if signature verification is enabled)"
+        }
+      ]
+    },
+    {
+      "id": "webhook_validation_failed",
+      "name": "Webhook Validation Failed",
+      "description": "Triggered when a webhook fails authentication or validation",
+      "outputs": [
+        {
+          "name": "webhook_id",
+          "type": "string",
+          "description": "Unique ID generated for this webhook attempt"
+        },
+        {
+          "name": "failure_reason",
+          "type": "string",
+          "description": "Reason for validation failure"
+        },
+        {
+          "name": "source_ip",
+          "type": "string",
+          "description": "IP address of the failed webhook sender"
+        },
+        {
+          "name": "failed_at",
+          "type": "string",
+          "description": "ISO timestamp when the validation failed"
+        },
+        {
+          "name": "headers",
+          "type": "object",
+          "description": "HTTP headers of the failed request"
+        }
+      ]
+    }
+  ],
+  "configSchema": {
+    "title": "Webhook Configuration",
+    "type": "object",
+    "properties": {
+      "port": {
+        "type": "number",
+        "title": "Porta Server",
+        "description": "Porta su cui il server webhook ascolta le richieste",
+        "default": 8080,
+        "minimum": 1024,
+        "maximum": 65535
+      },
+      "host": {
+        "type": "string",
+        "title": "Host Server",
+        "description": "Host su cui il server webhook ascolta (0.0.0.0 per tutte le interfacce)",
+        "default": "0.0.0.0"
+      },
+      "endpoints": {
+        "type": "array",
+        "title": "Endpoint Webhook",
+        "description": "Lista degli endpoint webhook da esporre",
+        "items": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "title": "Percorso Endpoint",
+              "description": "Percorso URL dell'endpoint (es: /github/webhook)",
+              "pattern": "^/.*"
+            },
+            "methods": {
+              "type": "array",
+              "title": "Metodi HTTP",
+              "description": "Metodi HTTP accettati per questo endpoint",
+              "items": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+              },
+              "default": ["POST"]
+            },
+            "auth_required": {
+              "type": "boolean",
+              "title": "Autenticazione Richiesta",
+              "description": "Se questo endpoint richiede autenticazione",
+              "default": false
+            },
+            "secret_token": {
+              "type": "string",
+              "title": "Token Segreto",
+              "description": "Token segreto per validazione signature (opzionale)",
+              "default": ""
+            },
+            "signature_header": {
+              "type": "string",
+              "title": "Header Signature",
+              "description": "Nome dell'header contenente la signature (es: X-Hub-Signature-256)",
+              "default": "X-Hub-Signature-256"
+            },
+            "content_type_filter": {
+              "type": "array",
+              "title": "Filtro Content-Type",
+              "description": "Content-Type accettati (vuoto = tutti)",
+              "items": {
+                "type": "string"
+              },
+              "default": ["application/json"]
+            }
+          },
+          "required": ["path"]
+        },
+        "default": [
+          {
+            "path": "/webhook",
+            "methods": ["POST"],
+            "auth_required": false,
+            "content_type_filter": ["application/json"]
+          }
+        ]
+      },
+      "max_payload_size": {
+        "type": "number",
+        "title": "Dimensione Massima Payload (MB)",
+        "description": "Dimensione massima del payload accettato in MB",
+        "default": 10,
+        "minimum": 1,
+        "maximum": 100
+      },
+      "request_timeout": {
+        "type": "number",
+        "title": "Timeout Richiesta (secondi)",
+        "description": "Timeout per le richieste webhook in secondi",
+        "default": 30,
+        "minimum": 5,
+        "maximum": 300
+      },
+      "rate_limiting": {
+        "type": "object",
+        "title": "Rate Limiting",
+        "description": "Configurazione rate limiting per IP",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Abilitato",
+            "description": "Se abilitare il rate limiting",
+            "default": true
+          },
+          "requests_per_minute": {
+            "type": "number",
+            "title": "Richieste per Minuto",
+            "description": "Numero massimo di richieste per IP per minuto",
+            "default": 60,
+            "minimum": 1
+          },
+          "burst_size": {
+            "type": "number",
+            "title": "Dimensione Burst",
+            "description": "Numero di richieste burst consentite",
+            "default": 10,
+            "minimum": 1
+          }
+        }
+      },
+      "logging": {
+        "type": "object",
+        "title": "Configurazione Logging",
+        "properties": {
+          "log_requests": {
+            "type": "boolean",
+            "title": "Log Richieste",
+            "description": "Se loggare tutte le richieste webhook",
+            "default": true
+          },
+          "log_payloads": {
+            "type": "boolean",
+            "title": "Log Payload",
+            "description": "Se includere i payload nei log (attenzione alla privacy)",
+            "default": false
+          },
+          "log_level": {
+            "type": "string",
+            "title": "Livello Log",
+            "description": "Livello di logging",
+            "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+            "default": "INFO"
+          }
+        }
+      }
+    },
+    "required": ["port", "endpoints"]
+  }
+}

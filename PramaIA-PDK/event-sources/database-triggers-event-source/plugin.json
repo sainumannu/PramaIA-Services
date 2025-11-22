@@ -1,0 +1,572 @@
+{
+  "id": "database-triggers-event-source",
+  "name": "database-triggers-event-source",
+  "version": "1.0.0",
+  "description": "Event source per monitoraggio database triggers e change data capture - supporta PostgreSQL, MySQL, SQLite, SQL Server",
+  "type": "event-source",
+  "lifecycle": "persistent",
+  "entryPoint": "src/event_source.py",
+  "eventTypes": [
+    {
+      "id": "record_inserted",
+      "name": "Record Inserted",
+      "description": "Triggered when a new record is inserted into monitored tables",
+      "outputs": [
+        {
+          "name": "trigger_id",
+          "type": "string",
+          "description": "Unique trigger event ID"
+        },
+        {
+          "name": "database",
+          "type": "string",
+          "description": "Database name"
+        },
+        {
+          "name": "schema",
+          "type": "string",
+          "description": "Schema name (if applicable)"
+        },
+        {
+          "name": "table",
+          "type": "string",
+          "description": "Table name where insert occurred"
+        },
+        {
+          "name": "record_id",
+          "type": "string",
+          "description": "Primary key value of inserted record"
+        },
+        {
+          "name": "new_values",
+          "type": "object",
+          "description": "New record data"
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "description": "ISO timestamp when insert occurred"
+        },
+        {
+          "name": "user",
+          "type": "string",
+          "description": "Database user who performed the insert"
+        },
+        {
+          "name": "metadata",
+          "type": "object",
+          "description": "Additional metadata about the change"
+        }
+      ]
+    },
+    {
+      "id": "record_updated",
+      "name": "Record Updated",
+      "description": "Triggered when a record is updated in monitored tables",
+      "outputs": [
+        {
+          "name": "trigger_id",
+          "type": "string",
+          "description": "Unique trigger event ID"
+        },
+        {
+          "name": "database",
+          "type": "string",
+          "description": "Database name"
+        },
+        {
+          "name": "schema",
+          "type": "string",
+          "description": "Schema name (if applicable)"
+        },
+        {
+          "name": "table",
+          "type": "string",
+          "description": "Table name where update occurred"
+        },
+        {
+          "name": "record_id",
+          "type": "string",
+          "description": "Primary key value of updated record"
+        },
+        {
+          "name": "old_values",
+          "type": "object",
+          "description": "Record data before update"
+        },
+        {
+          "name": "new_values",
+          "type": "object",
+          "description": "Record data after update"
+        },
+        {
+          "name": "changed_fields",
+          "type": "array",
+          "description": "List of fields that were changed"
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "description": "ISO timestamp when update occurred"
+        },
+        {
+          "name": "user",
+          "type": "string",
+          "description": "Database user who performed the update"
+        },
+        {
+          "name": "metadata",
+          "type": "object",
+          "description": "Additional metadata about the change"
+        }
+      ]
+    },
+    {
+      "id": "record_deleted",
+      "name": "Record Deleted",
+      "description": "Triggered when a record is deleted from monitored tables",
+      "outputs": [
+        {
+          "name": "trigger_id",
+          "type": "string",
+          "description": "Unique trigger event ID"
+        },
+        {
+          "name": "database",
+          "type": "string",
+          "description": "Database name"
+        },
+        {
+          "name": "schema",
+          "type": "string",
+          "description": "Schema name (if applicable)"
+        },
+        {
+          "name": "table",
+          "type": "string",
+          "description": "Table name where delete occurred"
+        },
+        {
+          "name": "record_id",
+          "type": "string",
+          "description": "Primary key value of deleted record"
+        },
+        {
+          "name": "old_values",
+          "type": "object",
+          "description": "Record data before deletion"
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "description": "ISO timestamp when delete occurred"
+        },
+        {
+          "name": "user",
+          "type": "string",
+          "description": "Database user who performed the delete"
+        },
+        {
+          "name": "metadata",
+          "type": "object",
+          "description": "Additional metadata about the change"
+        }
+      ]
+    },
+    {
+      "id": "schema_changed",
+      "name": "Schema Changed",
+      "description": "Triggered when database schema changes are detected",
+      "outputs": [
+        {
+          "name": "trigger_id",
+          "type": "string",
+          "description": "Unique trigger event ID"
+        },
+        {
+          "name": "database",
+          "type": "string",
+          "description": "Database name"
+        },
+        {
+          "name": "schema",
+          "type": "string",
+          "description": "Schema name"
+        },
+        {
+          "name": "change_type",
+          "type": "string",
+          "description": "Type of schema change (CREATE, ALTER, DROP)"
+        },
+        {
+          "name": "object_type",
+          "type": "string",
+          "description": "Type of object changed (TABLE, INDEX, COLUMN, etc.)"
+        },
+        {
+          "name": "object_name",
+          "type": "string",
+          "description": "Name of the changed object"
+        },
+        {
+          "name": "ddl_statement",
+          "type": "string",
+          "description": "DDL statement that caused the change (if available)"
+        },
+        {
+          "name": "timestamp",
+          "type": "string",
+          "description": "ISO timestamp when change occurred"
+        },
+        {
+          "name": "user",
+          "type": "string",
+          "description": "Database user who made the change"
+        }
+      ]
+    },
+    {
+      "id": "database_error",
+      "name": "Database Error",
+      "description": "Triggered when there's an error in database monitoring",
+      "outputs": [
+        {
+          "name": "error_id",
+          "type": "string",
+          "description": "Unique error identifier"
+        },
+        {
+          "name": "database",
+          "type": "string",
+          "description": "Database name where error occurred"
+        },
+        {
+          "name": "error_type",
+          "type": "string",
+          "description": "Type of error (connection, query, permission, etc.)"
+        },
+        {
+          "name": "error_message",
+          "type": "string",
+          "description": "Detailed error message"
+        },
+        {
+          "name": "error_at",
+          "type": "string",
+          "description": "ISO timestamp when error occurred"
+        },
+        {
+          "name": "retry_count",
+          "type": "number",
+          "description": "Number of retry attempts made"
+        },
+        {
+          "name": "context",
+          "type": "object",
+          "description": "Additional context about the error"
+        }
+      ]
+    }
+  ],
+  "configSchema": {
+    "title": "Database Triggers Configuration",
+    "type": "object",
+    "properties": {
+      "connections": {
+        "type": "array",
+        "title": "Connessioni Database",
+        "description": "Lista delle connessioni database da monitorare",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Nome Connessione",
+              "description": "Nome identificativo per questa connessione"
+            },
+            "type": {
+              "type": "string",
+              "title": "Tipo Database",
+              "description": "Tipo di database",
+              "enum": ["postgresql", "mysql", "sqlite", "sqlserver", "oracle"],
+              "default": "postgresql"
+            },
+            "host": {
+              "type": "string",
+              "title": "Host",
+              "description": "Indirizzo del server database",
+              "default": "localhost"
+            },
+            "port": {
+              "type": "number",
+              "title": "Porta",
+              "description": "Porta del server database",
+              "default": 5432,
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "database": {
+              "type": "string",
+              "title": "Nome Database",
+              "description": "Nome del database da monitorare"
+            },
+            "username": {
+              "type": "string",
+              "title": "Username",
+              "description": "Username per la connessione"
+            },
+            "password": {
+              "type": "string",
+              "title": "Password",
+              "description": "Password per la connessione",
+              "format": "password"
+            },
+            "schema": {
+              "type": "string",
+              "title": "Schema",
+              "description": "Schema di default da monitorare (opzionale)",
+              "default": ""
+            },
+            "ssl_mode": {
+              "type": "string",
+              "title": "Modalità SSL",
+              "description": "Modalità SSL per la connessione",
+              "enum": ["disable", "require", "prefer", "verify-ca", "verify-full"],
+              "default": "prefer"
+            }
+          },
+          "required": ["name", "type", "database", "username", "password"]
+        },
+        "default": []
+      },
+      "monitoring": {
+        "type": "object",
+        "title": "Configurazione Monitoraggio",
+        "properties": {
+          "method": {
+            "type": "string",
+            "title": "Metodo Monitoraggio",
+            "description": "Metodo per rilevare i cambiamenti",
+            "enum": ["polling", "triggers", "log_based", "change_streams"],
+            "default": "polling"
+          },
+          "polling_interval": {
+            "type": "number",
+            "title": "Intervallo Polling (secondi)",
+            "description": "Frequenza di controllo cambiamenti (solo per polling)",
+            "default": 30,
+            "minimum": 5,
+            "maximum": 3600
+          },
+          "batch_size": {
+            "type": "number",
+            "title": "Dimensione Batch",
+            "description": "Numero massimo di record da elaborare per batch",
+            "default": 1000,
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "track_schema_changes": {
+            "type": "boolean",
+            "title": "Monitora Cambi Schema",
+            "description": "Se monitorare anche i cambiamenti di schema",
+            "default": false
+          }
+        }
+      },
+      "tables": {
+        "type": "array",
+        "title": "Tabelle da Monitorare",
+        "description": "Lista delle tabelle da monitorare per cambiamenti",
+        "items": {
+          "type": "object",
+          "properties": {
+            "connection": {
+              "type": "string",
+              "title": "Connessione",
+              "description": "Nome della connessione da utilizzare"
+            },
+            "schema": {
+              "type": "string",
+              "title": "Schema",
+              "description": "Schema della tabella (opzionale se specificato nella connessione)"
+            },
+            "table": {
+              "type": "string",
+              "title": "Nome Tabella",
+              "description": "Nome della tabella da monitorare"
+            },
+            "primary_key": {
+              "type": "string",
+              "title": "Chiave Primaria",
+              "description": "Nome della colonna chiave primaria",
+              "default": "id"
+            },
+            "timestamp_column": {
+              "type": "string",
+              "title": "Colonna Timestamp",
+              "description": "Nome della colonna timestamp per rilevare cambiamenti (opzionale)"
+            },
+            "events": {
+              "type": "array",
+              "title": "Eventi da Monitorare",
+              "description": "Tipi di eventi da monitorare per questa tabella",
+              "items": {
+                "type": "string",
+                "enum": ["INSERT", "UPDATE", "DELETE"]
+              },
+              "default": ["INSERT", "UPDATE", "DELETE"]
+            },
+            "filters": {
+              "type": "object",
+              "title": "Filtri",
+              "description": "Filtri SQL per limitare i record monitorati",
+              "properties": {
+                "where_clause": {
+                  "type": "string",
+                  "title": "Clausola WHERE",
+                  "description": "Clausola WHERE SQL per filtrare i record"
+                },
+                "exclude_columns": {
+                  "type": "array",
+                  "title": "Colonne da Escludere",
+                  "description": "Colonne da escludere dal monitoraggio",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "tags": {
+              "type": "array",
+              "title": "Tag",
+              "description": "Tag da applicare agli eventi di questa tabella",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            }
+          },
+          "required": ["connection", "table"]
+        },
+        "default": []
+      },
+      "change_detection": {
+        "type": "object",
+        "title": "Rilevamento Cambiamenti",
+        "properties": {
+          "enable_checksums": {
+            "type": "boolean",
+            "title": "Abilita Checksum",
+            "description": "Se utilizzare checksum per rilevare cambiamenti",
+            "default": false
+          },
+          "track_field_changes": {
+            "type": "boolean",
+            "title": "Traccia Cambi Campi",
+            "description": "Se tracciare quali campi specifici sono cambiati negli UPDATE",
+            "default": true
+          },
+          "ignore_system_users": {
+            "type": "boolean",
+            "title": "Ignora Utenti Sistema",
+            "description": "Se ignorare cambiamenti fatti da utenti sistema",
+            "default": true
+          },
+          "system_users": {
+            "type": "array",
+            "title": "Utenti Sistema",
+            "description": "Lista di utenti considerati utenti sistema",
+            "items": {
+              "type": "string"
+            },
+            "default": ["postgres", "mysql", "sa", "system"]
+          }
+        }
+      },
+      "performance": {
+        "type": "object",
+        "title": "Configurazione Performance",
+        "properties": {
+          "connection_pool_size": {
+            "type": "number",
+            "title": "Dimensione Pool Connessione",
+            "description": "Numero di connessioni nel pool",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 50
+          },
+          "query_timeout": {
+            "type": "number",
+            "title": "Timeout Query (secondi)",
+            "description": "Timeout per le query del database",
+            "default": 30,
+            "minimum": 5,
+            "maximum": 300
+          },
+          "max_concurrent_tables": {
+            "type": "number",
+            "title": "Max Tabelle Concorrenti",
+            "description": "Numero massimo di tabelle da monitorare in parallelo",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "retry": {
+        "type": "object",
+        "title": "Configurazione Retry",
+        "properties": {
+          "max_retries": {
+            "type": "number",
+            "title": "Max Tentativi",
+            "description": "Numero massimo di tentativi per operazioni fallite",
+            "default": 3,
+            "minimum": 0,
+            "maximum": 10
+          },
+          "retry_delay_seconds": {
+            "type": "number",
+            "title": "Ritardo Retry (secondi)",
+            "description": "Ritardo tra tentativi di retry",
+            "default": 60,
+            "minimum": 10
+          },
+          "exponential_backoff": {
+            "type": "boolean",
+            "title": "Backoff Esponenziale",
+            "description": "Se utilizzare backoff esponenziale per i retry",
+            "default": true
+          }
+        }
+      },
+      "logging": {
+        "type": "object",
+        "title": "Configurazione Logging",
+        "properties": {
+          "log_queries": {
+            "type": "boolean",
+            "title": "Log Query",
+            "description": "Se loggare le query eseguite",
+            "default": false
+          },
+          "log_data_changes": {
+            "type": "boolean",
+            "title": "Log Cambiamenti Dati",
+            "description": "Se loggare i dettagli dei cambiamenti (attenzione alla privacy)",
+            "default": false
+          },
+          "log_level": {
+            "type": "string",
+            "title": "Livello Log",
+            "description": "Livello di logging",
+            "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+            "default": "INFO"
+          }
+        }
+      }
+    },
+    "required": ["connections", "tables"]
+  }
+}
