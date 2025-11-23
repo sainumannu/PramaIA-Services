@@ -298,11 +298,29 @@ class DocumentManager:
                 logger.warning("ChromaDB collection non disponibile per ricerca")
                 return []
             
-            results = collection.query(
-                query_texts=[query],
-                n_results=limit,
-                where=where
-            )
+            # 🔧 FIX: Genera embedding con lo stesso modello usato per l'indicizzazione
+            try:
+                from sentence_transformers import SentenceTransformer
+                model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+                query_embedding = model.encode([query], normalize_embeddings=True)[0].tolist()
+                
+                # Usa query_embeddings invece di query_texts per consistenza del modello
+                results = collection.query(
+                    query_embeddings=[query_embedding],  # ✅ Stesso modello dell'indicizzazione
+                    n_results=limit,
+                    where=where
+                )
+                
+                print(f"[DEBUG] Usato embedding generato con sentence-transformers per query: '{query}'")
+                
+            except ImportError:
+                logger.warning("sentence-transformers non disponibile, fallback a query_texts")
+                # Fallback al metodo originale
+                results = collection.query(
+                    query_texts=[query],
+                    n_results=limit,
+                    where=where
+                )
             
             if not results or not results.get('documents'):
                 return []
@@ -318,6 +336,9 @@ class DocumentManager:
                 # Converti distanza coseno in score similarità (0-1)
                 distance = distances[i] if i < len(distances) else 1.0
                 similarity_score = max(0.0, 1.0 - distance)
+                
+                # DEBUG: Log delle distanze
+                print(f"[DEBUG] Doc {i}: distance={distance}, similarity={similarity_score}")
                 
                 doc_data = {
                     'id': ids[i] if i < len(ids) else f"doc_{i}",

@@ -75,6 +75,14 @@ Base URL: `http://localhost:8090`
 | POST | `/settings/` | Settings object | Updated settings | Update settings |
 | GET | `/settings/status` | - | Settings status | Settings status |
 
+## Configuration (New)
+
+| Method | Endpoint | Body | Response | Description |
+|--------|----------|------|----------|-------------|
+| GET | `/api/configure` | - | `{"current_config": {...}, "config_source": "environment", "config_file": "..."}` | Get current VectorStore configuration |
+| POST | `/api/configure` | `{"chroma_host": "new-chroma-host", "chroma_port": 8001, "batch_size": 200, "max_worker_threads": 8}` | `{"success": true, "message": "Configurazione aggiornata con successo...", "config": {...}}` | Update VectorStore configuration |
+| POST | `/api/restart` | - | `{"success": true, "message": "Riavvio del servizio richiesto...", "restart_required": true}` | Restart VectorStore service |
+
 ## File Hashes
 
 | Method | Endpoint | Body | Response | Description |
@@ -105,6 +113,71 @@ Base URL: `http://localhost:8090`
 | POST | `/api/v1/backup` | Backup result | Create database backup |
 | GET | `/api/v1/backup/latest` | Backup info | Latest backup info |
 | POST | `/api/v1/optimize` | Optimize result | Optimize database |
+
+## Configuration Response Examples
+
+### VectorStore Configuration GET Response
+```json
+{
+  "current_config": {
+    "chroma_host": "new-chroma-host",
+    "chroma_port": 8001,
+    "batch_size": 200,
+    "max_worker_threads": 8
+  },
+  "config_source": "file",
+  "config_file": "C:\\PramaIA-Services\\PramaIA-VectorstoreService\\config\\vectorstore_config.json"
+}
+```
+
+### VectorStore Configuration POST Response
+```json
+{
+  "success": true,
+  "message": "Configurazione aggiornata con successo. Riavvio del servizio necessario per applicare le modifiche.",
+  "config": {
+    "chroma_host": "new-chroma-host",
+    "chroma_port": 8001,
+    "batch_size": 200,
+    "max_worker_threads": 8
+  }
+}
+```
+
+### Configuration Update Examples
+
+#### Update VectorStore Configuration
+```bash
+# Get current configuration
+curl -X GET "http://localhost:8090/api/configure"
+
+# Update configuration
+curl -X POST "http://localhost:8090/api/configure" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "chroma_host": "new-chroma-host",
+    "chroma_port": 8001,
+    "batch_size": 200,
+    "max_worker_threads": 8
+  }'
+```
+
+#### PowerShell Examples
+```powershell
+# Get configuration
+$config = Invoke-RestMethod -Uri "http://localhost:8090/api/configure" -Method GET
+$config | Format-List
+
+# Update configuration
+$body = @{
+    chroma_host = "new-chroma-host"
+    chroma_port = 8001
+    batch_size = 200
+    max_worker_threads = 8
+} | ConvertTo-Json
+
+$update = Invoke-RestMethod -Uri "http://localhost:8090/api/configure" -Method POST -Body $body -ContentType "application/json"
+```
 
 ## Common Response Formats
 

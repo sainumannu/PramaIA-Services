@@ -427,7 +427,7 @@ async def query_collection(
                 "id": result.get("id", ""),
                 "document": result.get("content", ""),
                 "metadata": result.get("metadata", {}),
-                "similarity_score": result.get("score", 0.0)  # Se disponibile
+                "similarity_score": result.get("similarity_score", 0.0)  # Chiave corretta
             }
             matches.append(match)
         
