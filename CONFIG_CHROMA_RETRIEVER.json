@@ -1,0 +1,14 @@
+# CONFIGURAZIONE CORRETTA - CHROMA_RETRIEVER
+# Configurazione per il nodo di ricerca che usa le stesse variabili d'ambiente:
+
+{
+    "node_type": "document-semantic-complete-plugin.chroma_retriever",
+    "config": {
+        "collection_name": "pdf_documents",
+        "service_url": "${VECTORSTORE_SERVICE_URL}",
+        "top_k": 5,
+        "similarity_threshold": 0.7,
+        "include_metadata": true,
+        "timeout": "${VECTORSTORE_TIMEOUT}"
+    }
+}

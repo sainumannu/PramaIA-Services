@@ -108,6 +108,75 @@ Current implementation status and next steps.
 
 ---
 
+### 7. **[NODES_AND_PLUGINS_OVERVIEW.md](./NODES_AND_PLUGINS_OVERVIEW.md)** ✨ NEW
+Panoramica completa del sistema nodi e plugin PramaIA PDK.
+
+**Contiene**:
+- Architettura plugin e nodi
+- Standard di implementazione e logging
+- Categorizzazione nodi funzionale
+- Best practices sviluppo
+- Integrazione con servizi
+- Linee guida documentazione
+
+**Per chi**: Sviluppatori plugin, architetti sistema
+**Tempo di lettura**: 15 minuti
+
+---
+
+### 8. **[NODES_INDEX.md](./NODES_INDEX.md)** ✨ NEW
+Indice completo della documentazione nodi PramaIA.
+
+**Contiene**:
+- Organizzazione per plugin e categoria
+- Template documentazione standard
+- Status documentazione per plugin
+- Guidelines contribuzione
+- Processo di documentazione
+
+**Per chi**: Sviluppatori, documentation maintainers
+**Tempo di lettura**: 10 minuti
+
+---
+
+### 9. **[NODES/](./NODES/)**
+Directory contenente documentazione dettagliata dei singoli nodi.
+
+**Struttura**:
+- Documentazione tecnica completa per ogni nodo
+- Esempi configurazione e utilizzo
+- Specifiche input/output
+- Note performance e integrazione
+
+**Current Status**:
+- ✅ **[chroma_vector_store_node.md](./NODES/chroma_vector_store_node.md)** - Nodo ChromaDB Writer completamente documentato
+- ✅ **[chroma_retriever_node.md](./NODES/chroma_retriever_node.md)** - Nodo ChromaDB Retriever completamente documentato
+
+**Per chi**: Sviluppatori che implementano workflow specifici
+**Accesso**: Per riferimento durante sviluppo
+
+---
+
+### 10. **[TEST_UPLOAD_RETRIEVE.md](./TEST_UPLOAD_RETRIEVE.md)** ✨ NEW
+Suite completa di test per verificare upload e retrieve documenti.
+
+**Contiene**:
+- Test manuali endpoint VectorstoreService
+- Script PowerShell automatizzati per test completi
+- Test nodi PDK (chroma_vector_store e chroma_retriever)
+- Workflow end-to-end testing
+- Validazione performance e troubleshooting
+
+**Script Inclusi**:
+- `test_upload_retrieve.ps1` - Test automatizzato completo
+- `quick_test.ps1` - Test rapido funzionalità base
+- `test_endpoints.sh` - Test bash per endpoint
+
+**Per chi**: QA, sviluppatori, DevOps per validazione sistema
+**Tempo di esecuzione**: 2-5 minuti per suite completa
+
+---
+
 ## 🎯 Quick Navigation
 
 **Se vuoi...**
@@ -121,6 +190,9 @@ Current implementation status and next steps.
 | Capire come funzionano gli eventi | EVENT_SOURCES_TRIGGERS_WORKFLOWS | Section 2-5 |
 | Creare un nuovo nodo | DEVELOPMENT_GUIDE | Section 2 |
 | Creare un event source | DEVELOPMENT_GUIDE \| EVENT_SOURCES_EXTENSIBILITY | Section 3 \| Section 3-4 |
+| Documentare un nodo | NODES_AND_PLUGINS_OVERVIEW \| NODES_INDEX | Section "Linee Guida" \| Template |
+| Capire i nodi disponibili | NODES_INDEX | Plugin sections |
+| Configurare un nodo specifico | NODES/[node_name]_node.md | Sezione "Configurazione" |
 | Debuggare | DEVELOPMENT_GUIDE | Section 4 |
 | Testare | DEVELOPMENT_GUIDE | Section 2.9, 3.3 |
 | **Estendere il sistema con custom event sources** | **EVENT_SOURCES_EXTENSIBILITY** | **Section 3-6** |
@@ -128,6 +200,10 @@ Current implementation status and next steps.
 | **Debuggare problemi di trigger matching** | **UPLOAD_EVENT_PIPELINE.md** | **Debugging Guide** |
 | **Capire come registra event sources** | **EVENT_SOURCES_EXTENSIBILITY** | **Section 2** |
 | **Emettere eventi da servizi** | **EVENT_SOURCES_EXTENSIBILITY** | **Section 5** |
+| **Documentare un nodo PDK** | **NODES_AND_PLUGINS_OVERVIEW** | **Standards section** |
+| **Trovare documentazione nodi specifici** | **NODES_INDEX** | **Plugin listings** |
+| **Testare upload e retrieve documenti** | **TEST_UPLOAD_RETRIEVE** | **Script sections** |
+| **Validare funzionamento VectorstoreService** | **TEST_UPLOAD_RETRIEVE** | **Endpoint tests** |
 
 ---
 

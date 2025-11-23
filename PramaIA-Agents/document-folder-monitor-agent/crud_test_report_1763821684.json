@@ -1,0 +1,157 @@
+{
+  "timestamp": "2025-11-22T15:28:04.785898",
+  "test_environment": {
+    "test_dir": "C:\\Users\\fabmi\\AppData\\Local\\Temp\\pramaai_crud_test_5s_y5pft",
+    "backend_url": "http://localhost:8000",
+    "client_id": "test-agent-crud",
+    "total_test_files": 5
+  },
+  "results": {
+    "create": [
+      {
+        "file": "documento_semplice.txt",
+        "success": true,
+        "payload_size": 539,
+        "metadata_fields": 4,
+        "has_required_fields": true,
+        "client_id": "test-agent-crud"
+      },
+      {
+        "file": "rapporto.pdf",
+        "success": true,
+        "payload_size": 519,
+        "metadata_fields": 4,
+        "has_required_fields": true,
+        "client_id": "test-agent-crud"
+      },
+      {
+        "file": "immagine.jpg",
+        "success": true,
+        "payload_size": 519,
+        "metadata_fields": 4,
+        "has_required_fields": true,
+        "client_id": "test-agent-crud"
+      },
+      {
+        "file": "spreadsheet.xlsx",
+        "success": true,
+        "payload_size": 526,
+        "metadata_fields": 4,
+        "has_required_fields": true,
+        "client_id": "test-agent-crud"
+      },
+      {
+        "file": "presentazione.pptx",
+        "success": true,
+        "payload_size": 530,
+        "metadata_fields": 4,
+        "has_required_fields": true,
+        "client_id": "test-agent-crud"
+      }
+    ],
+    "read": [],
+    "update": [
+      {
+        "file": "documento_semplice.txt",
+        "success": true,
+        "action": "modified",
+        "new_size": 71,
+        "timestamp_updated": true
+      },
+      {
+        "file": "rapporto.pdf",
+        "success": true,
+        "action": "modified",
+        "new_size": 58,
+        "timestamp_updated": true
+      }
+    ],
+    "delete": [
+      {
+        "file": "presentazione.pptx",
+        "success": true,
+        "action": "deleted",
+        "file_existed": true,
+        "metadata_preserved": true
+      }
+    ],
+    "metadata_extraction": [
+      {
+        "file": "documento_semplice.txt",
+        "success": true,
+        "metadata_fields": 4,
+        "missing_fields": [],
+        "file_size": 26,
+        "has_pdf_metadata": false
+      },
+      {
+        "file": "rapporto.pdf",
+        "success": true,
+        "metadata_fields": 4,
+        "missing_fields": [],
+        "file_size": 58,
+        "has_pdf_metadata": false
+      },
+      {
+        "file": "immagine.jpg",
+        "success": true,
+        "metadata_fields": 4,
+        "missing_fields": [],
+        "file_size": 10,
+        "has_pdf_metadata": false
+      },
+      {
+        "file": "spreadsheet.xlsx",
+        "success": true,
+        "metadata_fields": 4,
+        "missing_fields": [],
+        "file_size": 4,
+        "has_pdf_metadata": false
+      },
+      {
+        "file": "presentazione.pptx",
+        "success": true,
+        "metadata_fields": 4,
+        "missing_fields": [],
+        "file_size": 4,
+        "has_pdf_metadata": false
+      }
+    ],
+    "backend_communication": [
+      {
+        "test": "upload_with_metadata",
+        "success": true,
+        "status_code": 200,
+        "response_size": 1028,
+        "file": "documento_semplice.txt"
+      }
+    ]
+  },
+  "summary": {
+    "metadata_extraction": {
+      "total": 5,
+      "successful": 5,
+      "failed": 0
+    },
+    "create_operations": {
+      "total": 5,
+      "successful": 5,
+      "failed": 0
+    },
+    "update_operations": {
+      "total": 2,
+      "successful": 2,
+      "failed": 0
+    },
+    "delete_operations": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0
+    },
+    "backend_communication": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0
+    }
+  }
+}

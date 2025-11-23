@@ -53,38 +53,14 @@ except ImportError:
 async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Elabora un file PDF estraendo testo, metadati e altre informazioni.
-    
-    Args:
-        inputs: Dizionario con i parametri di input.
-            - file_path: Percorso del file PDF
-            - extract_text: Indica se estrarre il testo
-            - extract_metadata: Indica se estrarre i metadati
-            - extract_images: Indica se estrarre le immagini
-            - extract_tables: Indica se estrarre le tabelle
-            - page_range: Intervallo di pagine da elaborare
-            - output_format: Formato di output per il testo
-            - include_page_numbers: Indica se includere i numeri di pagina
-            - ocr_enabled: Abilita OCR per le immagini
-            - ocr_language: Lingua per l'OCR
-        config: Configurazione del nodo
-            
-    Returns:
-        Dict con i risultati dell'elaborazione:
-            - success: Booleano che indica il successo dell'operazione
-            - file_name: Nome del file elaborato
-            - text_content: Testo estratto
-            - metadata: Metadati estratti
-            - page_count: Numero totale di pagine
-            - images: Immagini estratte
-            - tables: Tabelle estratte
-            - error: Messaggio di errore (solo in caso di fallimento)
-            - processing_time: Tempo di elaborazione in secondi
     """
+    # Log ingresso nodo
+    file_path = str(inputs.get("file_path", ""))
+    entry_msg = f"[FileParsing] INGRESSO nodo: file_path={file_path}"
+    log_info(entry_msg)
     start_time = time.time()
-    
     try:
         # Estrazione e validazione dei parametri
-        file_path = str(inputs.get("file_path", ""))
         extract_text = bool(inputs.get("extract_text", True))
         extract_metadata = bool(inputs.get("extract_metadata", True))
         extract_images = bool(inputs.get("extract_images", False))
@@ -94,31 +70,23 @@ async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, A
         include_page_numbers = bool(inputs.get("include_page_numbers", True))
         ocr_enabled = bool(inputs.get("ocr_enabled", False))
         ocr_language = str(inputs.get("ocr_language", "ita"))
-        
         # Validazione parametri
         if not file_path:
             raise ValueError("Il percorso del file è obbligatorio")
-            
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File non trovato: {file_path}")
-            
         if not HAS_PYMUPDF:
             raise ImportError("PyMuPDF è necessario per elaborare i file PDF")
-            
         if ocr_enabled and not HAS_OCR:
             log_warning("OCR richiesto ma pytesseract non è disponibile")
             ocr_enabled = False
-        
         # Estrazione del nome del file
         file_name = os.path.basename(file_path)
-        
         # Apertura del documento PDF
         doc = fitz.open(file_path)
         page_count = len(doc)
-        
         # Determinazione delle pagine da elaborare
         pages_to_process = _parse_page_range(page_range, page_count)
-        
         # Inizializzazione dei risultati
         result = {
             "success": True,
@@ -126,42 +94,39 @@ async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, A
             "page_count": page_count,
             "processing_time": 0
         }
-        
         # Estrazione dei metadati
         if extract_metadata:
             result["metadata"] = _extract_metadata(doc)
-        
         # Estrazione del testo
         if extract_text:
             result["text_content"] = _extract_text(
                 doc, pages_to_process, output_format, include_page_numbers
             )
-        
         # Estrazione delle immagini
         if extract_images:
             result["images"] = _extract_images(
                 doc, pages_to_process, ocr_enabled, ocr_language
             )
-        
         # Estrazione delle tabelle
         if extract_tables:
             result["tables"] = _extract_tables(doc, pages_to_process)
-        
         # Chiusura del documento
         doc.close()
-        
         # Calcolo del tempo di elaborazione
         processing_time = time.time() - start_time
         result["processing_time"] = round(processing_time, 2)
-        
-        log_info(f"File {file_name} elaborato in {processing_time:.2f} secondi")
+        # Log uscita nodo (successo)
+        exit_msg = f"[FileParsing] USCITA nodo (successo): file_name={file_name}, processing_time={processing_time:.2f}s"
+        log_info(exit_msg)
         return result
     except Exception as e:
-        log_error(f"Errore durante l'elaborazione del file: {str(e)}")
-        processing_time = time.time() - start_time
-        
+        # Log uscita nodo (errore)
+        exit_msg = f"[FileParsing] USCITA nodo (errore): {str(e)}"
+        log_error(exit_msg)
         return {
             "success": False,
+            "error": str(e)
+        }
             "file_name": os.path.basename(file_path) if file_path else "",
             "error": str(e),
             "processing_time": round(processing_time, 2)

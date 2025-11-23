@@ -18,44 +18,30 @@ class PDFTextExtractorProcessor:
     async def process(self, context) -> Dict[str, Any]:
         """
         Estrae testo da un file PDF.
-        
-        Args:
-            context: Contesto di esecuzione con inputs e config
-            
-        Returns:
-            Dict contenente il testo estratto
         """
+        logger.info("[DocumentTextExtractor] INGRESSO nodo: process")
         try:
             config = context.get('config', {})
             inputs = context.get('inputs', {})
-            
-            # Ottieni il file PDF dall'input
             pdf_file = inputs.get('pdf_file')
             if not pdf_file:
                 raise ValueError("Nessun file PDF fornito in input")
-            
-            # Configurazione
             preserve_layout = config.get('preserve_layout', True)
             extract_images = config.get('extract_images', False)
-            
-            # Estrai il testo
             extracted_text = self._extract_text_from_pdf(
                 pdf_file, 
                 preserve_layout=preserve_layout,
                 extract_images=extract_images
             )
-            
-            logger.info(f"✅ Estratto testo da PDF: {len(extracted_text)} caratteri")
-            
+            logger.info(f"[DocumentTextExtractor] USCITA nodo (successo): Estratto testo da PDF: {len(extracted_text)} caratteri")
             return {
                 "status": "success",
                 "text_output": extracted_text,
                 "length": len(extracted_text),
                 "pages_processed": self._get_page_count(pdf_file)
             }
-            
         except Exception as e:
-            logger.error(f"❌ Errore estrazione testo PDF: {str(e)}")
+            logger.error(f"[DocumentTextExtractor] USCITA nodo (errore): {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),

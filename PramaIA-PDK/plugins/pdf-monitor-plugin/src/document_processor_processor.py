@@ -136,38 +136,30 @@ except ImportError:
 async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Processa il documento PDF ed estrae il testo.
-    
-    Args:
-        inputs: Dizionario contenente i parametri del documento
-        config: Configurazione del nodo
-        
-    Returns:
-        Dizionario con il documento elaborato
     """
+    # Log ingresso nodo
+    chunking_strategy = inputs.get("chunking_strategy", "paragraph")
+    entry_msg = f"[DocumentProcessor] INGRESSO nodo: chunking_strategy={chunking_strategy}"
+    log_info(entry_msg)
     try:
         # Estrazione parametri
         file_path = inputs.get("file_path")
         file_content = inputs.get("file_content")
-        chunking_strategy = inputs.get("chunking_strategy", "paragraph")
         chunk_size = inputs.get("chunk_size", 1000)
         chunk_overlap = inputs.get("chunk_overlap", 200)
         metadata = inputs.get("metadata", {})
-        
-    log_info(f"Elaborazione documento con strategia di chunking {chunking_strategy}")
-        
         # Valida che ci sia o file_path o file_content
         if not file_path and not file_content:
             raise ValueError("È necessario fornire file_path o file_content")
-        
         # Estrazione del testo dal documento
         document_text = _extract_text(file_path, file_content)
-        
         # Divisione del testo in chunks
         chunks = _chunk_text(document_text, chunking_strategy, chunk_size, chunk_overlap)
-        
         # Arricchimento dei metadati con informazioni sul documento
         enriched_metadata = _enrich_metadata(metadata, document_text)
-        
+        # Log uscita nodo (successo)
+        exit_msg = f"[DocumentProcessor] USCITA nodo (successo): total_chunks={len(chunks)}"
+        log_info(exit_msg)
         return {
             "status": "success",
             "document_text": document_text,
@@ -175,9 +167,10 @@ async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, A
             "total_chunks": len(chunks),
             "metadata": enriched_metadata
         }
-        
     except Exception as e:
-    log_error(f"Errore in DocumentProcessor: {str(e)}")
+        # Log uscita nodo (errore)
+        exit_msg = f"[DocumentProcessor] USCITA nodo (errore): {str(e)}"
+        log_error(exit_msg)
         return {
             "status": "error",
             "error": str(e),

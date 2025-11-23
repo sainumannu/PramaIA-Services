@@ -38,16 +38,18 @@ class InternalProcessorsPlugin:
     
     async def text_joiner(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Unisce array di testi con un separatore"""
+        entry_msg = f"[InternalProcessors] INGRESSO nodo: text_joiner"
+        logger.info(entry_msg)
         try:
             texts = inputs.get('texts', [])
             separator = inputs.get('separator', '\n')
-            
             if not texts:
+                exit_msg = f"[InternalProcessors] USCITA nodo (successo): text_joiner, count=0"
+                logger.info(exit_msg)
                 return {
                     "result": "",
                     "count": 0
                 }
-            
             # Filtra elementi non validi
             valid_texts = []
             for text in texts:
@@ -55,18 +57,16 @@ class InternalProcessorsPlugin:
                     valid_texts.append(text.strip())
                 elif text is not None:
                     valid_texts.append(str(text))
-            
             result = separator.join(valid_texts)
-            
-            logger.info(f"Uniti {len(valid_texts)} testi con separatore")
-            
+            exit_msg = f"[InternalProcessors] USCITA nodo (successo): text_joiner, count={len(valid_texts)}"
+            logger.info(exit_msg)
             return {
                 "result": result,
                 "count": len(valid_texts)
             }
-            
         except Exception as e:
-            logger.error(f"Errore text joiner: {e}")
+            exit_msg = f"[InternalProcessors] USCITA nodo (errore): text_joiner, {e}"
+            logger.error(exit_msg)
             return {
                 "result": "",
                 "count": 0
@@ -74,40 +74,36 @@ class InternalProcessorsPlugin:
     
     async def text_filter(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Filtra testi basandosi su criteri"""
+        entry_msg = f"[InternalProcessors] INGRESSO nodo: text_filter"
+        logger.info(entry_msg)
         try:
             texts = inputs.get('texts', [])
             min_length = inputs.get('min_length', 10)
             filter_empty = inputs.get('filter_empty', True)
-            
             if not texts:
+                exit_msg = f"[InternalProcessors] USCITA nodo (successo): text_filter, filtered_count=0"
+                logger.info(exit_msg)
                 return {
                     "filtered_texts": [],
                     "filtered_count": 0
                 }
-            
             filtered_texts = []
-            
             for text in texts:
                 if not isinstance(text, str):
                     text = str(text) if text is not None else ""
-                
-                # Filtra testi vuoti se richiesto
                 if filter_empty and not text.strip():
                     continue
-                
-                # Filtra per lunghezza minima
                 if len(text.strip()) >= min_length:
                     filtered_texts.append(text)
-            
-            logger.info(f"Filtrati {len(filtered_texts)} testi da {len(texts)}")
-            
+            exit_msg = f"[InternalProcessors] USCITA nodo (successo): text_filter, filtered_count={len(filtered_texts)}"
+            logger.info(exit_msg)
             return {
                 "filtered_texts": filtered_texts,
                 "filtered_count": len(filtered_texts)
             }
-            
         except Exception as e:
-            logger.error(f"Errore text filter: {e}")
+            exit_msg = f"[InternalProcessors] USCITA nodo (errore): text_filter, {e}"
+            logger.error(exit_msg)
             return {
                 "filtered_texts": [],
                 "filtered_count": 0
@@ -115,18 +111,20 @@ class InternalProcessorsPlugin:
     
     async def user_context_provider(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Fornisce informazioni di contesto utente"""
+        entry_msg = f"[InternalProcessors] INGRESSO nodo: user_context_provider"
+        logger.info(entry_msg)
         try:
-            # Per ora genera un user_id mock - in futuro dovrebbe venire dal sistema di auth
             user_id = inputs.get('user_id', 'user_123')
             current_time = datetime.now().isoformat()
-            
+            exit_msg = f"[InternalProcessors] USCITA nodo (successo): user_context_provider, user_id={user_id}"
+            logger.info(exit_msg)
             return {
                 "user_id": user_id,
                 "timestamp": current_time
             }
-            
         except Exception as e:
-            logger.error(f"Errore user context provider: {e}")
+            exit_msg = f"[InternalProcessors] USCITA nodo (errore): user_context_provider, {e}"
+            logger.error(exit_msg)
             return {
                 "user_id": "unknown",
                 "timestamp": datetime.now().isoformat()
@@ -135,16 +133,25 @@ class InternalProcessorsPlugin:
 # Funzioni di interfaccia per il PDK
 async def process_node(node_id: str, inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """Interfaccia principale per processare nodi del plugin"""
+    entry_msg = f"[InternalProcessors] INGRESSO process_node: node_id={node_id}"
+    logger.info(entry_msg)
     plugin = InternalProcessorsPlugin(config)
-    
-    if node_id == "text_joiner":
-        return await plugin.text_joiner(inputs)
-    elif node_id == "text_filter":
-        return await plugin.text_filter(inputs)
-    elif node_id == "user_context_provider":
-        return await plugin.user_context_provider(inputs)
-    else:
-        raise ValueError(f"Nodo non supportato: {node_id}")
+    try:
+        if node_id == "text_joiner":
+            result = await plugin.text_joiner(inputs)
+        elif node_id == "text_filter":
+            result = await plugin.text_filter(inputs)
+        elif node_id == "user_context_provider":
+            result = await plugin.user_context_provider(inputs)
+        else:
+            raise ValueError(f"Nodo non supportato: {node_id}")
+        exit_msg = f"[InternalProcessors] USCITA process_node (successo): node_id={node_id}"
+        logger.info(exit_msg)
+        return result
+    except Exception as e:
+        exit_msg = f"[InternalProcessors] USCITA process_node (errore): node_id={node_id}, {e}"
+        logger.error(exit_msg)
+        raise
 
 def validate_config(config: Dict[str, Any]) -> bool:
     """Valida la configurazione del plugin"""

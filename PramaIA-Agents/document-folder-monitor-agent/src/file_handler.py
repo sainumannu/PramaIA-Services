@@ -4,6 +4,7 @@ Enhanced File Handler con sistema di filtri intelligenti
 import threading
 import time
 import json
+import datetime
 import sqlite3
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -36,6 +37,61 @@ class SmartFileHandler(FileSystemEventHandler):
             return os.path.getsize(file_path)
         except:
             return 0
+
+    def _extract_file_metadata(self, file_path):
+        """Estrae metadati del file per il nuovo formato richiesto dal server"""
+        try:
+            stat = os.stat(file_path)
+            metadata = {
+                # CORE - sempre disponibili (obbligatori)
+                "filename_original": os.path.basename(file_path),
+                "file_size_original": stat.st_size,
+                "date_created": datetime.datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                "date_modified": datetime.datetime.fromtimestamp(stat.st_mtime).isoformat()
+            }
+
+            # Campi opzionali - aggiunti solo se disponibili
+            # Se è un PDF, prova ad estrarre metadati embedded
+            if file_path.lower().endswith('.pdf'):
+                try:
+                    import fitz  # PyMuPDF
+                    doc = fitz.open(file_path)
+                    pdf_metadata = doc.metadata
+                    doc.close()
+                    
+                    if pdf_metadata:
+                        # Aggiungi solo metadati PDF non vuoti
+                        if pdf_metadata.get('author'):
+                            metadata["author"] = pdf_metadata.get('author')
+                        if pdf_metadata.get('title'):
+                            metadata["title"] = pdf_metadata.get('title')
+                        if pdf_metadata.get('subject'):
+                            metadata["subject"] = pdf_metadata.get('subject')
+                        if pdf_metadata.get('keywords'):
+                            keywords = [k.strip() for k in pdf_metadata.get('keywords').split(',') if k.strip()]
+                            if keywords:
+                                metadata["keywords"] = keywords
+                        if pdf_metadata.get('creator'):
+                            metadata["creator"] = pdf_metadata.get('creator')
+                        if pdf_metadata.get('producer'):
+                            metadata["producer"] = pdf_metadata.get('producer')
+                        if pdf_metadata.get('creationDate'):
+                            metadata["creation_date"] = pdf_metadata.get('creationDate')
+                except ImportError:
+                    pass  # PyMuPDF non disponibile
+                except Exception:
+                    pass  # Errore nell'estrazione metadati PDF
+
+            return metadata
+            
+        except Exception as e:
+            # Ritorna metadati minimi obbligatori in caso di errore
+            return {
+                "filename_original": os.path.basename(file_path),
+                "file_size_original": 0,
+                "date_created": datetime.datetime.now().isoformat(),
+                "date_modified": datetime.datetime.now().isoformat()
+            }
 
     def on_created(self, event):
         """Gestisce creazione di file e cartelle con filtri intelligenti"""
@@ -399,14 +455,26 @@ class SmartFileHandler(FileSystemEventHandler):
             BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", f"http://localhost:{BACKEND_PORT}")
             UPLOAD_URL = f"{BACKEND_BASE_URL}/api/document-monitor/upload/"
             
+            # Estrai metadati del file per il nuovo formato richiesto dal server
+            file_metadata = self._extract_file_metadata(file_path)
+            
+            # Ottieni client_id dall'ambiente
+            client_id = os.getenv("CLIENT_ID", "agent-default")
+            
             with open(file_path, "rb") as f:
                 files = {"file": (file_name, f)}
                 
-                # Includi informazioni sui filtri nei metadati
+                # Costruisci il payload nel nuovo formato JSON richiesto dal server
+                metadata_payload = {
+                    "client_id": client_id,
+                    "original_path": file_path,
+                    "source": "agent",
+                    "metadata": file_metadata
+                }
+                
                 data = {
                     "action": action,
-                    "full_path": file_path,
-                    "relative_path": self._get_relative_path(file_path),
+                    "metadata": json.dumps(metadata_payload),
                     "filter_action": filter_decision['action'],
                     "extract_metadata": json.dumps(filter_decision['extract_metadata']),
                     "filter_name": filter_decision.get('filter_name', 'unknown'),
@@ -417,12 +485,14 @@ class SmartFileHandler(FileSystemEventHandler):
             
             if resp.status_code == 200:
                 info(
-                    f"✅ File '{file_name}' inviato al backend ({action})",
+                    f"✅ File '{file_name}' inviato al backend con metadati ({action})",
                     details={
                         "file_name": file_name,
                         "action": action,
                         "filter_name": filter_decision.get('filter_name', 'unknown'),
-                        "status_code": resp.status_code
+                        "status_code": resp.status_code,
+                        "has_original_metadata": bool(file_metadata.get('author') or file_metadata.get('title')),
+                        "file_size_original": file_metadata.get('file_size_original', 0)
                     }
                 )
                 

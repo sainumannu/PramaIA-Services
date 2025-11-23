@@ -35,41 +35,25 @@ class ChromaWriterProcessor:
     async def process(self, context) -> Dict[str, Any]:
         """
         Salva embeddings nel database vettoriale.
-        
-        Args:
-            context: Contesto di esecuzione con inputs e config
-            
-        Returns:
-            Dict contenente il risultato del salvataggio
         """
+        logger.info("[ChromaWriter] INGRESSO nodo: process")
         try:
             config = context.get('config', {})
             inputs = context.get('inputs', {})
-            
-            # Ottieni gli embeddings dall'input
             embeddings_input = inputs.get('embeddings_input', {})
             if not embeddings_input:
                 raise ValueError("Nessun embedding fornito in input")
-            
             embeddings = embeddings_input.get('embeddings', [])
             chunks = embeddings_input.get('chunks', [])
             model_name = embeddings_input.get('model', 'unknown')
-            
             if not embeddings or not chunks:
                 raise ValueError("Embeddings o chunks mancanti")
-            
             if len(embeddings) != len(chunks):
                 raise ValueError(f"Mismatch: {len(embeddings)} embeddings vs {len(chunks)} chunks")
-            
-            # Configurazione
             collection_name = config.get('collection_name', 'documents')
             persist_directory = config.get('persist_directory', './chroma_db')
             distance_metric = config.get('distance_metric', 'cosine')
-            
-            # Inizializza client ChromaDB
             await self._initialize_client(persist_directory)
-            
-            # Salva gli embeddings
             document_ids = await self._save_embeddings(
                 collection_name=collection_name,
                 embeddings=embeddings,
@@ -77,9 +61,7 @@ class ChromaWriterProcessor:
                 model_name=model_name,
                 distance_metric=distance_metric
             )
-            
-            logger.info(f"✅ Salvati {len(document_ids)} documenti in ChromaDB")
-            
+            logger.info(f"[ChromaWriter] USCITA nodo (successo): Salvati {len(document_ids)} documenti in ChromaDB")
             return {
                 "status": "success",
                 "storage_result": {
@@ -91,9 +73,8 @@ class ChromaWriterProcessor:
                 },
                 "documents_saved": len(document_ids)
             }
-            
         except Exception as e:
-            logger.error(f"❌ Errore salvataggio ChromaDB: {str(e)}")
+            logger.error(f"[ChromaWriter] USCITA nodo (errore): {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),

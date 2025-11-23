@@ -1,0 +1,17 @@
+# CONFIGURAZIONE CORRETTA - CHROMA_VECTOR_STORE
+# Sostituire nel file di workflow la configurazione attuale con questa:
+
+{
+    "node_type": "document-semantic-complete-plugin.chroma_vector_store",
+    "config": {
+        "collection_name": "pdf_documents",
+        "service_url": "${VECTORSTORE_SERVICE_URL}",
+        "embedding_model": "sentence-transformers/all-MiniLM-L6-v2", 
+        "operation": "add",
+        "distance_metric": "cosine",
+        "metadata_fields": ["source", "page", "document_type"],
+        "batch_size": "${VECTORSTORE_BATCH_SIZE}",
+        "retry_attempts": "${VECTORSTORE_RETRY_ATTEMPTS}",
+        "timeout": "${VECTORSTORE_TIMEOUT}"
+    }
+}

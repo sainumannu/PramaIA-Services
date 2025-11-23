@@ -16,37 +16,24 @@ class TextChunkerProcessor:
     async def process(self, context) -> Dict[str, Any]:
         """
         Divide il testo in chunks gestibili.
-        
-        Args:
-            context: Contesto di esecuzione con inputs e config
-            
-        Returns:
-            Dict contenente i chunks di testo
         """
+        logger.info("[TextChunker] INGRESSO nodo: process")
         try:
             config = context.get('config', {})
             inputs = context.get('inputs', {})
-            
-            # Ottieni il testo dall'input
             text_input = inputs.get('text_input', '')
             if not text_input:
                 raise ValueError("Nessun testo fornito in input")
-            
-            # Configurazione
             chunk_size = config.get('chunk_size', 1000)
             chunk_overlap = config.get('chunk_overlap', 200)
             separator = config.get('separator', '\n\n')
-            
-            # Dividi il testo in chunks
             chunks = self._create_chunks(
                 text_input,
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap,
                 separator=separator
             )
-            
-            logger.info(f"✅ Testo diviso in {len(chunks)} chunks")
-            
+            logger.info(f"[TextChunker] USCITA nodo (successo): Testo diviso in {len(chunks)} chunks")
             return {
                 "status": "success",
                 "chunks_output": chunks,
@@ -54,9 +41,8 @@ class TextChunkerProcessor:
                 "original_length": len(text_input),
                 "average_chunk_size": sum(len(chunk) for chunk in chunks) // len(chunks) if chunks else 0
             }
-            
         except Exception as e:
-            logger.error(f"❌ Errore chunking testo: {str(e)}")
+            logger.error(f"[TextChunker] USCITA nodo (errore): {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),

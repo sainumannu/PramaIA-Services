@@ -72,39 +72,24 @@ class TextEmbedderProcessor:
     async def process(self, context) -> Dict[str, Any]:
         """
         Genera embeddings per chunks di testo.
-        
-        Args:
-            context: Contesto di esecuzione con inputs e config
-            
-        Returns:
-            Dict contenente gli embeddings
         """
+        log_info("[TextEmbedder] INGRESSO nodo: process")
         try:
             config = context.get('config', {})
             inputs = context.get('inputs', {})
-            
-            # Ottieni i chunks dall'input
             text_chunks = inputs.get('text_chunks', [])
             if not text_chunks:
                 raise ValueError("Nessun chunk di testo fornito in input")
-            
-            # Configurazione
             model_name = config.get('model', 'sentence-transformers/all-MiniLM-L6-v2')
             batch_size = config.get('batch_size', 32)
             normalize_embeddings = config.get('normalize_embeddings', True)
-            
-            # Carica il modello se necessario
             await self._load_model(model_name)
-            
-            # Genera embeddings
             embeddings = await self._generate_embeddings(
                 text_chunks,
                 batch_size=batch_size,
                 normalize=normalize_embeddings
             )
-            
-            log_info(f"✅ Generati embeddings per {len(text_chunks)} chunks")
-            
+            log_info(f"[TextEmbedder] USCITA nodo (successo): Generati embeddings per {len(text_chunks)} chunks")
             return {
                 "status": "success",
                 "embeddings_output": {
@@ -116,9 +101,8 @@ class TextEmbedderProcessor:
                 "chunk_count": len(text_chunks),
                 "embedding_dimensions": len(embeddings[0]) if embeddings else 0
             }
-            
         except Exception as e:
-            log_error(f"❌ Errore generazione embeddings: {str(e)}")
+            log_error(f"[TextEmbedder] USCITA nodo (errore): {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),

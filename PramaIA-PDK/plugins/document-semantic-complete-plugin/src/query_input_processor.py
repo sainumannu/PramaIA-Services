@@ -20,29 +20,18 @@ class QueryInputProcessor:
     async def process(self, context) -> Dict[str, Any]:
         """
         Elabora la query dell'utente per la ricerca semantica.
-        
-        Args:
-            context: Contesto di esecuzione con inputs e config
-            
-        Returns:
-            Dict contenente la query elaborata
         """
+        logger.info("[QueryInput] INGRESSO nodo: process")
         try:
             config = context.get('config', {})
             inputs = context.get('inputs', {})
-            
-            # Ottieni query dall'input
             raw_query = inputs.get('query', '')
             if not raw_query or not raw_query.strip():
                 raise ValueError("Query vuota o mancante")
-            
-            # Configurazione elaborazione query
             max_query_length = config.get('max_query_length', 500)
             enable_preprocessing = config.get('enable_preprocessing', True)
-            query_language = config.get('query_language', 'auto')  # auto, it, en
+            query_language = config.get('query_language', 'auto')
             expand_query = config.get('expand_query', False)
-            
-            # Elabora la query
             processed_query = await self._process_query(
                 raw_query=raw_query,
                 max_query_length=max_query_length,
@@ -50,9 +39,7 @@ class QueryInputProcessor:
                 query_language=query_language,
                 expand_query=expand_query
             )
-            
-            logger.info(f"✅ Query elaborata: '{processed_query[:50]}...'")
-            
+            logger.info(f"[QueryInput] USCITA nodo (successo): Query elaborata: '{processed_query[:50]}...'")
             return {
                 "status": "success",
                 "processed_query": processed_query,
@@ -65,9 +52,8 @@ class QueryInputProcessor:
                     "query_expanded": expand_query
                 }
             }
-            
         except Exception as e:
-            logger.error(f"❌ Errore elaborazione query: {str(e)}")
+            logger.error(f"[QueryInput] USCITA nodo (errore): {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),

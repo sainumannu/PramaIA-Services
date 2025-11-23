@@ -36,47 +36,28 @@ class LLMProcessor:
     async def process(self, context) -> Dict[str, Any]:
         """
         Elabora documenti recuperati usando LLM.
-        
-        Args:
-            context: Contesto di esecuzione con inputs e config
-            
-        Returns:
-            Dict contenente la risposta del LLM
         """
+        logger.info("[LLMProcessor] INGRESSO nodo: process")
         try:
             config = context.get('config', {})
             inputs = context.get('inputs', {})
-            
-            # Ottieni documenti recuperati e query
             retrieved_docs = inputs.get('retrieved_documents', [])
             query_metadata = inputs.get('retrieval_metadata', {})
             original_query = query_metadata.get('query_text', '')
-            
             if not retrieved_docs:
-                logger.warning("⚠️ Nessun documento fornito per l'elaborazione LLM")
+                logger.warning("[LLMProcessor] Nessun documento fornito per l'elaborazione LLM")
                 return self._create_empty_response("Nessun documento trovato per elaborare la query.")
-            
             if not original_query:
-                logger.warning("⚠️ Query originale mancante")
+                logger.warning("[LLMProcessor] Query originale mancante")
                 original_query = "Riassumi e analizza i documenti forniti."
-            
-            # Configurazione LLM
-            provider = config.get('provider', 'openai')  # openai, anthropic, mock
+            provider = config.get('provider', 'openai')
             model = config.get('model', 'gpt-3.5-turbo')
             max_tokens = config.get('max_tokens', 1000)
             temperature = config.get('temperature', 0.7)
             system_prompt = config.get('system_prompt', self._get_default_system_prompt())
-            
-            # Inizializza client LLM
             await self._initialize_llm_client(provider, config)
-            
-            # Prepara contesto dai documenti
             documents_context = self._prepare_documents_context(retrieved_docs)
-            
-            # Crea prompt completo
             user_prompt = self._create_user_prompt(original_query, documents_context, query_metadata)
-            
-            # Genera risposta usando LLM
             llm_response = await self._generate_llm_response(
                 provider=provider,
                 model=model,
@@ -85,9 +66,7 @@ class LLMProcessor:
                 max_tokens=max_tokens,
                 temperature=temperature
             )
-            
-            logger.info(f"✅ Risposta LLM generata usando {provider}/{model}")
-            
+            logger.info(f"[LLMProcessor] USCITA nodo (successo): Risposta LLM generata usando {provider}/{model}")
             return {
                 "status": "success",
                 "llm_response": llm_response,
@@ -100,9 +79,8 @@ class LLMProcessor:
                     "total_tokens": llm_response.get('usage', {}).get('total_tokens', 0)
                 }
             }
-            
         except Exception as e:
-            logger.error(f"❌ Errore elaborazione LLM: {str(e)}")
+            logger.error(f"[LLMProcessor] USCITA nodo (errore): {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),

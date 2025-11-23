@@ -23,49 +23,31 @@ class VectorstoreWriterProcessor:
     async def process(self, context) -> Dict[str, Any]:
         """
         Salva embeddings nel database vettoriale.
-        
-        Args:
-            context: Contesto di esecuzione con inputs e config
-            
-        Returns:
-            Dict contenente il risultato del salvataggio
         """
+        logger.info("[VectorstoreWriter] INGRESSO nodo: process")
         try:
             config = context.get('config', {})
             inputs = context.get('inputs', {})
-            
-            # Ottieni gli embeddings dall'input
             embeddings_input = inputs.get('embeddings_input', {})
             if not embeddings_input:
                 raise ValueError("Nessun embedding fornito in input")
-            
             embeddings = embeddings_input.get('embeddings', [])
             chunks = embeddings_input.get('chunks', [])
             model_name = embeddings_input.get('model', 'unknown')
-            
             if not embeddings or not chunks:
                 raise ValueError("Embeddings o chunks mancanti")
-            
             if len(embeddings) != len(chunks):
                 raise ValueError(f"Mismatch: {len(embeddings)} embeddings vs {len(chunks)} chunks")
-            
-            # Configurazione
             collection_name = config.get('collection_name', 'pdf_documents')
             service_url = config.get('service_url', 'http://localhost:8090')
-            
-            # Inizializza client
             await self._initialize_client(service_url)
-            
-            # Salva gli embeddings
             document_ids = await self._save_embeddings(
                 collection_name=collection_name,
                 embeddings=embeddings,
                 documents=chunks,
                 model_name=model_name
             )
-            
-            logger.info(f"✅ Salvati {len(document_ids)} documenti via VectorstoreService")
-            
+            logger.info(f"[VectorstoreWriter] USCITA nodo (successo): Salvati {len(document_ids)} documenti via VectorstoreService")
             return {
                 "status": "success",
                 "storage_result": {
@@ -77,9 +59,8 @@ class VectorstoreWriterProcessor:
                 },
                 "documents_saved": len(document_ids)
             }
-            
         except Exception as e:
-            logger.error(f"❌ Errore salvataggio VectorstoreService: {str(e)}")
+            logger.error(f"[VectorstoreWriter] USCITA nodo (errore): {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),

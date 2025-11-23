@@ -96,56 +96,37 @@ class FileOutputProcessor:
     async def process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """
         Elabora l'input e salva il contenuto in un file.
-        
-        Args:
-            inputs: Dizionario contenente l'input 'content' e opzionalmente 'filename'
-            
-        Returns:
-            Dizionario con il percorso del file salvato
         """
-        if "content" not in inputs:
-            raise ValueError("Input 'content' richiesto ma non fornito")
-        
-        content = inputs["content"]
-        filename = inputs.get("filename", self.default_filename)
-        
-        # Crea la directory se non esiste
-        os.makedirs(self.directory, exist_ok=True)
-        
-        # Costruisci il percorso completo del file
-        filepath = os.path.join(self.directory, filename)
-        
-        # Controlla se il file esiste già e l'overwrite è disabilitato
-        if os.path.exists(filepath) and not self.overwrite:
-            # Genera un nome file unico aggiungendo un numero incrementale
-            base_name, extension = os.path.splitext(filename)
-            counter = 1
-            while os.path.exists(filepath):
-                new_filename = f"{base_name}_{counter}{extension}"
-                filepath = os.path.join(self.directory, new_filename)
-                counter += 1
-        
-        # Determina la modalità di scrittura in base al tipo di contenuto
-        write_mode = "w"  # modalità testuale di default
-        
-        # Se il contenuto è binario, usa la modalità binaria
-        if isinstance(content, bytes):
-            write_mode = "wb"
-        elif not isinstance(content, str):
-            # Se non è né binario né stringa, converti in JSON
-            content = json.dumps(content, indent=2)
-        
-        # Salva il contenuto nel file
-        with open(filepath, write_mode) as f:
-            f.write(content)
-        
-        # Ottieni il percorso assoluto
-        abs_filepath = os.path.abspath(filepath)
-        
-        # Prepara l'output
-        return {
-            "path": abs_filepath
-        }
+        log_info("[FileOutputProcessor] INGRESSO nodo: process")
+        try:
+            if "content" not in inputs:
+                raise ValueError("Input 'content' richiesto ma non fornito")
+            content = inputs["content"]
+            filename = inputs.get("filename", self.default_filename)
+            os.makedirs(self.directory, exist_ok=True)
+            filepath = os.path.join(self.directory, filename)
+            if os.path.exists(filepath) and not self.overwrite:
+                base_name, extension = os.path.splitext(filename)
+                counter = 1
+                while os.path.exists(filepath):
+                    new_filename = f"{base_name}_{counter}{extension}"
+                    filepath = os.path.join(self.directory, new_filename)
+                    counter += 1
+            write_mode = "w"
+            if isinstance(content, bytes):
+                write_mode = "wb"
+            elif not isinstance(content, str):
+                content = json.dumps(content, indent=2)
+            with open(filepath, write_mode) as f:
+                f.write(content)
+            abs_filepath = os.path.abspath(filepath)
+            log_info(f"[FileOutputProcessor] USCITA nodo (successo): File salvato in {abs_filepath}")
+            return {
+                "path": abs_filepath
+            }
+        except Exception as e:
+            log_error(f"[FileOutputProcessor] USCITA nodo (errore): {str(e)}")
+            raise
     
     def _log_debug(self, message: str) -> None:
         """

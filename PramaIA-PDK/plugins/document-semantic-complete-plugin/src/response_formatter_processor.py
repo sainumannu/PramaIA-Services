@@ -92,50 +92,50 @@ class ResponseFormatterProcessor:
                              include_sources: bool,
                              include_confidence: bool,
                              max_response_length: int) -> Dict[str, Any]:
-        """
-        Formatta la risposta secondo il formato specificato.
-        
-        Args:
-            llm_response: Risposta del LLM
-            processing_metadata: Metadati del processing
-            output_format: Formato di output
-            include_metadata: Se includere metadati
-            include_sources: Se includere informazioni sulle fonti
-            include_confidence: Se includere score di confidenza
-            max_response_length: Lunghezza massima risposta
-            
-        Returns:
-            Risposta formattata
-        """
-        content = llm_response.get('content', '')
-        
-        # Applica limite lunghezza se specificato
-        if max_response_length > 0 and len(content) > max_response_length:
-            content = content[:max_response_length] + "..."
-            logger.info(f"📏 Risposta troncata a {max_response_length} caratteri")
-        
-        if output_format == "simple":
-            return self._format_simple(content)
-        elif output_format == "json":
-            return self._format_json(content, llm_response, processing_metadata, 
-                                   include_metadata, include_sources, include_confidence)
-        elif output_format == "markdown":
-            return self._format_markdown(content, llm_response, processing_metadata,
-                                       include_metadata, include_sources, include_confidence)
-        else:  # detailed (default)
-            return self._format_detailed(content, llm_response, processing_metadata,
-                                       include_metadata, include_sources, include_confidence)
-    
-    def _format_simple(self, content: str) -> Dict[str, Any]:
-        """Formato semplice - solo il contenuto."""
-        return {
-            "content": content,
-            "format": "simple"
-        }
-    
-    def _format_json(self, content: str, llm_response: Dict[str, Any], 
-                    processing_metadata: Dict[str, Any],
-                    include_metadata: bool, include_sources: bool, 
+                            llm_response = inputs.get('llm_response', {})
+                            processing_metadata = inputs.get('processing_metadata', {})
+                            logger.info("[ResponseFormatter] INGRESSO nodo: process")
+                            if not llm_response:
+                                logger.warning("[ResponseFormatter] Nessuna risposta LLM fornita")
+                                return self._create_default_response("Nessuna risposta disponibile.")
+                            output_format = config.get('output_format', 'detailed')
+                            include_metadata = config.get('include_metadata', True)
+                            include_sources = config.get('include_sources', True)
+                            include_confidence = config.get('include_confidence', True)
+                            max_response_length = config.get('max_response_length', 0)
+                            formatted_response = await self._format_response(
+                                llm_response=llm_response,
+                                processing_metadata=processing_metadata,
+                                output_format=output_format,
+                                include_metadata=include_metadata,
+                                include_sources=include_sources,
+                                include_confidence=include_confidence,
+                                max_response_length=max_response_length
+                            )
+                            logger.info(f"[ResponseFormatter] USCITA nodo (successo): Risposta formattata in formato {output_format}")
+                            return {
+                                "status": "success",
+                                "formatted_response": formatted_response,
+                                "formatting_metadata": {
+                                    "output_format": output_format,
+                                    "response_length": len(formatted_response.get('content', '')),
+                                    "formatted_at": datetime.now().isoformat(),
+                                    "included_metadata": include_metadata,
+                                    "included_sources": include_sources
+                                }
+                            }
+                        except Exception as e:
+                            logger.error(f"[ResponseFormatter] USCITA nodo (errore): {str(e)}")
+                            return {
+                                "status": "error",
+                                "error": str(e),
+                                "formatted_response": self._create_error_response(str(e)),
+                                "formatting_metadata": {
+                                    "output_format": "error",
+                                    "response_length": 0,
+                                    "formatted_at": datetime.now().isoformat()
+                                }
+                            }
                     include_confidence: bool) -> Dict[str, Any]:
         """Formato JSON strutturato."""
         response = {

@@ -1,0 +1,54 @@
+{
+  "type": "event-source-node",
+  "id": "file-cleanup",
+  "name": "FileCleanup / FileArchiver",
+  "description": "Nodo per rimuovere o archiviare file su filesystem.",
+  "version": "1.0.0",
+  "author": "AI Copilot",
+  "license": "MIT",
+  "inputs": [
+    {
+      "port_name": "file_path",
+      "type": "string",
+      "description": "Percorso assoluto del file da rimuovere o archiviare"
+    },
+    {
+      "port_name": "mode",
+      "type": "string",
+      "description": "Modalità di azione: 'delete' o 'archive'"
+    },
+    {
+      "port_name": "backup_dir",
+      "type": "string",
+      "description": "(Opzionale) Cartella di backup per archiviazione",
+      "required": false
+    },
+    {
+      "port_name": "log",
+      "type": "boolean",
+      "description": "(Opzionale) Se true, logga l'operazione",
+      "required": false
+    }
+  ],
+  "outputs": [
+    {
+      "port_name": "result",
+      "type": "string",
+      "description": "Risultato dell'operazione (success/fail/messaggio)"
+    }
+  ],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "default_mode": {
+        "type": "string",
+        "enum": ["delete", "archive"],
+        "default": "archive"
+      },
+      "default_backup_dir": {
+        "type": "string",
+        "description": "Cartella di default per archiviazione"
+      }
+    }
+  }
+}

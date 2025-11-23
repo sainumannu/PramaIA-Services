@@ -33,39 +33,24 @@ class ChromaRetrieverProcessor:
     async def process(self, context) -> Dict[str, Any]:
         """
         Recupera documenti simili dalla query.
-        
-        Args:
-            context: Contesto di esecuzione con inputs e config
-            
-        Returns:
-            Dict contenente i documenti recuperati
         """
+        logger.info("[ChromaRetriever] INGRESSO nodo: process")
         try:
             config = context.get('config', {})
             inputs = context.get('inputs', {})
-            
-            # Ottieni query embeddings dall'input
             query_input = inputs.get('query_embeddings', {})
             if not query_input:
                 raise ValueError("Nessun query embedding fornito in input")
-            
             query_embeddings = query_input.get('embeddings', [])
             query_text = query_input.get('query', '')
-            
             if not query_embeddings:
                 raise ValueError("Query embeddings mancanti")
-            
-            # Configurazione
             collection_name = config.get('collection_name', 'documents')
             persist_directory = config.get('persist_directory', './chroma_db')
             max_results = config.get('max_results', 5)
             similarity_threshold = config.get('similarity_threshold', 0.7)
             include_metadata = config.get('include_metadata', True)
-            
-            # Inizializza client ChromaDB
             await self._initialize_client(persist_directory)
-            
-            # Recupera documenti simili
             retrieved_docs = await self._retrieve_similar_documents(
                 collection_name=collection_name,
                 query_embeddings=query_embeddings,
@@ -73,9 +58,7 @@ class ChromaRetrieverProcessor:
                 similarity_threshold=similarity_threshold,
                 include_metadata=include_metadata
             )
-            
-            logger.info(f"✅ Recuperati {len(retrieved_docs)} documenti da ChromaDB")
-            
+            logger.info(f"[ChromaRetriever] USCITA nodo (successo): Recuperati {len(retrieved_docs)} documenti da ChromaDB")
             return {
                 "status": "success",
                 "retrieved_documents": retrieved_docs,
@@ -87,9 +70,8 @@ class ChromaRetrieverProcessor:
                     "documents_found": len(retrieved_docs)
                 }
             }
-            
         except Exception as e:
-            logger.error(f"❌ Errore retrieval ChromaDB: {str(e)}")
+            logger.error(f"[ChromaRetriever] USCITA nodo (errore): {str(e)}")
             return {
                 "status": "error",
                 "error": str(e),

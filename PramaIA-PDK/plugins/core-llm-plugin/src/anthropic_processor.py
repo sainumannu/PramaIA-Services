@@ -2,52 +2,22 @@
 Processore per il nodo Anthropic nel core-llm-plugin
 """
 
+import logging
+
 async def process(inputs, config):
     """
     Questo processore gestisce le richieste ai modelli Anthropic Claude.
-    
-    Args:
-        inputs: Dict con gli input del nodo
-            - prompt: Testo da inviare al modello
-            - system (opzionale): Messaggio di sistema
-        config: Dict con la configurazione del nodo
-            - model: Modello Anthropic da utilizzare
-            - max_tokens: Numero massimo di token nella risposta
-            - temperature: Controllo della creatività
-    
-    Returns:
-        Dict con l'output del nodo
-            - response: Testo della risposta
-            - full_response: Risposta completa con metadati
     """
-    # Estrai i valori di input
+    logger = logging.getLogger("anthropic_processor")
+    entry_msg = f"[Anthropic] INGRESSO nodo: prompt={inputs.get('prompt', '')[:30]}..."
+    logger.info(entry_msg)
     prompt = inputs.get("prompt", "")
     system = inputs.get("system", "Sei un assistente AI utile, preciso e conciso.")
-    
-    # Estrai la configurazione
     model = config.get("model", "claude-3-sonnet-20240229")
     max_tokens = config.get("max_tokens", 1000)
     temperature = config.get("temperature", 0.7)
-    
-    # In un'implementazione reale, qui ci sarebbe la chiamata all'API Anthropic
-    # Esempio di codice (commentato):
-    # from anthropic import Anthropic
-    # client = Anthropic()
-    # response = client.messages.create(
-    #     model=model,
-    #     system=system,
-    #     messages=[
-    #         {"role": "user", "content": prompt}
-    #     ],
-    #     max_tokens=max_tokens,
-    #     temperature=temperature
-    # )
-    # result = response.content[0].text
-    
-    # Per ora, simuliamo una risposta
+    # Simulazione risposta
     result = f"Risposta Claude simulata per: {prompt}"
-    
-    # Simuliamo anche una risposta completa dall'API
     full_response = {
         "id": "msg_012345abcdef",
         "type": "message",
@@ -65,7 +35,8 @@ async def process(inputs, config):
             "output_tokens": len(result) // 4
         }
     }
-    
+    exit_msg = f"[Anthropic] USCITA nodo (successo): model={model}"
+    logger.info(exit_msg)
     return {
         "response": result,
         "full_response": full_response

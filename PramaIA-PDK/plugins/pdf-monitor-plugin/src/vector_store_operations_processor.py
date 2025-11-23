@@ -304,57 +304,43 @@ def _query_documents(vectorstore: Any, query_text: str, top_k: int) -> Dict[str,
 async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Esegue operazioni sul vectorstore.
-    
-    Args:
-        inputs: Dizionario con parametri operativi
-            - operation_type: Tipo di operazione (add, get, update, delete, query)
-            - collection_name: Nome della collezione
-            - namespace: Namespace (opzionale)
-            - document_id: ID del documento (richiesto per get, update, delete)
-            - document_content: Contenuto del documento (richiesto per add, update)
-            - document_metadata: Metadati del documento (opzionale)
-            - query_text: Testo della query (richiesto per query)
-            - top_k: Numero massimo di risultati (opzionale, default=5)
-        config: Configurazione del nodo
-        
-    Returns:
-        Dict con risultati dell'operazione
     """
+    # Log ingresso nodo
+    operation_type = inputs.get("operation_type", "").lower()
+    collection_name = inputs.get("collection_name", "default")
+    namespace = inputs.get("namespace", "default")
+    document_id = inputs.get("document_id")
+    document_content = inputs.get("document_content")
+    document_metadata = inputs.get("document_metadata", {})
+    query_text = inputs.get("query_text")
+    entry_msg = f"[VectorStoreOperations] INGRESSO nodo: operation_type={operation_type}, collection={collection_name}, namespace={namespace}, document_id={document_id}"
+    log_info(entry_msg)
     try:
-        # Estrazione parametri di input
-        operation_type = inputs.get("operation_type", "").lower()
-        collection_name = inputs.get("collection_name", "default")
-        namespace = inputs.get("namespace", "default")
-        document_id = inputs.get("document_id")
-        document_content = inputs.get("document_content")
-        document_metadata = inputs.get("document_metadata", {})
-        query_text = inputs.get("query_text")
-        
-        # Log dell'operazione
-        log_info(f"Esecuzione operazione {operation_type} sul vectorstore")
-        
         # Valida input
         _validate_inputs(operation_type, document_id, document_content, query_text)
-        
         # Ottieni riferimento al vectorstore
         vectorstore = _get_vectorstore(collection_name, namespace)
-        
         # Esegui l'operazione richiesta
         if operation_type == "add":
-            return _add_document(vectorstore, document_content, document_metadata)
+            result = _add_document(vectorstore, document_content, document_metadata)
         elif operation_type == "get":
-            return _get_document(vectorstore, document_id, document_metadata)
+            result = _get_document(vectorstore, document_id, document_metadata)
         elif operation_type == "update":
-            return _update_document(vectorstore, document_id, document_content, document_metadata)
+            result = _update_document(vectorstore, document_id, document_content, document_metadata)
         elif operation_type == "delete":
-            return _delete_document(vectorstore, document_id, document_metadata)
+            result = _delete_document(vectorstore, document_id, document_metadata)
         elif operation_type == "query":
-            return _query_documents(vectorstore, query_text, inputs.get("top_k", 5))
+            result = _query_documents(vectorstore, query_text, inputs.get("top_k", 5))
         else:
             raise ValueError(f"Tipo di operazione non supportato: {operation_type}")
-            
+        # Log uscita nodo (successo)
+        exit_msg = f"[VectorStoreOperations] USCITA nodo (successo): operation_type={operation_type}, result_status={result.get('status', 'ok')}"
+        log_info(exit_msg)
+        return result
     except Exception as e:
-        log_error(f"Errore in VectorStoreOperations: {str(e)}")
+        # Log uscita nodo (errore)
+        exit_msg = f"[VectorStoreOperations] USCITA nodo (errore): {str(e)}"
+        log_error(exit_msg)
         return {
             "status": "error",
             "error": str(e),

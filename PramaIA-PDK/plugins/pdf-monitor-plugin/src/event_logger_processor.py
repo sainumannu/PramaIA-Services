@@ -36,46 +36,25 @@ DEFAULT_DB_PATH = "document_monitor_events.db"
 async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Registra un evento nel LogService centralizzato.
-    
-    Args:
-        inputs: Dizionario con i parametri di input.
-            - event_type: Tipo di evento
-            - file_name: Nome del file
-            - status: Stato dell'evento
-            - document_id: ID del documento (opzionale)
-            - metadata: Metadati associati (opzionale)
-            - event_data: Dati aggiuntivi (opzionale)
-            - event_source: Sorgente dell'evento (opzionale)
-            - user_id: ID utente (opzionale)
-            - db_path: Percorso del database (opzionale, mantenuto per retrocompatibilità)
-        config: Configurazione del nodo
-            
-    Returns:
-        Dict con i risultati dell'operazione:
-            - success: Booleano che indica se l'evento è stato registrato
-            - event_id: ID univoco dell'evento
-            - timestamp: Timestamp di registrazione
-            - error: Messaggio di errore (solo in caso di fallimento)
     """
+    # Log ingresso nodo
+    event_type = str(inputs.get("event_type", ""))
+    file_name = str(inputs.get("file_name", ""))
+    entry_msg = f"[EventLogger] INGRESSO nodo: event_type={event_type}, file_name={file_name}"
+    logger.info(entry_msg)
     try:
-        # Estrazione dei parametri di input con validazione dei tipi
-        event_type = str(inputs.get("event_type", ""))
-        file_name = str(inputs.get("file_name", ""))
         status = str(inputs.get("status", ""))
         document_id = inputs.get("document_id")
         if document_id is not None:
             document_id = str(document_id)
-        
         metadata = inputs.get("metadata", {})
         event_data = inputs.get("event_data", {})
         event_source = str(inputs.get("event_source", "pdk_workflow"))
         user_id = inputs.get("user_id")
         if user_id is not None:
             user_id = str(user_id)
-        
         # Validazione degli input obbligatori
         _validate_inputs(event_type, file_name, status, document_id, metadata)
-        
         # Generazione event_id e timestamp
         event_id = str(uuid.uuid4())
         timestamp = datetime.now().isoformat()
@@ -122,16 +101,16 @@ async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, A
             logger.error(f"Errore durante l'invio del log lifecycle: {str(e)}")
             logger.info(f"[LIFECYCLE] {log_message}")
             
-        logger.info(f"Evento {event_type} registrato con ID {event_id}")
-        
+        exit_msg = f"[EventLogger] USCITA nodo (successo): event_type={event_type}, event_id={event_id}"
+        logger.info(exit_msg)
         return {
             "success": True,
             "event_id": event_id,
             "timestamp": timestamp
         }
-        
     except Exception as e:
-        logger.error(f"Errore durante la registrazione dell'evento: {str(e)}")
+        exit_msg = f"[EventLogger] USCITA nodo (errore): {str(e)}"
+        logger.error(exit_msg)
         return {
             "success": False,
             "event_id": "",

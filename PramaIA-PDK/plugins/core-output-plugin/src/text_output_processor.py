@@ -95,44 +95,33 @@ class TextOutputProcessor:
     async def process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """
         Elabora l'input e genera l'output testuale formattato.
-        
-        Args:
-            inputs: Dizionario contenente l'input 'text' e opzionalmente 'title'
-            
-        Returns:
-            Dizionario vuoto dato che questo nodo non ha output
         """
-        if "text" not in inputs:
-            raise ValueError("Input 'text' richiesto ma non fornito")
-        
-        text = inputs["text"]
-        title = inputs.get("title", "")
-        
-        # Applica il template se specificato
-        if self.template:
-            formatted_text = self.template.replace("{{text}}", str(text))
-            if "{{title}}" in self.template and title:
-                formatted_text = formatted_text.replace("{{title}}", str(title))
-        else:
-            formatted_text = str(text)
-            if title:
-                formatted_text = f"{title}\n\n{formatted_text}"
-        
-        # Prepara l'output per il sistema
-        output_data = {
-            "type": "text_output",
-            "format": self.format,
-            "content": formatted_text,
-            "title": title if title else None
-        }
-        
-        # Questo output è destinato al sistema per la visualizzazione
-        # e non viene passato ad altri nodi
-        self._send_output_to_system(output_data)
-        
-        # Ritorna un dizionario vuoto poiché questo nodo non ha output
-        # connettibili ad altri nodi
-        return {}
+        log_info("[TextOutputProcessor] INGRESSO nodo: process")
+        try:
+            if "text" not in inputs:
+                raise ValueError("Input 'text' richiesto ma non fornito")
+            text = inputs["text"]
+            title = inputs.get("title", "")
+            if self.template:
+                formatted_text = self.template.replace("{{text}}", str(text))
+                if "{{title}}" in self.template and title:
+                    formatted_text = formatted_text.replace("{{title}}", str(title))
+            else:
+                formatted_text = str(text)
+                if title:
+                    formatted_text = f"{title}\n\n{formatted_text}"
+            output_data = {
+                "type": "text_output",
+                "format": self.format,
+                "content": formatted_text,
+                "title": title if title else None
+            }
+            self._send_output_to_system(output_data)
+            log_info("[TextOutputProcessor] USCITA nodo (successo): Output generato")
+            return {}
+        except Exception as e:
+            log_error(f"[TextOutputProcessor] USCITA nodo (errore): {str(e)}")
+            raise
     
     def _send_output_to_system(self, output_data: Dict[str, Any]) -> None:
         """

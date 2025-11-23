@@ -2,52 +2,22 @@
 Processore per il nodo OpenAI nel core-llm-plugin
 """
 
+import logging
+
 async def process(inputs, config):
     """
     Questo processore gestisce le richieste ai modelli OpenAI.
-    
-    Args:
-        inputs: Dict con gli input del nodo
-            - prompt: Testo da inviare al modello
-            - system (opzionale): Messaggio di sistema
-        config: Dict con la configurazione del nodo
-            - model: Modello OpenAI da utilizzare
-            - max_tokens: Numero massimo di token nella risposta
-            - temperature: Controllo della creatività
-    
-    Returns:
-        Dict con l'output del nodo
-            - response: Testo della risposta
-            - full_response: Risposta completa con metadati
     """
-    # Estrai i valori di input
+    logger = logging.getLogger("openai_processor")
+    entry_msg = f"[OpenAI] INGRESSO nodo: prompt={inputs.get('prompt', '')[:30]}..."
+    logger.info(entry_msg)
     prompt = inputs.get("prompt", "")
     system = inputs.get("system", "Sei un assistente AI utile, preciso e conciso.")
-    
-    # Estrai la configurazione
     model = config.get("model", "gpt-3.5-turbo")
     max_tokens = config.get("max_tokens", 1000)
     temperature = config.get("temperature", 0.7)
-    
-    # In un'implementazione reale, qui ci sarebbe la chiamata all'API OpenAI
-    # Esempio di codice (commentato):
-    # from openai import OpenAI
-    # client = OpenAI()
-    # response = client.chat.completions.create(
-    #     model=model,
-    #     messages=[
-    #         {"role": "system", "content": system},
-    #         {"role": "user", "content": prompt}
-    #     ],
-    #     max_tokens=max_tokens,
-    #     temperature=temperature
-    # )
-    # result = response.choices[0].message.content
-    
-    # Per ora, simuliamo una risposta
+    # Simulazione risposta
     result = f"Risposta simulata per: {prompt}"
-    
-    # Simuliamo anche una risposta completa dall'API
     full_response = {
         "id": "chatcmpl-123",
         "object": "chat.completion",
@@ -69,7 +39,8 @@ async def process(inputs, config):
             }
         ]
     }
-    
+    exit_msg = f"[OpenAI] USCITA nodo (successo): model={model}"
+    logger.info(exit_msg)
     return {
         "response": result,
         "full_response": full_response

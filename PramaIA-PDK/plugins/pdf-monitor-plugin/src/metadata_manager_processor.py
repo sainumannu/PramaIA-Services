@@ -39,30 +39,20 @@ except ImportError:
 async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Elabora le operazioni sui metadati in base all'operazione specificata.
-    
-    Args:
-        inputs: Dizionario contenente i parametri dell'operazione
-        config: Configurazione del nodo
-        
-    Returns:
-        Dizionario con i risultati dell'operazione
     """
+    # Log ingresso nodo
+    operation = inputs.get("operation", "update")
+    current_metadata = inputs.get("current_metadata", {})
+    new_metadata = inputs.get("new_metadata", {})
+    validation_schema = inputs.get("validation_schema")
+    entry_msg = f"[MetadataManager] INGRESSO nodo: operation={operation}"
+    logger.info(entry_msg)
     try:
-        # Estrai parametri operazione
-        operation = inputs.get("operation", "update")
-        current_metadata = inputs.get("current_metadata", {})
-        new_metadata = inputs.get("new_metadata", {})
-        validation_schema = inputs.get("validation_schema")
-        
-        logger.info(f"Esecuzione operazione {operation} sui metadati")
-        
         # Valida input
         if not isinstance(current_metadata, dict):
             raise ValueError("current_metadata deve essere un dizionario")
-                
         if not isinstance(new_metadata, dict):
             raise ValueError("new_metadata deve essere un dizionario")
-        
         # Esegui l'operazione richiesta
         if operation == "update":
             result_metadata = _update_metadata(current_metadata, new_metadata)
@@ -72,13 +62,13 @@ async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, A
             result_metadata = _extract_metadata(current_metadata, new_metadata, inputs.get("content", ""))
         else:
             raise ValueError(f"Operazione non supportata: {operation}")
-        
         # Aggiungi timestamp operazione
         result_metadata["metadata_updated_at"] = datetime.now().isoformat()
-        
         # Valida i metadati risultanti se è fornito uno schema
         is_valid, validation_errors = _validate_metadata(result_metadata, validation_schema)
-        
+        # Log uscita nodo (successo)
+        exit_msg = f"[MetadataManager] USCITA nodo (successo): operation={operation}, is_valid={is_valid}"
+        logger.info(exit_msg)
         return {
             "status": "success" if is_valid else "validation_error",
             "metadata": result_metadata,
@@ -86,9 +76,10 @@ async def process(inputs: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, A
             "validation_errors": validation_errors,
             "operation": operation
         }
-            
     except Exception as e:
-        logger.error(f"Errore in MetadataManager: {str(e)}")
+        # Log uscita nodo (errore)
+        exit_msg = f"[MetadataManager] USCITA nodo (errore): {str(e)}"
+        logger.error(exit_msg)
         return {
             "status": "error",
             "error": str(e),
