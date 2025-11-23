@@ -76,7 +76,7 @@ PramaIAServer/
 
 **Responsabilità**:
 - Server API per nodi di workflow
-- Registry dei plugin disponibili
+- API dei plugin disponibili
 - Esecuzione dei nodi tramite resolver function
 
 **Componenti**:

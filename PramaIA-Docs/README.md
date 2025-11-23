@@ -79,7 +79,7 @@ Architettura e estensibilità del sistema Event Sources.
 
 **Contiene**:
 - Core concepts e lifecycle degli eventi
-- EventSourceRegistry: come funziona la scoperta
+- PDK API: come funziona la scoperta automatica
 - Creazione custom event sources (plugin pattern)
 - Built-in event sources (system, webhook, upload, monitor)
 - Event emission pattern e best practices

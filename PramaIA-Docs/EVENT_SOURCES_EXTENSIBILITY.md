@@ -9,7 +9,7 @@
 ## 📚 Table of Contents
 
 1. [Core Concepts](#core-concepts)
-2. [Event Sources Registry](#event-sources-registry)
+2. [Event Sources Management](#event-sources-management)
 3. [Creating Custom Event Sources](#creating-custom-event-sources)
 4. [Built-in Event Sources](#built-in-event-sources)
 5. [Event Emission Pattern](#event-emission-pattern)
@@ -79,38 +79,41 @@ If trigger found:
 
 ---
 
-## 2. Event Sources Registry
+## 2. Event Sources Management
 
-### Registry Architecture
+### PDK Server API Architecture
 
-The **EventSourceRegistry** manages all event sources in the system:
+Event sources are now managed directly by the PDK server through API endpoints:
 
 ```python
-# Location: backend/core/event_sources_registry.py
+# Event sources are discovered via PDK server APIs
+# No central registry - direct API communication
 
-class EventSourceRegistry:
-    """Central registry for all event sources"""
+class PDKEventSourceClient:
+    """Client for PDK server event source APIs"""
     
-    def __init__(self):
-        self.sources: Dict[str, dict] = {}
-        self._load_built_in_sources()      # System event sources
-        self._discover_external_sources()  # PDK + custom sources
+    def __init__(self, pdk_url: str = "http://localhost:3001"):
+        self.base_url = pdk_url
     
-    def get_available_sources(self) -> List[dict]
-    def register_source(self, config: dict) -> bool
-    def unregister_source(self, source_id: str) -> bool
-    def get_event_types_for_source(self, source_id: str) -> List[dict]
-    def get_all_event_types(self) -> List[dict]
+    async def get_available_sources(self) -> List[dict]:
+        """Get all event sources from PDK server"""
+        response = await self.client.get(f"{self.base_url}/api/event-sources")
+        return response.json()
+    
+    async def get_event_types_for_source(self, source_id: str) -> List[dict]:
+        """Get event types for specific source"""
+        response = await self.client.get(f"{self.base_url}/api/event-sources/{source_id}/events")
+        return response.json()
 
-# Global instance
-event_source_registry = EventSourceRegistry()
+# Direct API client
+pdk_client = PDKEventSourceClient()
 ```
 
 ### Discovery Mechanism
 
-The registry automatically discovers event sources from:
+The PDK server automatically discovers event sources from:
 
-1. **Built-in Sources**: Hardcoded in `_load_built_in_sources()`
+1. **Built-in Sources**: Defined in PDK server configuration
    - System events (user_login, workflow_completed)
    - API webhooks
    - Web client uploads
@@ -119,40 +122,37 @@ The registry automatically discovers event sources from:
    - Custom event sources created by developers
    - Plugin format: `plugin.json` with `"type": "event-source"`
 
-3. **External Sources**: Directory `PramaIA-EventSources/` (legacy)
-   - Manifest format: `source.json`
-   - Deprecated but supported for backward compatibility
+3. **Dynamic Discovery**: Real-time via API calls
+   - No static configuration needed
+   - Sources available immediately after plugin updates
 
 ### Registration Process
 
-**Automatic (Startup)**:
+**Automatic (Plugin-based)**:
 ```python
-# On PramaIAServer startup:
-event_source_registry = EventSourceRegistry()
-# ↓ Loads built-in sources
-# ↓ Scans PramaIA-PDK/event-sources/ for plugins
-# ↓ Scans PramaIA-EventSources/ for legacy sources
-# → All sources ready in registry
+# PDK server startup automatically discovers:
+# 1. Scans PramaIA-PDK/event-sources/ for plugins
+# 2. Loads plugin.json configurations
+# 3. Makes sources available via API immediately
+# → All sources ready via /api/event-sources
 ```
 
-**Manual (Runtime)**:
+**API Access**:
 ```python
-# POST /api/event-sources/register (admin only)
-POST http://127.0.0.1:8000/api/event-sources/register
-{
-    "id": "my-custom-source",
-    "name": "My Custom Source",
-    "description": "...",
-    "version": "1.0.0",
-    "eventTypes": [ ... ]
-}
+# Get all available event sources
+GET http://127.0.0.1:3001/api/event-sources
+
+# Get specific event source details
+GET http://127.0.0.1:3001/api/event-sources/{source_id}
+
+# No manual registration needed - plugin-based discovery
 ```
 
-### Registry API Endpoints
+### PDK Server API Endpoints
 
 ```
 GET /api/event-sources/
-  → Returns all available event sources
+  → Returns all available event sources (from PDK server)
 
 GET /api/event-sources/{source_id}
   → Returns specific event source details
@@ -160,14 +160,13 @@ GET /api/event-sources/{source_id}
 GET /api/event-sources/{source_id}/events
   → Returns event types for specific source
 
-GET /api/event-sources/events/all
-  → Returns ALL event types from all sources
+POST /api/event-sources/{source_id}/start
+  → Start an event source
 
-POST /api/event-sources/register
-  → Register new event source (admin only)
+POST /api/event-sources/{source_id}/stop
+  → Stop an event source
 
-DELETE /api/event-sources/{source_id}
-  → Unregister event source (admin only)
+# No registration endpoints - plugin-based discovery
 ```
 
 ---
@@ -240,9 +239,9 @@ PramaIA-PDK/event-sources/my-event-source/
 }
 ```
 
-### Validation Rules
+### Plugin Validation
 
-The registry validates:
+PDK server validates plugin.json files automatically:
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
@@ -816,16 +815,16 @@ async def emit_with_retry(event, max_retries=3):
 
 ### For System Integrators
 
-#### 1. **Registry Inspection**
+#### 1. **PDK API Inspection**
 ```bash
 # Check available event sources
-curl http://127.0.0.1:8000/api/event-sources/
+curl http://127.0.0.1:3001/api/event-sources/
 
 # Check event types for specific source
-curl http://127.0.0.1:8000/api/event-sources/pdf-monitor-event-source/events
+curl http://127.0.0.1:3001/api/event-sources/pdf-monitor-event-source/events
 
-# Get event types for UI dropdowns
-curl http://127.0.0.1:8000/api/event-sources/events/all
+# Get all event sources for UI dropdowns
+curl http://127.0.0.1:3001/api/event-sources
 ```
 
 #### 2. **Trigger Configuration**
@@ -874,9 +873,9 @@ LIMIT 10;
 }
 ```
 
-#### Step 2: Register in System
+#### Step 2: Available via PDK API
 
-On startup, registry discovers `invoice-parser` plugin and registers it.
+On startup, PDK server discovers `invoice-parser` plugin and makes it available via API.
 
 #### Step 3: Create Trigger (UI)
 
@@ -929,7 +928,7 @@ emit_event(
 - [ ] Create README.md
 - [ ] Implement event emission logic
 - [ ] Test with `emit_event()`
-- [ ] Verify registry discovers source
+- [ ] Verify PDK server discovers source
 - [ ] Create sample trigger in UI
 - [ ] Test end-to-end workflow execution
 - [ ] Document for other developers
@@ -944,6 +943,6 @@ emit_event(
 
 ---
 
-**Questions?** Check the Event Sources Registry implementation in `backend/core/event_sources_registry.py` and `backend/routers/event_sources_router.py`.
+**Questions?** Check the PDK Event Sources implementation in `PramaIA-PDK/server/event-source-routes.js` and `PramaIA-PDK/server/event-source-manager.js`.
 
 ````

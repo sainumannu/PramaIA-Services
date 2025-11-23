@@ -101,7 +101,7 @@ Results saved and returned
 
 #### 1. **Event Source: "web-client-upload"**
 
-**Definition** (in EventSourceRegistry):
+**Definition** (via PDK API):
 ```python
 {
     "id": "web-client-upload",
@@ -194,7 +194,7 @@ TriggerService automatically:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Event Source Registry | ✅ Implemented | `backend/core/event_sources_registry.py` |
+| Event Sources | ✅ Implemented | `PramaIA-PDK/server/event-source-*.js` |
 | Event Trigger System | ✅ Implemented | `backend/routers/event_trigger_system.py` |
 | TriggerService | ✅ Implemented | `backend/services/trigger_service.py` |
 | WorkflowEngine | ✅ Implemented | `backend/engine/workflow_engine.py` |
@@ -310,7 +310,7 @@ curl -X POST http://127.0.0.1:8000/api/events/process \
 
 ### Phase 2: Register Web-Client-Upload Event Source
 
-**Location**: `backend/core/event_sources_registry.py` (already exists in built-in sources)
+**Location**: `PramaIA-PDK/server/event-source-upload.js` (PDK-based event source)
 
 Verify it's in `_load_built_in_sources()`:
 ```python
@@ -343,7 +343,7 @@ Verify it's in `_load_built_in_sources()`:
 
 **Verification**:
 ```bash
-# After restart, check registry
+# After restart, check PDK API
 curl http://127.0.0.1:8000/api/event-sources/ | grep -A 5 '"id":"web-client-upload"'
 ```
 

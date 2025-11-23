@@ -204,8 +204,8 @@ for item in items:
 ### Event Not Emitted
 - [ ] Service imports emit_event
 - [ ] emit_event() is called
-- [ ] event_type exists in registry
-- [ ] source exists in registry
+- [ ] event_type available via PDK API
+- [ ] source available via PDK API
 
 ### Event Received But No Workflow
 - [ ] Trigger exists in DB
@@ -243,7 +243,7 @@ sqlite3 database.db "SELECT * FROM workflow_executions ORDER BY created_at DESC 
 | What | Where |
 |------|-------|
 | Event sources | `PramaIA-PDK/event-sources/*/plugin.json` |
-| Registry code | `backend/core/event_sources_registry.py` |
+| Event Sources | `PramaIA-PDK/server/event-source-*.js` |
 | Router | `backend/routers/event_sources_router.py` |
 | Event endpoint | `backend/routers/event_trigger_system.py` |
 | Trigger service | `backend/services/trigger_service.py` |
@@ -265,7 +265,7 @@ sqlite3 database.db "SELECT * FROM workflow_executions ORDER BY created_at DESC 
 
 ## Key Insights
 
-1. **Registry is automatic** - No manual registration needed
+1. **Discovery is automatic** - PDK API handles plugin detection
 2. **System is extensible** - Just add plugin.json
 3. **Pattern is consistent** - All services use emit_event()
 4. **UI is dynamic** - Shows available sources automatically

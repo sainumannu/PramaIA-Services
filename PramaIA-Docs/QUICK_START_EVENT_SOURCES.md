@@ -76,7 +76,7 @@ async def start_timer():
 On startup:
 ```
 1. Backend starts
-2. EventSourceRegistry scans PramaIA-PDK/event-sources/
+2. PDK server automatically exposes available event sources via API
 3. Finds my-timer/plugin.json
 4. Validates manifest
 5. Registers as available event source

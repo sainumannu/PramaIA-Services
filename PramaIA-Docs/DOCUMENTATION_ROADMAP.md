@@ -23,7 +23,7 @@
 │ WORKFLOWS.md        │ │ ✨ NEW           │ │ (Existing)           │
 │                     │ │                  │ │                      │
 │ Core concepts:      │ │ Advanced:        │ │ Building nodes:      │
-│ • Events            │ │ • Registry       │ │ • Plugin structure   │
+│ • Events            │ │ • API access     │ │ • Plugin structure   │
 │ • Triggers          │ │ • Discovery      │ │ • Resolver functions │
 │ • Workflows         │ │ • Custom sources │ │ • Testing patterns   │
 │ • Integration       │ │ • Emission       │ │ • Best practices     │
@@ -200,7 +200,7 @@ START
 ✅ Concepts & Architecture
    • Events, Triggers, Workflows
    • Event Source lifecycle
-   • Registry discovery
+   • API discovery
    • Plugin pattern
 
 ✅ Practical Implementation

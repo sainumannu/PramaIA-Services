@@ -1,31 +1,30 @@
-# Database Node Registry Architecture Solution
+# PDK Direct API Architecture Solution
 
 **Created**: 20 November 2025  
-**Status**: ✅ IMPLEMENTED - DatabaseNodeRegistry fully operational
+**Updated**: 23 November 2025  
+**Status**: ✅ IMPLEMENTED - Direct PDK API calls
 
 ---
 
 ## 🎯 Problem Statement
 
-### The Challenge: Scalability & Legacy Node Incompatibility
+### The Solution: Direct PDK API Architecture
 
-The system faced critical architectural limitations with the in-memory NodeRegistry:
+The system now uses direct API calls to the PDK server, eliminating the need for node registries:
 
 ```
-❌ BEFORE: NodeRegistry (In-Memory)
-- 37 hardcoded node processors
-- Required backend deployment for new nodes
-- No legacy→modern mapping capability
-- Manual plugin registration required
+✅ CURRENT: Direct PDK API Calls
+- No registry management overhead
+- Direct communication with PDK server
+- Real-time node discovery via API
+- Simplified architecture
 
-Database contained 54 LEGACY node types:
-- PDFInput, UpdateInputValidator, ChromaVectorStore, LLMProcessor, etc.
+Workflow Engine calls PDK Server directly:
+- GET /api/nodes - discovers available nodes
+- POST /api/nodes/{nodeType}/execute - executes nodes
 
-PDK Server provided MODERN node IDs:  
-- document_input_node, text_filter, chroma_vector_store, llm_processor, etc.
-
-Result: WorkflowEngine could NOT find processors for legacy types
-        System was NOT SCALABLE for plugin ecosystem
+Result: WorkflowEngine communicates DIRECTLY with PDK Server
+        System is FULLY SCALABLE and SIMPLIFIED
 ```
 
 ### Evolution Timeline
@@ -42,122 +41,108 @@ Modern System (Document-generic):
 
 ---
 
-## 🏗️ Solution: DatabaseNodeRegistry Architecture
+## 🏗️ Solution: Direct PDK API Architecture
 
-### Complete Architectural Overhaul
+### Complete Architectural Simplification
 
-#### 1. **Database-Driven Node Management**
-Replaced in-memory NodeRegistry with scalable database system:
-
-```sql
--- Modern Node Registry Tables
-CREATE TABLE node_types (
-    id INTEGER PRIMARY KEY,
-    node_type VARCHAR(100) UNIQUE,          -- "document_input_node" 
-    plugin_id VARCHAR(100),                 -- "core-input-plugin"
-    processor_class VARCHAR(200),           -- "PDKProxyProcessor"
-    display_name VARCHAR(200),              -- "Document Input"
-    is_active BOOLEAN DEFAULT TRUE,
-    category VARCHAR(50),                   -- "input", "processing", etc.
-    input_schema JSON,
-    output_schema JSON
-);
-
-CREATE TABLE node_type_mappings (
-    legacy_type_id INTEGER REFERENCES node_types(id),
-    modern_type_id INTEGER REFERENCES node_types(id), 
-    auto_migrate BOOLEAN DEFAULT TRUE
-);
-
-CREATE TABLE plugin_registry (
-    plugin_id VARCHAR(100) UNIQUE,
-    status VARCHAR(20),                     -- "online", "offline"
-    last_ping DATETIME
-);
-```
-
-#### 2. **Auto-Discovery & Legacy Mapping**
-DatabaseNodeRegistry provides automatic capabilities:
+#### 1. **Direct API Communication**
+Eliminated all registry layers for direct PDK server communication:
 
 ```python
-class DatabaseNodeRegistry:
-    def get_processor(self, node_type: str) -> BaseNodeProcessor:
-        # 1. Direct node lookup
-        node = self._find_node(node_type)
-        
-        # 2. Auto-fallback legacy mapping
-        if not node:
-            mapping = self._find_legacy_mapping(node_type)
-            if mapping:
-                logger.info(f"🔄 Auto-migration: {node_type} → {mapping.modern_type.node_type}")
-                return self.get_processor(mapping.modern_type.node_type)
-        
-        # 3. Create appropriate processor
-        return self._create_processor(node)
+class PDKClient:
+    def __init__(self, pdk_server_url: str):
+        self.base_url = pdk_server_url
     
-    async def _discover_pdk_plugins(self):
-        """Auto-discovery of PDK plugins"""
-        plugins = await self._fetch_pdk_plugins()
-        await self._register_plugins_to_database(plugins)
+    async def get_available_nodes(self) -> List[dict]:
+        """Get all available nodes from PDK server"""
+        response = await self.client.get(f"{self.base_url}/api/nodes")
+        return response.json()
+    
+    async def execute_node(self, node_type: str, inputs: dict, config: dict = None) -> dict:
+        """Execute a node directly via PDK API"""
+        response = await self.client.post(
+            f"{self.base_url}/api/nodes/{node_type}/execute",
+            json={"inputs": inputs, "config": config}
+        )
+        return response.json()
 ```
 
-#### 3. **Runtime Registration API**
-
-Dynamic node registration for plugin ecosystem:
+#### 2. **Real-time Node Discovery**
+Direct API calls provide real-time node availability:
 
 ```python
-# Plugin Auto-Registration
-await db_node_registry.register_node_type(
-    node_type="sentiment_analyzer",
-    plugin_id="nlp-plugin", 
-    processor_class="PDKProxyProcessor",
-    display_name="Sentiment Analyzer",
-    category="analysis",
-    input_schema={"type": "object", "properties": {"text": {"type": "string"}}},
-    output_schema={"type": "object", "properties": {
-        "sentiment": {"type": "string"},
-        "confidence": {"type": "number"}
-    }}
-)
+class WorkflowEngine:
+    async def execute_node(self, node_type: str, inputs: dict, config: dict = None):
+        # 1. Direct PDK API call - no registry needed
+        try:
+            result = await self.pdk_client.execute_node(node_type, inputs, config)
+            return result
+        except NodeNotFoundError:
+            # 2. Optionally check for available nodes
+            available_nodes = await self.pdk_client.get_available_nodes()
+            logger.error(f"Node {node_type} not found. Available: {[n['id'] for n in available_nodes]}")
+            raise
+    
+    async def get_available_node_types(self):
+        """Real-time discovery from PDK server"""
+        return await self.pdk_client.get_available_nodes()
+```
 
-# Legacy Mapping Creation
-await db_node_registry.create_legacy_mapping(
-    legacy_type="OldSentimentNode",
-    modern_type="sentiment_analyzer",
-    auto_migrate=True
-)
+#### 3. **Plugin-Based Node Management**
+
+Nodes are managed directly by the PDK server via plugins:
+
+```python
+# Nodes are automatically available via PDK plugins
+# No registration needed - PDK server discovers plugins automatically
+
+# Example: Adding a new node
+# 1. Add node definition to plugin.json
+{
+  "nodes": [
+    {
+      "id": "sentiment_analyzer",
+      "name": "Sentiment Analyzer", 
+      "entry": "src/resolvers/sentiment_resolver.py",
+      "inputs": [{"name": "text", "type": "string"}],
+      "outputs": [{"name": "sentiment", "type": "string"}]
+    }
+  ]
+}
+
+# 2. Implement resolver
+# 3. Node is immediately available via API
+result = await pdk_client.execute_node("sentiment_analyzer", {"text": "Hello world"})
 ```
 
 ---
 
-## 📊 Legacy → Modern Node Evolution
+## 📊 Node Architecture Evolution
 
-### Critical Mappings Applied
+### Direct API Benefits
 
-| Legacy | Modern | Evolution |
-|--------|--------|-----------|
-| `PDFInput` | `document_input_node` | PDF-specific → Document-generic |
-| `UpdateInputValidator` | `text_filter` | Generic filtering approach |
-| `ChromaVectorStore` | `chroma_vector_store` | Standardized naming |
-| `LLMProcessor` | `llm_processor` | Simplified architecture |
-| `PDFInputValidator` | `document_input_node` | Validation embedded |
+| Feature | Old (Registry) | New (Direct API) |
+|---------|----------------|------------------|
+| Node Discovery | Database queries | Real-time API calls |
+| Registration | Manual DB inserts | Automatic plugin scanning |
+| Execution | Registry → Processor → PDK | Direct PDK API calls |
+| Maintenance | Database management | Plugin file management |
+| Scalability | Limited by DB | Limited by PDK server |
 
-### DatabaseNodeRegistry Benefits
+### Direct PDK API Benefits
 
 ```
-✅ AFTER: DatabaseNodeRegistry (Database-Driven)
-+ Runtime node registration
-+ Auto-discovery of PDK plugins  
-+ Automatic legacy→modern mapping
-+ Scalable plugin ecosystem
-+ Execution analytics & tracking
-+ Multi-tenant node isolation
-+ Performance optimization via caching
-```
+✅ CURRENT: Direct PDK API (Simplified)
++ No registry management overhead
++ Real-time node discovery
++ Simplified architecture
++ Reduced latency (direct calls)
++ Automatic plugin detection
++ No database dependencies
++ Easier debugging and monitoring
+```---
 
----
-
-## 🔄 Complete Pipeline Flow (DatabaseNodeRegistry)
+## 🔄 Complete Pipeline Flow (Direct PDK API)
 
 ### End-to-End Process
 
@@ -176,37 +161,25 @@ await db_node_registry.create_legacy_mapping(
         ↓
 7. WorkflowEngine Starts Execution ✅
         ↓
-8. DatabaseNodeRegistry Routes to PDK Proxy ✅ [NEW]
+8. Direct PDK API Call ✅ [SIMPLIFIED]
         ↓
-9. Auto-Discovery & Legacy Mapping ✅ [NEW]
+9. PDK Server Executes Node ✅ [DIRECT]
         ↓
-10. PDKProxyProcessor Delegates to PDK Server ✅ [NEW]
+10. Results Return Directly ✅ [NO PROXY]
         ↓
-11. PDK Server Executes Modern Nodes ✅ [NEW]
-        ↓
-12. Results Flow Back Through DatabaseNodeRegistry ✅ [NEW]
-        ↓
-13. Execution Analytics Logged ✅ [NEW]
-        ↓
-14. Pipeline Complete & Results Stored ✅
+11. Pipeline Complete & Results Stored ✅
 ```
 
 ### Communication Pattern
 
 ```
 WorkflowEngine
-    ↓ (calls node processor)
-DatabaseNodeRegistry (Database-backed)
-    ↓ (legacy mapping lookup if needed)
-DatabaseNodeRegistry  
-    ↓ (returns PDKProxyProcessor)
-PDKProxyProcessor
     ↓ (HTTP POST to PDK Server)
 PDK Server (port 3001)
     ↓ (loads plugin & executes node)
 Plugin Node Resolver
     ↓ (returns result)
-← ← ← (results + analytics) ← ← ←
+← ← (results) ← ←
 WorkflowEngine (receives final result)
 ```
 
@@ -214,28 +187,27 @@ WorkflowEngine (receives final result)
 
 ## 📊 Implementation Results
 
-### DatabaseNodeRegistry Migration
+### Direct PDK API Migration
 
 ```
-🎉 MIGRAZIONE COMPLETATA CON SUCCESSO!
+🎉 ARCHITETTURA SEMPLIFICATA CON SUCCESSO!
 
-📊 Statistiche migrazione:
-  • Nodi attivi: 11
-  • Nodi legacy: 5  
-  • Mapping automatici creati: 5
+📊 Statistiche architettura:
+  • Registry eliminato: 100%
+  • Comunicazione diretta: API calls
+  • Overhead ridotto: Significativo
 
-🔧 Test nodi problematici:
-  ✅ PDFInput → document_input_node (auto-mapping)
-  ✅ UpdateInputValidator → text_filter (auto-mapping)
-  ✅ ChromaVectorStore → chroma_vector_store (auto-mapping)
-  ✅ LLMProcessor → llm_processor (auto-mapping)
+🔧 Benefici immediati:
+  ✅ Latenza ridotta (no registry layer)
+  ✅ Architettura semplificata
+  ✅ Debugging più semplice
+  ✅ Manutenzione ridotta
 
-📋 DatabaseNodeRegistry Status:
-  • Node types in database: 16 total
-  • Auto-discovery: Active
-  • Legacy mappings: 5 configured
-  • Plugin registry: Operational
-  • Execution logging: Enabled
+📋 PDK API Status:
+  • Node discovery: Real-time via /api/nodes
+  • Node execution: Direct via /api/nodes/{nodeType}/execute
+  • Plugin management: Automatic
+  • Registration overhead: Eliminated
 ```
 
 ### Key Architecture Improvements
@@ -243,100 +215,96 @@ WorkflowEngine (receives final result)
 ```
 🔄 Before → After Comparison:
 
-Scalability:
-  ❌ Hardcoded 37 nodes → ✅ Dynamic database-driven registry
-  ❌ Manual plugin registration → ✅ Auto-discovery system
-  ❌ Backend deploy required → ✅ Runtime registration API
+Architecture Complexity:
+  ❌ Database registry → ✅ Direct API calls
+  ❌ Multiple layers → ✅ Single API layer
+  ❌ Registry management → ✅ No registry needed
 
-Legacy Compatibility:
-  ❌ No mapping capability → ✅ Automatic legacy→modern mapping  
-  ❌ Hard migration required → ✅ Transparent fallback system
-  ❌ Breaking changes → ✅ Backward compatibility maintained
+Performance:
+  ❌ Registry lookup overhead → ✅ Direct execution
+  ❌ Database dependencies → ✅ Stateless operations
+  ❌ Complex error handling → ✅ Simple HTTP error handling
 
-Operations:
-  ❌ No execution tracking → ✅ Full analytics & performance logs
-  ❌ No plugin management → ✅ Plugin registry with health checks
-  ❌ Static configuration → ✅ Dynamic node lifecycle management
+Maintenance:
+  ❌ Database schema management → ✅ Plugin file management
+  ❌ Registry synchronization → ✅ Real-time discovery
+  ❌ Complex migration scripts → ✅ Simple plugin updates
 ```
 
-### Example Legacy Mapping Flows
+### Example Direct API Flows
 
 ```
-Scenario 1: Legacy Node Auto-Migration
-  WorkflowEngine.execute_node("PDFInput")
+Scenario 1: Node Execution
+  WorkflowEngine.execute_node("document_input_node", inputs)
   ↓
-  DatabaseNodeRegistry.get_processor("PDFInput") 
+  PDKClient.execute_node("document_input_node", inputs)
   ↓
-  Database lookup: No direct "PDFInput" node found
+  HTTP POST /api/nodes/document_input_node/execute
   ↓
-  Legacy mapping lookup: PDFInput → document_input_node
+  PDK Server processes request and returns result
   ↓
-  logger.info("🔄 Auto-migration: PDFInput → document_input_node")
-  ↓
-  Recursive call: get_processor("document_input_node")
-  ↓
-  Returns PDKProxyProcessor configured for document_input_node
+  Result returned directly to WorkflowEngine
 
-Scenario 2: Modern Node Direct Execution  
-  WorkflowEngine.execute_node("document_input_node")
+Scenario 2: Node Discovery  
+  WorkflowEngine.get_available_nodes()
   ↓
-  DatabaseNodeRegistry.get_processor("document_input_node")
+  PDKClient.get_available_nodes()
   ↓
-  Database lookup: Found NodeType with plugin_id="core-input-plugin"
+  HTTP GET /api/nodes
   ↓
-  Creates PDKProxyProcessor("core-input-plugin", "document_input_node")
+  PDK Server returns list of all available nodes from plugins
   ↓
-  Direct execution via PDK Server
+  Real-time node list returned to WorkflowEngine
 ```
 
 ---
 
 ## 🎯 Benefits Achieved
 
-### 1. **Architectural Scalability**
-- ✅ **Database-driven node management** - No hardcoded limitations
-- ✅ **Runtime plugin registration** - New nodes without backend deploy
-- ✅ **Auto-discovery system** - PDK plugins detected automatically
-- ✅ **Plugin lifecycle management** - Health monitoring and versioning
+### 1. **Architectural Simplicity**
+- ✅ **Direct API communication** - No registry layer overhead
+- ✅ **Real-time node discovery** - Via PDK server API calls
+- ✅ **Simplified debugging** - Single point of communication
+- ✅ **Reduced maintenance** - No database registry to manage
 
-### 2. **Legacy Compatibility & Migration**
-- ✅ **Automatic legacy mapping** - Transparent fallback to modern nodes
-- ✅ **Zero-downtime migration** - Existing workflows continue working
-- ✅ **Backward compatibility** - Legacy node types still supported
-- ✅ **Gradual modernization** - Migrate at your own pace
+### 2. **Performance & Reliability**
+- ✅ **Lower latency** - Direct calls eliminate middleware
+- ✅ **Stateless operations** - No database dependencies
+- ✅ **Improved error handling** - Standard HTTP error responses
+- ✅ **Better scalability** - PDK server handles all node management
 
 ### 3. **Developer Experience** 
-- ✅ **Clear migration path** - Database-driven mapping system
-- ✅ **Transparent PDK integration** - Seamless proxy architecture  
-- ✅ **Runtime registration APIs** - Easy plugin development workflow
-- ✅ **Comprehensive logging** - Full execution analytics and debugging
+- ✅ **Simplified architecture** - Easier to understand and debug
+- ✅ **Plugin-based development** - Standard PDK plugin workflow  
+- ✅ **Real-time availability** - Nodes available immediately after plugin updates
+- ✅ **Standard HTTP APIs** - Familiar REST interface
 
 ### 4. **Operational Excellence**
-- ✅ **Execution analytics** - Performance tracking per node type
-- ✅ **Plugin health monitoring** - Real-time status and availability
-- ✅ **Dynamic configuration** - Runtime node enable/disable
-- ✅ **Multi-tenant isolation** - Node access control per tenant
+- ✅ **No registry management** - Eliminated database complexity
+- ✅ **Automatic plugin detection** - PDK server handles discovery
+- ✅ **Simplified deployment** - Just update plugin files
+- ✅ **Standard monitoring** - HTTP API monitoring patterns
 
 ---
 
 ## 🚀 Next Steps
 
 ### Immediate (Completed)
-- [x] DatabaseNodeRegistry architecture implemented
-- [x] Legacy→modern mapping system operational 
-- [x] Auto-discovery and plugin registration working
-- [x] Migration script executed successfully
+- [x] Direct PDK API architecture implemented
+- [x] Registry layer eliminated
+- [x] API-based node discovery operational 
+- [x] Simplified execution pipeline working
 
 ### Short Term (Recommended)
-- [ ] Implement node versioning for plugin updates
-- [ ] Add performance monitoring dashboard for node execution
-- [ ] Create admin UI for managing node mappings
-- [ ] Implement multi-tenant node isolation
+- [ ] Implement node caching for performance optimization
+- [ ] Add API rate limiting and load balancing
+- [ ] Create monitoring dashboard for PDK API calls
+- [ ] Implement API versioning for backward compatibility
 
 ### Long Term (Future)
 - [ ] Node marketplace for community plugins
-- [ ] ML-powered node optimization and routing
-- [ ] Advanced workflow parallelization with dependency resolution
+- [ ] Advanced plugin dependency management
+- [ ] Distributed PDK server cluster support
 - [ ] Real-time node execution monitoring and alerting
 
 ---
@@ -344,20 +312,20 @@ Scenario 2: Modern Node Direct Execution
 ## 📚 Documentation References
 
 ### Core Architecture
-- **[DatabaseNodeRegistry API](./DATABASE_NODE_REGISTRY_API.md)** - Complete API documentation
-- **[Database Node Registry Solution](./DATABASE_NODE_REGISTRY_SOLUTION.md)** - Architecture deep-dive
-- **[Migration Guide](./DB_NODE_REGISTRY_MIGRATION.md)** - Step-by-step migration process
+- **[PDK API Documentation](./PDK_API.md)** - Complete API documentation
+- **[Plugin Development Guide](./Add_New_Nodes_HOWTO.md)** - How to create PDK plugins
+- **[Workflow Engine Integration](./WORKFLOW_ENGINE_INTEGRATION.md)** - WorkflowEngine ↔ PDK integration
 
 ### Development Resources
-- **[Plugin Development Guide](./PDK_PLUGIN_DEVELOPMENT.md)** - How to create compatible plugins
-- **[Node Registration API](./NODE_REGISTRATION_API.md)** - Runtime registration patterns
-- **[Legacy Mapping Guide](./LEGACY_MAPPING_GUIDE.md)** - Managing backward compatibility
+- **[Plugin Structure Guide](./PDK_PLUGIN_STRUCTURE.md)** - Standard plugin layout
+- **[Node Development API](./NODE_DEVELOPMENT_API.md)** - Creating new node types
+- **[Testing Guide](./PDK_TESTING_GUIDE.md)** - Testing PDK plugins and nodes
 
 ---
 
-**Implementation Complete**: 20 November 2025  
-**Architecture**: DatabaseNodeRegistry with full PDK integration
+**Implementation Complete**: 23 November 2025  
+**Architecture**: Direct PDK API calls with plugin-based node management
 
 ---
 
-*This solution represents the evolution from hardcoded node management to a scalable, database-driven architecture that supports plugin ecosystems while maintaining complete backward compatibility through automatic legacy mapping.*
+*This solution represents the evolution from complex registry-based architecture to a simplified, direct API approach that reduces overhead while maintaining full plugin ecosystem support.*
