@@ -166,6 +166,61 @@ async def list_documents():
         "total": len(document_ids)
     }
 
+@router.get("/count/today")
+async def count_documents_today():
+    """
+    Count documents created today.
+    
+    Returns:
+        Dict: Count of documents created today.
+    """
+    try:
+        manager = get_metadata_manager()
+        
+        # Query SQL per contare documenti di oggi
+        # SQLite DATE() function: SELECT COUNT(*) FROM documents WHERE DATE(created_at) = DATE('now')
+        count_query = """
+        SELECT COUNT(*) as count 
+        FROM documents 
+        WHERE DATE(created_at) = DATE('now')
+        """
+        
+        # Esegui la query usando il metodo del manager
+        conn = manager.metadata_db._get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(count_query)
+        result = cursor.fetchone()
+        count = result[0] if result else 0
+        cursor.close()
+        conn.close()
+        
+        print(f"[DEBUG] Documenti creati oggi: {count}")
+        
+        return {
+            "count": count,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "message": f"Found {count} documents created today"
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Errore conteggio documenti oggi: {e}")
+        # Fallback: usa il metodo esistente per contare tutti i documenti
+        try:
+            manager = get_metadata_manager()
+            all_docs = manager.list_all_documents()
+            return {
+                "count": len(all_docs),
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "message": f"Fallback: total documents {len(all_docs)}",
+                "error": str(e)
+            }
+        except:
+            return {
+                "count": 0,
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "error": str(e)
+            }
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_document(document: Dict[str, Any] = Body(...)):
     """

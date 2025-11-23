@@ -88,8 +88,20 @@ async def get_vectorstore_collections():
     
     return {
         "collections": result,
-        "total": len(collections)
+        "total": len(result)
     }
+
+# REDIRECT per compatibilità: /collections/ -> /vectorstore/collections  
+@router.get("/", include_in_schema=False, deprecated=True)
+async def collections_redirect():
+    """
+    DEPRECATED: Redirect from /collections/ to /vectorstore/collections.
+    
+    Il vecchio endpoint /collections/ era inutile (restituiva sempre []).
+    Usa /vectorstore/collections che funziona davvero!
+    """
+    # Chiama direttamente il metodo sopra invece di fare un redirect HTTP
+    return await get_vectorstore_collections()
 
 @router.get("/document/{document_id}")
 async def get_vectorstore_document(document_id: str = Path(..., description="ID del documento da recuperare")):

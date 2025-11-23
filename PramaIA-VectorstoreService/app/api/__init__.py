@@ -3,19 +3,23 @@ Modulo API del VectorstoreService.
 """
 
 from fastapi import APIRouter
-from app.api.routes import documents, collections, reconciliation, health, stats, embeddings, api_gateway, vectorstore, settings, database, database_management, vectorstore_service_status, file_hashes
+from app.api.routes import documents, reconciliation, health, stats, embeddings, api_gateway, vectorstore, settings, database, database_management, vectorstore_service_status, file_hashes
 
 # Create API router
 api_router = APIRouter()
 
 # Include all routers
 api_router.include_router(health.router, prefix="/health", tags=["health"])
-api_router.include_router(collections.router, prefix="/collections", tags=["collections"])
+# RIMOSSO: collections.router (endpoint inutile che restituiva sempre [])
+# USO: /vectorstore/collections che funziona davvero!
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(reconciliation.router, prefix="/reconciliation", tags=["reconciliation"])
 api_router.include_router(stats.router, prefix="/stats", tags=["stats"])
 api_router.include_router(embeddings.router, prefix="/embeddings", tags=["embeddings"])
 api_router.include_router(vectorstore.router, prefix="/vectorstore", tags=["vectorstore"])
+
+# REDIRECT COMPATIBILITY: /collections/ -> /vectorstore/collections
+api_router.include_router(vectorstore.router, prefix="/collections", tags=["collections-redirect"])
 api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
 
 # Gateway API per compatibilità frontend
