@@ -1,0 +1,383 @@
+{
+  "name": "ecommerce_search_workflow",
+  "description": "Workflow avanzato per ricerca prodotti e-commerce con analisi intent, filtri multipli e ranking intelligente",
+  "version": "1.0.0",
+  "category": "ecommerce",
+  "tags": ["ecommerce", "products", "search", "recommendation"],
+  "author": "PramaIA Team",
+  "nodes": [
+    {
+      "id": "search_intent_analysis",
+      "name": "Analisi Intent di Ricerca",
+      "type": "generic_query_analyzer",
+      "config": {
+        "analysis_types": ["classification", "intent", "entities"],
+        "analysis_patterns": {
+          "product_search": ["cerca", "trova", "voglio", "comprare", "acquistare"],
+          "comparison": ["confronta", "differenza", "meglio", "vs", "versus", "migliore"],
+          "price_focused": ["prezzo", "economico", "costoso", "offerta", "sconto", "promozione"],
+          "feature_focused": ["caratteristiche", "specifiche", "funzioni", "dettagli"],
+          "brand_focused": ["marca", "brand", "marchio"],
+          "category_search": ["tipo", "categoria", "genere", "modello"]
+        },
+        "custom_classifiers": {
+          "price_extractor": {
+            "patterns": {
+              "budget": ["budget\\\\s+(\\\\d+)", "massimo\\\\s+(\\\\d+)", "fino\\\\s+a\\\\s+(\\\\d+)"],
+              "min_price": ["sopra\\\\s+(\\\\d+)", "più\\\\s+di\\\\s+(\\\\d+)", "almeno\\\\s+(\\\\d+)"],
+              "max_price": ["sotto\\\\s+(\\\\d+)", "meno\\\\s+di\\\\s+(\\\\d+)", "massimo\\\\s+(\\\\d+)"],
+              "range": ["tra\\\\s+(\\\\d+)\\\\s+e\\\\s+(\\\\d+)", "da\\\\s+(\\\\d+)\\\\s+a\\\\s+(\\\\d+)"]
+            }
+          },
+          "brand_extractor": {
+            "patterns": {
+              "brand": ["marca\\\\s+(\\\\w+)", "brand\\\\s+(\\\\w+)", "di\\\\s+(\\\\w+)", "(apple|samsung|nike|adidas)"]
+            }
+          }
+        },
+        "confidence_thresholds": {
+          "classification": 0.3,
+          "intent": 0.4,
+          "price": 0.5
+        },
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "product_semantic_search",
+      "name": "Ricerca Semantica Prodotti",
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "vectorstore",
+        "backend_config": {
+          "base_url": "http://localhost:8090",
+          "timeout": 15,
+          "default_collection": "products"
+        },
+        "default_search_params": {
+          "collection": "products",
+          "limit": 25
+        },
+        "min_score": 0.2,
+        "max_results": 20,
+        "include_snippets": true,
+        "snippet_length": 200,
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "product_metadata_filter",
+      "name": "Filtri Metadati Prodotti",
+      "type": "generic_metadata_search",
+      "config": {
+        "extractors": {
+          "date_enabled": false,
+          "file_type_enabled": false,
+          "author_enabled": false,
+          "size_enabled": false,
+          "custom": {
+            "price_range_extractor": {
+              "field_patterns": {
+                "min_price": {
+                  "patterns": ["sopra\\\\s+(\\\\d+)", "più\\\\s+di\\\\s+(\\\\d+)", "almeno\\\\s+(\\\\d+)"],
+                  "type": "number"
+                },
+                "max_price": {
+                  "patterns": ["sotto\\\\s+(\\\\d+)", "meno\\\\s+di\\\\s+(\\\\d+)", "massimo\\\\s+(\\\\d+)"],
+                  "type": "number"
+                }
+              }
+            },
+            "brand_extractor": {
+              "field_patterns": {
+                "brand": {
+                  "patterns": ["marca\\\\s+(\\\\w+)", "brand\\\\s+(\\\\w+)", "di\\\\s+(\\\\w+)"],
+                  "type": "string"
+                }
+              }
+            },
+            "category_extractor": {
+              "field_patterns": {
+                "category": {
+                  "patterns": ["categoria\\\\s+(\\\\w+)", "tipo\\\\s+(\\\\w+)", "sezione\\\\s+(\\\\w+)"],
+                  "type": "string"
+                },
+                "subcategory": {
+                  "patterns": ["sottocategoria\\\\s+(\\\\w+)", "sottotipo\\\\s+(\\\\w+)"],
+                  "type": "string"
+                }
+              }
+            },
+            "feature_extractor": {
+              "field_patterns": {
+                "color": {
+                  "patterns": ["colore\\\\s+(\\\\w+)", "color\\\\s+(\\\\w+)", "(rosso|blu|verde|nero|bianco)"],
+                  "type": "string"
+                },
+                "size": {
+                  "patterns": ["taglia\\\\s+(\\\\w+)", "size\\\\s+(\\\\w+)", "(xs|s|m|l|xl|xxl)"],
+                  "type": "string"
+                },
+                "material": {
+                  "patterns": ["materiale\\\\s+(\\\\w+)", "in\\\\s+(\\\\w+)", "(cotone|pelle|metallo|plastica)"],
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "data_source": {
+          "type": "vectorstore",
+          "config": {
+            "base_url": "http://localhost:8090",
+            "timeout": 15,
+            "field_mapping": {
+              "price": ["price", "cost", "amount"],
+              "brand": ["brand", "manufacturer", "maker"],
+              "category": ["category", "type", "section"],
+              "rating": ["rating", "score", "stars"],
+              "availability": ["stock", "available", "in_stock"]
+            }
+          }
+        },
+        "max_results": 50,
+        "output_format": "detailed",
+        "include_match_details": true
+      }
+    },
+    {
+      "id": "popularity_boost",
+      "name": "Boost Popolarità",
+      "type": "generic_metadata_search",
+      "config": {
+        "extractors": {
+          "custom": {
+            "popularity_metrics": {
+              "field_patterns": {
+                "high_rating": {
+                  "patterns": ["rating >= 4", "stelle >= 4"],
+                  "type": "boolean"
+                },
+                "best_seller": {
+                  "patterns": ["bestseller", "più venduto", "popolare"],
+                  "type": "boolean"
+                },
+                "recently_popular": {
+                  "patterns": ["trending", "di tendenza", "nuovo"],
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "data_source": {
+          "type": "vectorstore",
+          "config": {
+            "base_url": "http://localhost:8090"
+          }
+        },
+        "max_results": 30
+      }
+    },
+    {
+      "id": "product_ranking",
+      "name": "Ranking Prodotti Finale",
+      "type": "generic_aggregator", 
+      "config": {
+        "source_weights": {
+          "product_semantic_search": 0.5,
+          "product_metadata_filter": 0.3,
+          "popularity_boost": 0.2
+        },
+        "aggregation_strategy": "weighted_merge",
+        "enable_deduplication": true,
+        "deduplication_field": "product_id",
+        "similarity_threshold": 0.95,
+        "max_total_results": 24,
+        "scoring_method": "weighted_average",
+        "score_normalization": true,
+        "output_format": "structured",
+        "include_metadata": true,
+        "include_sources": true,
+        "format_templates": {
+          "item_template": "{name} - {price}€\\n{description}\\nRating: {rating}/5 - Brand: {brand}",
+          "summary_template": "Trovati {count} prodotti che corrispondono alla tua ricerca",
+          "no_results_template": "Nessun prodotto trovato con questi criteri"
+        }
+      }
+    }
+  ],
+  "flows": [
+    {
+      "from": "INPUT",
+      "to": "search_intent_analysis",
+      "data_mapping": {
+        "query": "search_query",
+        "context": "user_context"
+      }
+    },
+    {
+      "from": "search_intent_analysis",
+      "to": "product_semantic_search",
+      "data_mapping": {
+        "query": "original_query",
+        "search_params": {
+          "limit": 25
+        }
+      }
+    },
+    {
+      "from": "search_intent_analysis", 
+      "to": "product_metadata_filter",
+      "data_mapping": {
+        "query": "original_query"
+      }
+    },
+    {
+      "from": "search_intent_analysis",
+      "to": "popularity_boost",
+      "data_mapping": {
+        "query": "original_query"
+      }
+    },
+    {
+      "from": "product_semantic_search",
+      "to": "product_ranking",
+      "data_mapping": {
+        "semantic_results": "*"
+      }
+    },
+    {
+      "from": "product_metadata_filter",
+      "to": "product_ranking", 
+      "data_mapping": {
+        "metadata_results": "*"
+      }
+    },
+    {
+      "from": "popularity_boost",
+      "to": "product_ranking",
+      "data_mapping": {
+        "popularity_results": "*"
+      }
+    },
+    {
+      "from": "search_intent_analysis",
+      "to": "product_ranking",
+      "data_mapping": {
+        "context": {
+          "search_intent": "*",
+          "extracted_criteria": "analysis_results"
+        }
+      }
+    },
+    {
+      "from": "product_ranking",
+      "to": "OUTPUT"
+    }
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["search_query"],
+    "properties": {
+      "search_query": {
+        "type": "string", 
+        "description": "Query di ricerca del prodotto",
+        "examples": [
+          "smartphone samsung sotto 500 euro",
+          "scarpe da running nike rosse taglia 42",
+          "laptop per gaming con buone prestazioni"
+        ]
+      },
+      "user_context": {
+        "type": "object",
+        "description": "Contesto dell'utente per personalizzazione",
+        "properties": {
+          "user_id": {"type": "string"},
+          "previous_purchases": {"type": "array"},
+          "preferences": {"type": "object"},
+          "location": {"type": "string"}
+        }
+      },
+      "filters": {
+        "type": "object",
+        "description": "Filtri aggiuntivi specifici",
+        "properties": {
+          "price_range": {
+            "type": "object",
+            "properties": {
+              "min": {"type": "number"},
+              "max": {"type": "number"}
+            }
+          },
+          "brands": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "categories": {
+            "type": "array", 
+            "items": {"type": "string"}
+          }
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "product_id": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "price": {"type": "number"},
+            "currency": {"type": "string"},
+            "brand": {"type": "string"},
+            "category": {"type": "string"},
+            "rating": {"type": "number"},
+            "availability": {"type": "string"},
+            "images": {"type": "array"},
+            "match_score": {"type": "number"},
+            "match_reasons": {"type": "array"}
+          }
+        }
+      },
+      "search_metadata": {
+        "type": "object",
+        "properties": {
+          "total_found": {"type": "integer"},
+          "search_intent": {"type": "object"}, 
+          "applied_filters": {"type": "object"},
+          "ranking_factors": {"type": "object"}
+        }
+      },
+      "recommendations": {
+        "type": "object",
+        "properties": {
+          "alternative_searches": {"type": "array"},
+          "similar_products": {"type": "array"},
+          "popular_in_category": {"type": "array"}
+        }
+      }
+    }
+  },
+  "performance_considerations": {
+    "caching": {
+      "description": "Cache risultati per query popolari",
+      "ttl": "15 minutes",
+      "cache_keys": ["search_query", "filters"]
+    },
+    "parallel_execution": {
+      "description": "Esegui ricerche in parallelo per prestazioni ottimali",
+      "parallel_nodes": ["product_semantic_search", "product_metadata_filter", "popularity_boost"]
+    },
+    "pagination": {
+      "description": "Supporta paginazione per grandi result set",
+      "default_page_size": 24,
+      "max_page_size": 100
+    }
+  }
+}

@@ -1,0 +1,461 @@
+{
+  "name": "search_results_merging_workflow",
+  "description": "Workflow per unire e ottimizzare risultati da diverse sorgenti di ricerca con deduplicazione intelligente",
+  "version": "1.0.0",
+  "category": "search_optimization", 
+  "tags": ["search", "merging", "deduplication", "optimization"],
+  "author": "PramaIA Team",
+  "nodes": [
+    {
+      "id": "query_intent_analyzer",
+      "name": "Analisi Intent Query",
+      "type": "generic_query_analyzer",
+      "config": {
+        "analysis_types": ["intent", "classification"],
+        "analysis_patterns": {
+          "search_intent": {
+            "informational": ["cos'è", "cosa", "come", "perché", "quando", "dove"],
+            "navigational": ["sito", "pagina", "vai a", "apri", "homepage"],
+            "transactional": ["compra", "acquista", "ordina", "prenota", "scarica"],
+            "comparison": ["confronta", "vs", "versus", "migliore", "differenza"]
+          },
+          "content_type": {
+            "product": ["prodotto", "articolo", "item", "prezzo"],
+            "service": ["servizio", "assistenza", "supporto", "help"],
+            "information": ["informazione", "guida", "tutorial", "manuale"],
+            "news": ["notizia", "news", "articolo", "blog"]
+          }
+        },
+        "confidence_thresholds": {
+          "intent": 0.5,
+          "content_type": 0.4
+        },
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "vectorstore_search",
+      "name": "Ricerca VectorStore",
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "vectorstore",
+        "backend_config": {
+          "base_url": "http://localhost:8090",
+          "timeout": 15
+        },
+        "default_search_params": {
+          "limit": 20
+        },
+        "min_score": 0.3,
+        "max_results": 20,
+        "include_snippets": true,
+        "snippet_length": 200,
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "elasticsearch_search",
+      "name": "Ricerca Elasticsearch",
+      "type": "generic_semantic_search", 
+      "config": {
+        "backend_type": "elasticsearch",
+        "backend_config": {
+          "host": "localhost",
+          "port": 9200,
+          "index": "documents",
+          "timeout": 10
+        },
+        "default_search_params": {
+          "size": 15,
+          "highlight": true
+        },
+        "min_score": 0.2,
+        "max_results": 15,
+        "include_snippets": true,
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "external_api_search",
+      "name": "Ricerca API Esterna",
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "http",
+        "backend_config": {
+          "base_url": "https://api.external-search.com",
+          "method": "POST",
+          "headers": {
+            "Authorization": "Bearer ${API_KEY}",
+            "Content-Type": "application/json"
+          },
+          "timeout": 20
+        },
+        "request_mapping": {
+          "query": "$.search_query",
+          "limit": "$.max_results",
+          "filters": "$.search_filters"
+        },
+        "response_mapping": {
+          "results": "$.data.results",
+          "total": "$.data.total_count",
+          "score_field": "relevance",
+          "title_field": "title",
+          "content_field": "summary"
+        },
+        "max_results": 10,
+        "include_snippets": true,
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "metadata_enricher",
+      "name": "Arricchimento Metadati",
+      "type": "generic_metadata_search",
+      "config": {
+        "extractors": {
+          "date_enabled": true,
+          "file_type_enabled": true,
+          "author_enabled": true,
+          "custom": {
+            "quality_metrics": {
+              "field_patterns": {
+                "freshness_score": {
+                  "patterns": ["published.*?(\\\\d{4})", "updated.*?(\\\\d{4})"],
+                  "type": "number"
+                },
+                "authority_score": {
+                  "patterns": ["author.*?(expert|authority|specialist)", "verified", "official"],
+                  "type": "number" 
+                }
+              }
+            },
+            "source_credibility": {
+              "field_patterns": {
+                "domain_authority": {
+                  "patterns": ["(wikipedia|gov|edu|org)", "verified_source"],
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "data_source": {
+          "type": "mixed",
+          "config": {
+            "sources": ["vectorstore", "elasticsearch", "external_api"]
+          }
+        },
+        "max_results": 50
+      }
+    },
+    {
+      "id": "intelligent_merger",
+      "name": "Unione Intelligente Risultati",
+      "type": "generic_aggregator",
+      "config": {
+        "source_weights": {
+          "vectorstore_search": 0.35,
+          "elasticsearch_search": 0.30,
+          "external_api_search": 0.25,
+          "metadata_enricher": 0.10
+        },
+        "aggregation_strategy": "intelligent_merge",
+        "enable_deduplication": true,
+        "deduplication_field": ["title", "url", "content_hash"],
+        "similarity_threshold": 0.85,
+        "max_total_results": 25,
+        "scoring_method": "hybrid",
+        "score_normalization": true,
+        "diversity_factor": 0.3,
+        "freshness_weight": 0.2,
+        "authority_weight": 0.3,
+        "output_format": "structured",
+        "include_metadata": true,
+        "include_sources": true,
+        "format_templates": {
+          "item_template": "🔍 {title}\\n📄 {snippet}\\n🌐 Fonte: {source} | ⭐ Punteggio: {final_score:.2f}",
+          "summary_template": "Risultati unificati: {count} risultati da {source_count} sorgenti",
+          "metadata_template": "📊 Deduplicati: {duplicates_removed} | 🎯 Diversità: {diversity_score:.2f}"
+        },
+        "ranking_factors": {
+          "relevance": 0.4,
+          "freshness": 0.2, 
+          "authority": 0.2,
+          "diversity": 0.1,
+          "user_preference": 0.1
+        }
+      }
+    }
+  ],
+  "flows": [
+    {
+      "from": "INPUT",
+      "to": "query_intent_analyzer",
+      "data_mapping": {
+        "query": "search_query"
+      }
+    },
+    {
+      "from": "query_intent_analyzer",
+      "to": "vectorstore_search",
+      "data_mapping": {
+        "query": "original_query",
+        "search_params": {
+          "collection": "intent.content_type"
+        }
+      }
+    },
+    {
+      "from": "query_intent_analyzer", 
+      "to": "elasticsearch_search",
+      "data_mapping": {
+        "query": "original_query",
+        "search_params": {
+          "index": "intent.content_type"
+        }
+      }
+    },
+    {
+      "from": "query_intent_analyzer",
+      "to": "external_api_search", 
+      "data_mapping": {
+        "query": "original_query"
+      }
+    },
+    {
+      "from": "vectorstore_search",
+      "to": "metadata_enricher",
+      "data_mapping": {
+        "results": "*"
+      }
+    },
+    {
+      "from": "elasticsearch_search",
+      "to": "metadata_enricher",
+      "data_mapping": {
+        "results": "*"
+      }
+    },
+    {
+      "from": "external_api_search",
+      "to": "metadata_enricher", 
+      "data_mapping": {
+        "results": "*"
+      }
+    },
+    {
+      "from": "vectorstore_search",
+      "to": "intelligent_merger",
+      "data_mapping": {
+        "vectorstore_results": "*"
+      }
+    },
+    {
+      "from": "elasticsearch_search",
+      "to": "intelligent_merger",
+      "data_mapping": {
+        "elasticsearch_results": "*"
+      }
+    },
+    {
+      "from": "external_api_search",
+      "to": "intelligent_merger",
+      "data_mapping": {
+        "external_results": "*"
+      }
+    },
+    {
+      "from": "metadata_enricher",
+      "to": "intelligent_merger",
+      "data_mapping": {
+        "enriched_metadata": "*"
+      }
+    },
+    {
+      "from": "query_intent_analyzer",
+      "to": "intelligent_merger",
+      "data_mapping": {
+        "context": {
+          "search_intent": "*",
+          "content_preferences": "analysis_results"
+        }
+      }
+    },
+    {
+      "from": "intelligent_merger",
+      "to": "OUTPUT"
+    }
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["search_query"],
+    "properties": {
+      "search_query": {
+        "type": "string",
+        "description": "Query di ricerca da elaborare",
+        "minLength": 2,
+        "examples": [
+          "migliori smartphone 2024",
+          "come cucinare pasta carbonara",
+          "tutorial python machine learning"
+        ]
+      },
+      "search_preferences": {
+        "type": "object",
+        "description": "Preferenze per la ricerca",
+        "properties": {
+          "preferred_sources": {
+            "type": "array",
+            "items": {
+              "enum": ["vectorstore", "elasticsearch", "external_api"]
+            }
+          },
+          "content_types": {
+            "type": "array",
+            "items": {
+              "enum": ["product", "service", "information", "news"]
+            }
+          },
+          "max_results": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 50,
+            "default": 25
+          },
+          "diversity_preference": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.3,
+            "description": "Livello di diversità desiderato nei risultati (0=rilevanza pura, 1=massima diversità)"
+          }
+        }
+      },
+      "filters": {
+        "type": "object",
+        "description": "Filtri aggiuntivi per la ricerca",
+        "properties": {
+          "date_range": {
+            "type": "object",
+            "properties": {
+              "from": {"type": "string", "format": "date"},
+              "to": {"type": "string", "format": "date"}
+            }
+          },
+          "language": {
+            "type": "string",
+            "enum": ["it", "en", "fr", "es", "auto"]
+          },
+          "content_length": {
+            "type": "string",
+            "enum": ["short", "medium", "long", "any"]
+          }
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "unified_results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string"},
+            "title": {"type": "string"},
+            "snippet": {"type": "string"},
+            "url": {"type": "string"},
+            "source": {"type": "string"},
+            "final_score": {"type": "number"},
+            "ranking_factors": {
+              "type": "object",
+              "properties": {
+                "relevance": {"type": "number"},
+                "freshness": {"type": "number"},
+                "authority": {"type": "number"},
+                "diversity": {"type": "number"}
+              }
+            },
+            "metadata": {"type": "object"}
+          }
+        }
+      },
+      "search_metadata": {
+        "type": "object",
+        "properties": {
+          "total_sources_searched": {"type": "integer"},
+          "duplicates_removed": {"type": "integer"},
+          "diversity_score": {"type": "number"},
+          "processing_time": {"type": "number"},
+          "search_intent": {"type": "object"},
+          "source_performance": {
+            "type": "object",
+            "properties": {
+              "vectorstore": {"type": "object"},
+              "elasticsearch": {"type": "object"},
+              "external_api": {"type": "object"}
+            }
+          }
+        }
+      },
+      "recommendations": {
+        "type": "object",
+        "properties": {
+          "related_queries": {"type": "array"},
+          "source_suggestions": {"type": "array"},
+          "search_optimization_tips": {"type": "array"}
+        }
+      }
+    }
+  },
+  "conditional_logic": [
+    {
+      "condition": "search_preferences.preferred_sources is not empty",
+      "action": "adjust_source_weights",
+      "description": "Adatta i pesi delle sorgenti basandosi sulle preferenze"
+    },
+    {
+      "condition": "search_intent.intent == 'transactional'",
+      "action": "boost_product_sources",
+      "description": "Aumenta il peso di sorgenti orientate ai prodotti"
+    },
+    {
+      "condition": "filters.date_range is defined",
+      "action": "apply_temporal_filtering",
+      "description": "Applica filtri temporali a tutte le sorgenti"
+    },
+    {
+      "condition": "search_preferences.diversity_preference > 0.5",
+      "action": "enable_diversity_boost",
+      "description": "Aumenta la diversificazione dei risultati"
+    }
+  ],
+  "performance_considerations": {
+    "parallel_execution": {
+      "description": "Ricerche parallele per performance ottimali",
+      "parallel_groups": [
+        ["vectorstore_search", "elasticsearch_search", "external_api_search"]
+      ],
+      "timeout_handling": "graceful_degradation"
+    },
+    "caching": {
+      "description": "Cache intelligente per query frequenti",
+      "cache_keys": ["search_query", "filters", "preferences"],
+      "ttl": "30 minutes",
+      "invalidation_strategy": "source_dependent"
+    },
+    "fallback_strategy": {
+      "description": "Gestione fallback per sorgenti non disponibili",
+      "fallback_order": ["vectorstore", "elasticsearch", "external_api"],
+      "minimum_sources": 1
+    },
+    "rate_limiting": {
+      "description": "Gestione rate limiting per API esterne",
+      "external_api": {
+        "requests_per_minute": 60,
+        "retry_strategy": "exponential_backoff"
+      }
+    }
+  }
+}

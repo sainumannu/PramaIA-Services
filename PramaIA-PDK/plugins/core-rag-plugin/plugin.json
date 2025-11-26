@@ -399,12 +399,2191 @@
         "include_metadata": false,
         "output_format": "both"
       }
+    },
+    {
+      "id": "chat_query_analyzer",
+      "name": "Chat Query Analyzer",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Analizza domande di chat per determinare il tipo di ricerca necessaria",
+      "icon": "🔍",
+      "color": "#9C27B0",
+      "entry": "src/chat_query_analyzer_processor.py",
+      "inputs": [
+        {
+          "name": "question",
+          "type": "string",
+          "description": "Domanda dell'utente da analizzare",
+          "required": true
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "description": "ID dell'utente",
+          "required": false
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "description": "ID della sessione",
+          "required": false
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "description": "Modalità di elaborazione",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "analysis",
+          "type": "object",
+          "description": "Analisi dettagliata della query"
+        },
+        {
+          "name": "search_strategy",
+          "type": "object",
+          "description": "Strategia di ricerca consigliata"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione Chat Query Analyzer",
+        "properties": {
+          "semantic_keywords": {
+            "type": "array",
+            "title": "Parole chiave semantiche",
+            "description": "Lista di parole chiave che indicano ricerca semantica",
+            "default": ["contenuto", "parla di", "spiega", "cos'è", "come", "perché"]
+          },
+          "metadata_keywords": {
+            "type": "array",
+            "title": "Parole chiave metadati",
+            "description": "Lista di parole chiave che indicano ricerca sui metadati",
+            "default": ["quando", "creato", "data", "autore", "formato", "tipo file"]
+          },
+          "confidence_threshold_semantic": {
+            "type": "number",
+            "title": "Soglia confidenza semantica",
+            "description": "Soglia per attivare ricerca semantica",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.3
+          },
+          "confidence_threshold_metadata": {
+            "type": "number",
+            "title": "Soglia confidenza metadati",
+            "description": "Soglia per attivare ricerca metadati",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.2
+          },
+          "default_strategy": {
+            "type": "string",
+            "title": "Strategia predefinita",
+            "description": "Strategia da usare quando non ci sono indicatori chiari",
+            "enum": ["semantic", "metadata", "both"],
+            "default": "both"
+          }
+        }
+      },
+      "defaultConfig": {
+        "semantic_keywords": ["contenuto", "parla di", "spiega", "cos'è", "come", "perché"],
+        "metadata_keywords": ["quando", "creato", "data", "autore", "formato", "tipo file"],
+        "confidence_threshold_semantic": 0.3,
+        "confidence_threshold_metadata": 0.2,
+        "default_strategy": "both"
+      }
+    },
+    {
+      "id": "semantic_search",
+      "name": "Semantic Search",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Esegue ricerche semantiche utilizzando il VectorstoreService",
+      "icon": "🧠",
+      "color": "#3F51B5",
+      "entry": "src/semantic_search_processor.py",
+      "inputs": [
+        {
+          "name": "question",
+          "type": "string",
+          "description": "Domanda per la ricerca semantica",
+          "required": true
+        },
+        {
+          "name": "collection",
+          "type": "string",
+          "description": "Nome della collezione da cercare",
+          "required": false
+        },
+        {
+          "name": "max_results",
+          "type": "integer",
+          "description": "Numero massimo di risultati",
+          "required": false
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "description": "ID dell'utente",
+          "required": false
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "description": "ID della sessione",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "results",
+          "type": "array",
+          "description": "Risultati della ricerca semantica"
+        },
+        {
+          "name": "total_found",
+          "type": "integer",
+          "description": "Numero totale di risultati trovati"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione Semantic Search",
+        "properties": {
+          "vectorstore_base_url": {
+            "type": "string",
+            "title": "URL VectorstoreService",
+            "description": "URL base del servizio VectorstoreService",
+            "default": "http://localhost:8090"
+          },
+          "default_collection": {
+            "type": "string",
+            "title": "Collezione predefinita",
+            "description": "Nome della collezione predefinita",
+            "default": "documents"
+          },
+          "max_results": {
+            "type": "integer",
+            "title": "Risultati massimi",
+            "description": "Numero massimo di risultati da restituire",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 5
+          },
+          "min_similarity_score": {
+            "type": "number",
+            "title": "Punteggio similarità minimo",
+            "description": "Punteggio minimo di similarità per includere un risultato",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.1
+          },
+          "timeout": {
+            "type": "integer",
+            "title": "Timeout (secondi)",
+            "description": "Timeout per le richieste HTTP",
+            "minimum": 5,
+            "maximum": 120,
+            "default": 30
+          },
+          "enable_fallback_search": {
+            "type": "boolean",
+            "title": "Abilita ricerca fallback",
+            "description": "Usa ricerca alternativa se quella principale fallisce",
+            "default": true
+          }
+        }
+      },
+      "defaultConfig": {
+        "vectorstore_base_url": "http://localhost:8090",
+        "default_collection": "documents",
+        "max_results": 5,
+        "min_similarity_score": 0.1,
+        "timeout": 30,
+        "enable_fallback_search": true
+      }
+    },
+    {
+      "id": "metadata_search",
+      "name": "Metadata Search",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Esegue ricerche sui metadati dei documenti",
+      "icon": "📊",
+      "color": "#FF5722",
+      "entry": "src/metadata_search_processor.py",
+      "inputs": [
+        {
+          "name": "question",
+          "type": "string",
+          "description": "Domanda per la ricerca sui metadati",
+          "required": true
+        },
+        {
+          "name": "max_results",
+          "type": "integer",
+          "description": "Numero massimo di risultati",
+          "required": false
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "description": "ID dell'utente",
+          "required": false
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "description": "ID della sessione",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "results",
+          "type": "array",
+          "description": "Risultati della ricerca sui metadati"
+        },
+        {
+          "name": "total_found",
+          "type": "integer",
+          "description": "Numero totale di risultati trovati"
+        },
+        {
+          "name": "criteria",
+          "type": "object",
+          "description": "Criteri di ricerca estratti"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione Metadata Search",
+        "properties": {
+          "vectorstore_base_url": {
+            "type": "string",
+            "title": "URL VectorstoreService",
+            "description": "URL base del servizio VectorstoreService",
+            "default": "http://localhost:8090"
+          },
+          "max_results": {
+            "type": "integer",
+            "title": "Risultati massimi",
+            "description": "Numero massimo di risultati da restituire",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          },
+          "timeout": {
+            "type": "integer",
+            "title": "Timeout (secondi)",
+            "description": "Timeout per le richieste HTTP",
+            "minimum": 5,
+            "maximum": 120,
+            "default": 30
+          }
+        }
+      },
+      "defaultConfig": {
+        "vectorstore_base_url": "http://localhost:8090",
+        "max_results": 10,
+        "timeout": 30
+      }
+    },
+    {
+      "id": "generic_text_processor",
+      "name": "Generic Text Processor",
+      "type": "processing",
+      "category": "Text Processing",
+      "description": "Processore universale per operazioni testuali: chunking, embedding, filtering, joining",
+      "icon": "📝",
+      "color": "#FF9800",
+      "entry": "src/generic_text_processor.py",
+      "inputs": [
+        {
+          "name": "text_input",
+          "type": "string",
+          "description": "Testo di input per chunking",
+          "required": false
+        },
+        {
+          "name": "texts",
+          "type": "array",
+          "description": "Lista di testi per embedding/filtering/joining",
+          "required": false
+        },
+        {
+          "name": "text_chunks",
+          "type": "array",
+          "description": "Array di chunks per embedding",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "object",
+          "description": "Output dell'operazione testuale configurata"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Generic Text Processor Configuration",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation Type",
+            "description": "Type of text operation to perform",
+            "enum": ["chunk", "embed", "filter", "join", "pipeline"],
+            "default": "chunk"
+          },
+          "strategy": {
+            "type": "string",
+            "title": "Processing Strategy",
+            "description": "Strategy for chunking operation",
+            "enum": ["token", "sentence", "semantic"],
+            "default": "token"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Embedding Provider",
+            "description": "Provider for embedding operation",
+            "enum": ["sentence_transformers", "openai"],
+            "default": "sentence_transformers"
+          },
+          "filter_type": {
+            "type": "string",
+            "title": "Filter Type",
+            "description": "Type of filtering to apply",
+            "enum": ["length", "regex", "content"],
+            "default": "length"
+          },
+          "join_strategy": {
+            "type": "string",
+            "title": "Join Strategy",
+            "description": "Strategy for joining texts",
+            "enum": ["simple", "template", "priority"],
+            "default": "simple"
+          },
+          "chunk_size": {
+            "type": "integer",
+            "title": "Chunk Size",
+            "description": "Maximum chunk size in characters",
+            "default": 1000
+          },
+          "chunk_overlap": {
+            "type": "integer",
+            "title": "Chunk Overlap",
+            "description": "Overlap between chunks",
+            "default": 200
+          },
+          "model": {
+            "type": "string",
+            "title": "Embedding Model",
+            "description": "Model to use for embeddings",
+            "default": "sentence-transformers/all-MiniLM-L6-v2"
+          },
+          "batch_size": {
+            "type": "integer",
+            "title": "Batch Size",
+            "description": "Batch size for processing",
+            "default": 32
+          },
+          "normalize_embeddings": {
+            "type": "boolean",
+            "title": "Normalize Embeddings",
+            "description": "Whether to normalize embeddings",
+            "default": true
+          },
+          "separator": {
+            "type": "string",
+            "title": "Separator",
+            "description": "Separator for chunking/joining",
+            "default": "\n\n"
+          },
+          "min_length": {
+            "type": "integer",
+            "title": "Minimum Length",
+            "description": "Minimum text length for filtering",
+            "default": 0
+          },
+          "max_length": {
+            "type": "integer",
+            "title": "Maximum Length",
+            "description": "Maximum text length for filtering",
+            "default": 10000
+          },
+          "include_patterns": {
+            "type": "array",
+            "title": "Include Patterns",
+            "description": "Regex patterns to include in filtering",
+            "items": {"type": "string"}
+          },
+          "exclude_patterns": {
+            "type": "array",
+            "title": "Exclude Patterns",
+            "description": "Regex patterns to exclude in filtering",
+            "items": {"type": "string"}
+          },
+          "template": {
+            "type": "string",
+            "title": "Join Template",
+            "description": "Template for joining texts",
+            "default": "{content}"
+          },
+          "pipeline": {
+            "type": "array",
+            "title": "Processing Pipeline",
+            "description": "Array of processing steps for pipeline operation",
+            "items": {"type": "object"}
+          }
+        }
+      },
+      "defaultConfig": {
+        "operation": "chunk",
+        "strategy": "token",
+        "chunk_size": 1000,
+        "chunk_overlap": 200,
+        "separator": "\n\n"
+      }
+    },
+    {
+      "id": "generic_document_processor",
+      "name": "Generic Document Processor",
+      "type": "processing",
+      "category": "Document Processing",
+      "description": "Processore universale per documenti: estrazione testo, metadati, conversione formati",
+      "icon": "📄",
+      "color": "#9C27B0",
+      "entry": "src/generic_document_processor.py",
+      "inputs": [
+        {
+          "name": "document",
+          "type": "object",
+          "description": "Documento da processare (file, bytes, path)",
+          "required": true
+        },
+        {
+          "name": "file",
+          "type": "string",
+          "description": "File path del documento",
+          "required": false
+        },
+        {
+          "name": "content",
+          "type": "string",
+          "description": "Contenuto del documento come stringa",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "object",
+          "description": "Risultato dell'elaborazione documento"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Generic Document Processor Configuration",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation Type",
+            "description": "Type of document operation to perform",
+            "enum": ["extract", "metadata", "convert", "analyze"],
+            "default": "extract"
+          },
+          "format": {
+            "type": "string",
+            "title": "Document Format",
+            "description": "Format of the input document",
+            "enum": ["auto", "pdf", "docx", "html", "txt", "md", "csv"],
+            "default": "auto"
+          },
+          "target_format": {
+            "type": "string",
+            "title": "Target Format",
+            "description": "Target format for conversion",
+            "enum": ["text", "html", "markdown"],
+            "default": "text"
+          },
+          "preserve_layout": {
+            "type": "boolean",
+            "title": "Preserve Layout",
+            "description": "Try to preserve document layout",
+            "default": true
+          },
+          "extract_images": {
+            "type": "boolean",
+            "title": "Extract Images",
+            "description": "Extract images from document",
+            "default": false
+          },
+          "page_range": {
+            "type": "array",
+            "title": "Page Range",
+            "description": "Range of pages to process [start, end]",
+            "items": {"type": "integer"},
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "encoding": {
+            "type": "string",
+            "title": "Text Encoding",
+            "description": "Character encoding for text files",
+            "default": "utf-8"
+          },
+          "file_type": {
+            "type": "string",
+            "title": "File Type",
+            "description": "Specific file type for text processing",
+            "enum": ["txt", "md", "csv", "json", "xml"],
+            "default": "txt"
+          }
+        }
+      },
+      "defaultConfig": {
+        "operation": "extract",
+        "format": "auto",
+        "preserve_layout": true,
+        "extract_images": false,
+        "encoding": "utf-8"
+      }
+    },
+    {
+      "id": "generic_vector_store_processor",
+      "name": "Generic Vector Store Processor",
+      "type": "processing", 
+      "category": "Vector Storage",
+      "description": "Processore universale per operazioni vector database: write, read, search, manage su Chroma, VectorStore Service, Elasticsearch",
+      "icon": "🗄️",
+      "color": "#673AB7",
+      "entry": "src/generic_vector_store_processor.py",
+      "inputs": [
+        {
+          "name": "embeddings_input",
+          "type": "object",
+          "description": "Input embeddings con chunks/documents per write",
+          "required": false
+        },
+        {
+          "name": "embeddings",
+          "type": "array",
+          "description": "Array di embeddings per write (formato alternativo)",
+          "required": false
+        },
+        {
+          "name": "documents",
+          "type": "array",
+          "description": "Array di documenti per write",
+          "required": false
+        },
+        {
+          "name": "texts",
+          "type": "array",
+          "description": "Array di testi per write (alternativa a documents)",
+          "required": false
+        },
+        {
+          "name": "ids",
+          "type": "array",
+          "description": "Array di ID per read/delete operations",
+          "required": false
+        },
+        {
+          "name": "vector_ids",
+          "type": "array",
+          "description": "Array di ID vettori (alternativa a ids)",
+          "required": false
+        },
+        {
+          "name": "query_vector",
+          "type": "array",
+          "description": "Vector di query per search",
+          "required": false
+        },
+        {
+          "name": "query_embedding",
+          "type": "array",
+          "description": "Embedding di query (alternativa a query_vector)",
+          "required": false
+        },
+        {
+          "name": "collection",
+          "type": "string",
+          "description": "Nome collezione per manage operations",
+          "required": false
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "description": "Modello usato per gli embeddings",
+          "required": false
+        },
+        {
+          "name": "metadata",
+          "type": "object",
+          "description": "Metadati da aggiungere ai vettori",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "object",
+          "description": "Risultato dell'operazione vector store"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Generic Vector Store Processor Configuration",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation Type",
+            "description": "Type of vector store operation to perform",
+            "enum": ["write", "read", "search", "delete", "manage"],
+            "default": "write"
+          },
+          "backend_type": {
+            "type": "string",
+            "title": "Backend Type",
+            "description": "Vector store backend to use",
+            "enum": ["chroma", "vectorstore_service", "elasticsearch", "mock"],
+            "default": "chroma"
+          },
+          "collection": {
+            "type": "string",
+            "title": "Collection Name",
+            "description": "Name of the collection/index",
+            "default": "documents"
+          },
+          "backend_config": {
+            "type": "object",
+            "title": "Backend Configuration",
+            "description": "Backend-specific configuration",
+            "properties": {
+              "persist_directory": {
+                "type": "string",
+                "title": "Persist Directory (Chroma)",
+                "description": "Directory for Chroma persistence",
+                "default": "./chroma_db"
+              },
+              "service_url": {
+                "type": "string",
+                "title": "Service URL (VectorStore)",
+                "description": "URL for VectorStore service",
+                "default": "http://localhost:8090"
+              },
+              "host": {
+                "type": "string",
+                "title": "Host (Elasticsearch)",
+                "description": "Elasticsearch host",
+                "default": "localhost"
+              },
+              "port": {
+                "type": "integer",
+                "title": "Port (Elasticsearch)",
+                "description": "Elasticsearch port",
+                "default": 9200
+              },
+              "username": {
+                "type": "string",
+                "title": "Username",
+                "description": "Authentication username"
+              },
+              "password": {
+                "type": "string",
+                "title": "Password",
+                "description": "Authentication password"
+              },
+              "timeout": {
+                "type": "integer",
+                "title": "Timeout (seconds)",
+                "description": "Connection timeout",
+                "default": 30
+              },
+              "distance_metric": {
+                "type": "string",
+                "title": "Distance Metric (Chroma)",
+                "description": "Distance metric for similarity",
+                "enum": ["cosine", "euclidean", "l2", "ip"],
+                "default": "cosine"
+              },
+              "vector_dimensions": {
+                "type": "integer",
+                "title": "Vector Dimensions (Elasticsearch)",
+                "description": "Dimensionality of vectors for ES",
+                "default": 384
+              }
+            }
+          },
+          "n_results": {
+            "type": "integer",
+            "title": "Number of Results",
+            "description": "Number of results to return for search",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          },
+          "include": {
+            "type": "array",
+            "title": "Include Fields",
+            "description": "Fields to include in search results",
+            "items": {"type": "string"},
+            "default": ["documents", "metadatas", "distances"]
+          },
+          "batch_size": {
+            "type": "integer",
+            "title": "Batch Size",
+            "description": "Batch size for write operations",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 100
+          },
+          "management_action": {
+            "type": "string",
+            "title": "Management Action",
+            "description": "Management operation to perform",
+            "enum": ["list_collections", "get_collection_info", "create_collection"],
+            "default": "list_collections"
+          },
+          "min_score": {
+            "type": "number",
+            "title": "Minimum Score",
+            "description": "Minimum similarity score to include",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.0
+          }
+        }
+      },
+      "defaultConfig": {
+        "operation": "write",
+        "backend_type": "chroma", 
+        "collection": "documents",
+        "backend_config": {
+          "persist_directory": "./chroma_db",
+          "distance_metric": "cosine",
+          "timeout": 30
+        },
+        "n_results": 10,
+        "include": ["documents", "metadatas", "distances"],
+        "batch_size": 100,
+        "min_score": 0.0
+      }
+    },
+    {
+      "id": "response_aggregator",
+      "name": "Response Aggregator",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Aggrega risultati da ricerche semantiche e sui metadati",
+      "icon": "🔗",
+      "color": "#607D8B",
+      "entry": "src/response_aggregator_processor.py",
+      "inputs": [
+        {
+          "name": "question",
+          "type": "string",
+          "description": "Domanda originale dell'utente",
+          "required": true
+        },
+        {
+          "name": "search_strategy",
+          "type": "object",
+          "description": "Strategia di ricerca utilizzata",
+          "required": false
+        },
+        {
+          "name": "semantic_results",
+          "type": "object",
+          "description": "Risultati della ricerca semantica",
+          "required": false
+        },
+        {
+          "name": "metadata_results",
+          "type": "object",
+          "description": "Risultati della ricerca sui metadati",
+          "required": false
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "description": "ID dell'utente",
+          "required": false
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "description": "ID della sessione",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "string",
+          "description": "Risposta finale aggregata"
+        },
+        {
+          "name": "documents",
+          "type": "array",
+          "description": "Documenti finali ordinati per rilevanza"
+        },
+        {
+          "name": "sources",
+          "type": "array",
+          "description": "Informazioni sulle fonti"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione Response Aggregator",
+        "properties": {
+          "max_total_results": {
+            "type": "integer",
+            "title": "Risultati totali massimi",
+            "description": "Numero massimo di risultati nella risposta finale",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 10
+          },
+          "semantic_weight": {
+            "type": "number",
+            "title": "Peso ricerca semantica",
+            "description": "Peso per i risultati della ricerca semantica",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7
+          },
+          "metadata_weight": {
+            "type": "number",
+            "title": "Peso ricerca metadati",
+            "description": "Peso per i risultati della ricerca sui metadati",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.3
+          },
+          "enable_deduplication": {
+            "type": "boolean",
+            "title": "Abilita deduplicazione",
+            "description": "Rimuovi documenti duplicati dai risultati",
+            "default": true
+          },
+          "response_format": {
+            "type": "string",
+            "title": "Formato risposta",
+            "description": "Formato della risposta finale",
+            "enum": ["detailed", "summary"],
+            "default": "detailed"
+          },
+          "include_sources": {
+            "type": "boolean",
+            "title": "Includi fonti",
+            "description": "Includi informazioni sulle fonti nella risposta",
+            "default": true
+          },
+          "include_snippets": {
+            "type": "boolean",
+            "title": "Includi snippet",
+            "description": "Includi snippet di testo rilevanti",
+            "default": true
+          }
+        }
+      },
+      "defaultConfig": {
+        "max_total_results": 10,
+        "semantic_weight": 0.7,
+        "metadata_weight": 0.3,
+        "enable_deduplication": true,
+        "response_format": "detailed",
+        "include_sources": true,
+        "include_snippets": true
+      }
+    },
+    {
+      "id": "generic_aggregator",
+      "name": "Generic Aggregator",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Aggregatore generico riutilizzabile per combinare risultati da fonti multiple",
+      "icon": "⚡",
+      "color": "#795548",
+      "entry": "src/generic_aggregator_processor.py",
+      "inputs": [
+        {
+          "name": "context",
+          "type": "object",
+          "description": "Contesto della richiesta (opzionale)",
+          "required": false
+        },
+        {
+          "name": "request_id",
+          "type": "string",
+          "description": "ID della richiesta (opzionale)",
+          "required": false
+        },
+        {
+          "name": "user_id",
+          "type": "string",
+          "description": "ID dell'utente (opzionale)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "results",
+          "type": "array",
+          "description": "Risultati aggregati finali"
+        },
+        {
+          "name": "total_count",
+          "type": "integer",
+          "description": "Numero totale di risultati"
+        },
+        {
+          "name": "sources_summary",
+          "type": "object",
+          "description": "Riassunto delle fonti utilizzate"
+        },
+        {
+          "name": "aggregation_metadata",
+          "type": "object",
+          "description": "Metadati del processo di aggregazione"
+        },
+        {
+          "name": "formatted_output",
+          "type": "string",
+          "description": "Output formattato come testo (se output_format=formatted_text)"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione Generic Aggregator",
+        "properties": {
+          "max_total_results": {
+            "type": "integer",
+            "title": "Risultati massimi",
+            "description": "Numero massimo di risultati nella risposta finale",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          },
+          "aggregation_strategy": {
+            "type": "string",
+            "title": "Strategia aggregazione",
+            "description": "Strategia per aggregare i risultati",
+            "enum": ["weighted_merge", "priority_merge", "simple_merge"],
+            "default": "weighted_merge"
+          },
+          "source_weights": {
+            "type": "object",
+            "title": "Pesi per fonte",
+            "description": "Pesi per le diverse fonti di dati",
+            "default": {
+              "primary": 0.7,
+              "secondary": 0.3,
+              "semantic": 0.6,
+              "metadata": 0.4
+            }
+          },
+          "enable_deduplication": {
+            "type": "boolean",
+            "title": "Abilita deduplicazione",
+            "description": "Rimuovi risultati duplicati",
+            "default": true
+          },
+          "deduplication_field": {
+            "type": "string",
+            "title": "Campo deduplicazione",
+            "description": "Campo da usare per identificare duplicati",
+            "default": "id"
+          },
+          "similarity_threshold": {
+            "type": "number",
+            "title": "Soglia similarità",
+            "description": "Soglia per considerare due risultati simili",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.8
+          },
+          "output_format": {
+            "type": "string",
+            "title": "Formato output",
+            "description": "Formato dell'output finale",
+            "enum": ["structured", "formatted_text", "raw"],
+            "default": "structured"
+          },
+          "include_metadata": {
+            "type": "boolean",
+            "title": "Includi metadati",
+            "description": "Includi metadati di processing nell'output",
+            "default": true
+          },
+          "include_sources": {
+            "type": "boolean",
+            "title": "Includi fonti",
+            "description": "Includi informazioni sulle fonti nell'output",
+            "default": true
+          },
+          "scoring_method": {
+            "type": "string",
+            "title": "Metodo scoring",
+            "description": "Metodo per calcolare i punteggi combinati",
+            "enum": ["weighted_average", "max", "product", "sum"],
+            "default": "weighted_average"
+          },
+          "score_normalization": {
+            "type": "boolean",
+            "title": "Normalizzazione score",
+            "description": "Normalizza i punteggi tra 0 e 1",
+            "default": true
+          },
+          "format_templates": {
+            "type": "object",
+            "title": "Template formatazione",
+            "description": "Template per formattazione testo",
+            "default": {
+              "item_template": "{index}. {title}\n   {content}",
+              "summary_template": "Found {count} results from {sources} sources",
+              "no_results_template": "No results found",
+              "error_template": "Error occurred: {error}"
+            }
+          }
+        }
+      },
+      "defaultConfig": {
+        "max_total_results": 10,
+        "aggregation_strategy": "weighted_merge",
+        "source_weights": {
+          "primary": 0.7,
+          "secondary": 0.3,
+          "semantic": 0.6,
+          "metadata": 0.4
+        },
+        "enable_deduplication": true,
+        "deduplication_field": "id",
+        "similarity_threshold": 0.8,
+        "output_format": "structured",
+        "include_metadata": true,
+        "include_sources": true,
+        "scoring_method": "weighted_average",
+        "score_normalization": true,
+        "format_templates": {
+          "item_template": "{index}. {title}\n   {content}",
+          "summary_template": "Found {count} results from {sources} sources",
+          "no_results_template": "No results found",
+          "error_template": "Error occurred: {error}"
+        }
+      }
+    },
+    {
+      "id": "generic_query_analyzer",
+      "name": "Generic Query Analyzer",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Analizzatore di query generico completamente riutilizzabile per classificazione, intent detection, sentiment analysis",
+      "icon": "🎯",
+      "color": "#9C27B0",
+      "entry": "src/generic_query_analyzer_processor.py",
+      "inputs": [
+        {
+          "name": "query",
+          "type": "string",
+          "description": "Query da analizzare (campo configurabile)",
+          "required": false
+        },
+        {
+          "name": "context",
+          "type": "object",
+          "description": "Contesto della richiesta",
+          "required": false
+        },
+        {
+          "name": "user_id",
+          "type": "string",
+          "description": "ID dell'utente",
+          "required": false
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "description": "ID della sessione",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "strategy",
+          "type": "object",
+          "description": "Strategia di elaborazione determinata"
+        },
+        {
+          "name": "analysis_results",
+          "type": "object",
+          "description": "Risultati di tutte le analisi eseguite"
+        },
+        {
+          "name": "reasoning",
+          "type": "object",
+          "description": "Spiegazione del ragionamento seguito"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione Generic Query Analyzer",
+        "properties": {
+          "analysis_types": {
+            "type": "array",
+            "title": "Tipi di analisi",
+            "description": "Lista dei tipi di analisi da eseguire",
+            "items": {
+              "type": "string",
+              "enum": ["classification", "intent", "strategy", "sentiment", "entities", "complexity"]
+            },
+            "default": ["classification", "intent", "strategy"]
+          },
+          "analysis_patterns": {
+            "type": "object",
+            "title": "Pattern di analisi",
+            "description": "Pattern configurabili per diversi domini",
+            "default": {
+              "semantic": ["contenuto", "spiega", "cos'è", "come", "dimmi"],
+              "metadata": ["quando", "autore", "tipo", "data", "formato"],
+              "temporal": ["\\b\\d{4}\\b", "\\boggi\\b", "\\bieri\\b"],
+              "intent_search": ["trova", "cerca", "mostra", "dammi"],
+              "intent_info": ["cos'è", "cosa", "chi", "dove"],
+              "intent_procedure": ["come", "modo", "procedura"]
+            }
+          },
+          "confidence_thresholds": {
+            "type": "object",
+            "title": "Soglie di confidenza",
+            "description": "Soglie per diversi tipi di analisi",
+            "default": {
+              "semantic": 0.3,
+              "metadata": 0.2,
+              "intent": 0.4,
+              "classification": 0.3
+            }
+          },
+          "input_field": {
+            "type": "string",
+            "title": "Campo input",
+            "description": "Nome del campo da analizzare",
+            "default": "query"
+          },
+          "output_format": {
+            "type": "string",
+            "title": "Formato output",
+            "description": "Formato dell'output",
+            "enum": ["detailed", "simple", "classification_only"],
+            "default": "detailed"
+          },
+          "include_scores": {
+            "type": "boolean",
+            "title": "Includi punteggi",
+            "description": "Includi punteggi di confidenza nell'output",
+            "default": true
+          },
+          "text_preprocessing": {
+            "type": "object",
+            "title": "Pre-processing testo",
+            "description": "Opzioni di pre-processing del testo",
+            "default": {
+              "lowercase": true,
+              "remove_punctuation": false,
+              "normalize_whitespace": true
+            }
+          }
+        }
+      },
+      "defaultConfig": {
+        "analysis_types": ["classification", "intent", "strategy"],
+        "analysis_patterns": {
+          "semantic": ["contenuto", "spiega", "cos'è", "come", "dimmi"],
+          "metadata": ["quando", "autore", "tipo", "data", "formato"],
+          "temporal": ["\\b\\d{4}\\b", "\\boggi\\b", "\\bieri\\b"],
+          "intent_search": ["trova", "cerca", "mostra", "dammi"],
+          "intent_info": ["cos'è", "cosa", "chi", "dove"],
+          "intent_procedure": ["come", "modo", "procedura"]
+        },
+        "confidence_thresholds": {
+          "semantic": 0.3,
+          "metadata": 0.2,
+          "intent": 0.4,
+          "classification": 0.3
+        },
+        "input_field": "query",
+        "output_format": "detailed",
+        "include_scores": true,
+        "text_preprocessing": {
+          "lowercase": true,
+          "remove_punctuation": false,
+          "normalize_whitespace": true
+        }
+      }
+    },
+    {
+      "id": "generic_semantic_search",
+      "name": "Generic Semantic Search",
+      "type": "rag",
+      "category": "RAG",
+      "description": "Ricerca semantica generica su diversi backend (Vectorstore, Elasticsearch, HTTP generico)",
+      "icon": "🌐",
+      "color": "#3F51B5",
+      "entry": "src/generic_semantic_search_processor.py",
+      "inputs": [
+        {
+          "name": "query",
+          "type": "string",
+          "description": "Query di ricerca (campo configurabile)",
+          "required": false
+        },
+        {
+          "name": "search_params",
+          "type": "object",
+          "description": "Parametri di ricerca specifici",
+          "required": false
+        },
+        {
+          "name": "context",
+          "type": "object",
+          "description": "Contesto della richiesta",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "results",
+          "type": "array",
+          "description": "Risultati della ricerca"
+        },
+        {
+          "name": "total_found",
+          "type": "integer",
+          "description": "Numero totale di risultati trovati"
+        },
+        {
+          "name": "search_metadata",
+          "type": "object",
+          "description": "Metadati della ricerca eseguita"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione Generic Semantic Search",
+        "properties": {
+          "backend_type": {
+            "type": "string",
+            "title": "Tipo backend",
+            "description": "Tipo di backend per la ricerca",
+            "enum": ["vectorstore", "elasticsearch", "http", "generic"],
+            "default": "vectorstore"
+          },
+          "backend_config": {
+            "type": "object",
+            "title": "Configurazione backend",
+            "description": "Configurazione specifica del backend",
+            "default": {
+              "base_url": "http://localhost:8090",
+              "timeout": 30
+            }
+          },
+          "default_search_params": {
+            "type": "object",
+            "title": "Parametri ricerca default",
+            "description": "Parametri di ricerca predefiniti",
+            "default": {
+              "limit": 5,
+              "collection": "documents"
+            }
+          },
+          "min_score": {
+            "type": "number",
+            "title": "Punteggio minimo",
+            "description": "Punteggio minimo per includere risultati",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.1
+          },
+          "max_results": {
+            "type": "integer",
+            "title": "Risultati massimi",
+            "description": "Numero massimo di risultati da restituire",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          },
+          "output_format": {
+            "type": "string",
+            "title": "Formato output",
+            "description": "Formato dell'output",
+            "enum": ["detailed", "simple", "raw"],
+            "default": "detailed"
+          },
+          "include_snippets": {
+            "type": "boolean",
+            "title": "Includi snippet",
+            "description": "Genera snippet di testo rilevante",
+            "default": true
+          },
+          "snippet_length": {
+            "type": "integer",
+            "title": "Lunghezza snippet",
+            "description": "Lunghezza massima degli snippet",
+            "minimum": 100,
+            "maximum": 1000,
+            "default": 300
+          },
+          "enable_fallback": {
+            "type": "boolean",
+            "title": "Abilita fallback",
+            "description": "Usa backend di fallback in caso di errore",
+            "default": true
+          }
+        }
+      },
+      "defaultConfig": {
+        "backend_type": "vectorstore",
+        "backend_config": {
+          "base_url": "http://localhost:8090",
+          "timeout": 30,
+          "default_collection": "documents"
+        },
+        "default_search_params": {
+          "limit": 5,
+          "collection": "documents"
+        },
+        "min_score": 0.1,
+        "max_results": 10,
+        "output_format": "detailed",
+        "include_snippets": true,
+        "snippet_length": 300,
+        "enable_fallback": true
+      }
+    },
+    {
+      "id": "generic_metadata_search",
+      "name": "Generic Metadata Search", 
+      "type": "rag",
+      "category": "RAG",
+      "description": "Ricerca sui metadati generica con estrattori configurabili",
+      "icon": "🔍",
+      "color": "#FF5722",
+      "entry": "src/generic_metadata_search_processor.py",
+      "inputs": [
+        {
+          "name": "query",
+          "type": "string",
+          "description": "Query per estrazione criteri metadati",
+          "required": false
+        },
+        {
+          "name": "context",
+          "type": "object",
+          "description": "Contesto della richiesta",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "results",
+          "type": "array",
+          "description": "Risultati filtrati per metadati"
+        },
+        {
+          "name": "total_found",
+          "type": "integer",
+          "description": "Numero totale di risultati"
+        },
+        {
+          "name": "criteria",
+          "type": "object",
+          "description": "Criteri estratti dalla query"
+        },
+        {
+          "name": "search_metadata",
+          "type": "object",
+          "description": "Metadati della ricerca"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Configurazione Generic Metadata Search",
+        "properties": {
+          "extractors": {
+            "type": "object",
+            "title": "Configurazione estrattori",
+            "description": "Configurazione degli estrattori di criteri",
+            "default": {
+              "date_enabled": true,
+              "file_type_enabled": true,
+              "size_enabled": true,
+              "author_enabled": true
+            }
+          },
+          "data_source": {
+            "type": "object",
+            "title": "Configurazione fonte dati",
+            "description": "Configurazione della fonte dati",
+            "default": {
+              "type": "vectorstore",
+              "config": {
+                "base_url": "http://localhost:8090",
+                "timeout": 30
+              }
+            }
+          },
+          "max_results": {
+            "type": "integer",
+            "title": "Risultati massimi",
+            "description": "Numero massimo di risultati",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          },
+          "output_format": {
+            "type": "string",
+            "title": "Formato output",
+            "description": "Formato dell'output",
+            "enum": ["detailed", "simple", "raw"],
+            "default": "detailed"
+          },
+          "include_match_details": {
+            "type": "boolean",
+            "title": "Includi dettagli match",
+            "description": "Includi dettagli sui motivi del match",
+            "default": true
+          },
+          "input_field": {
+            "type": "string",
+            "title": "Campo input",
+            "description": "Nome del campo da cui estrarre la query",
+            "default": "query"
+          }
+        }
+      },
+      "defaultConfig": {
+        "extractors": {
+          "date_enabled": true,
+          "file_type_enabled": true,
+          "size_enabled": true,
+          "author_enabled": true,
+          "date": {
+            "temporal_keywords": {
+              "today": 0, "oggi": 0,
+              "yesterday": -1, "ieri": -1,
+              "week": -7, "settimana": -7,
+              "month": -30, "mese": -30
+            }
+          },
+          "file_type": {
+            "type_mapping": {
+              "pdf": [".pdf"],
+              "document": [".doc", ".docx", ".txt"],
+              "image": [".jpg", ".jpeg", ".png", ".gif"]
+            }
+          }
+        },
+        "data_source": {
+          "type": "vectorstore",
+          "config": {
+            "base_url": "http://localhost:8090",
+            "timeout": 30
+          }
+        },
+        "max_results": 10,
+        "output_format": "detailed",
+        "include_match_details": true,
+        "input_field": "query"
+      }
+    },
+    {
+      "id": "generic_llm_processor",
+      "name": "Generic LLM Processor",
+      "type": "processing",
+      "category": "LLM",
+      "description": "Processore universale per Large Language Models: OpenAI, Anthropic, Ollama, HuggingFace con templating e formattazione avanzata",
+      "icon": "🧠",
+      "color": "#FF9800",
+      "entry": "src/generic_llm_processor.py",
+      "inputs": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "description": "Prompt utente per generazione singola",
+          "required": false
+        },
+        {
+          "name": "query",
+          "type": "string", 
+          "description": "Query utente (alias per prompt)",
+          "required": false
+        },
+        {
+          "name": "text",
+          "type": "string",
+          "description": "Testo input (alias per prompt)",
+          "required": false
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "description": "Messaggio per conversazione multi-turn",
+          "required": false
+        },
+        {
+          "name": "system_prompt",
+          "type": "string",
+          "description": "Prompt di sistema da input",
+          "required": false
+        },
+        {
+          "name": "context",
+          "type": "object",
+          "description": "Contesto aggiuntivo per templating",
+          "required": false
+        },
+        {
+          "name": "documents",
+          "type": "object",
+          "description": "Documenti di contesto per RAG",
+          "required": false
+        },
+        {
+          "name": "template",
+          "type": "string",
+          "description": "Template string per operazione template",
+          "required": false
+        },
+        {
+          "name": "data",
+          "type": "object",
+          "description": "Dati per templating",
+          "required": false
+        },
+        {
+          "name": "response",
+          "type": "object",
+          "description": "Risposta LLM raw per formattazione",
+          "required": false
+        },
+        {
+          "name": "llm_response",
+          "type": "object",
+          "description": "Risposta LLM (alias per response)",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "object",
+          "description": "Risultato dell'operazione LLM"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Generic LLM Processor Configuration",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation Type",
+            "description": "Operazione LLM da eseguire",
+            "enum": ["generate", "chat", "template", "format"],
+            "default": "generate"
+          },
+          "provider": {
+            "type": "string",
+            "title": "LLM Provider",
+            "description": "Provider del Large Language Model",
+            "enum": ["openai", "anthropic", "ollama", "huggingface"],
+            "default": "openai"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model Name",
+            "description": "Nome del modello specifico",
+            "default": "gpt-3.5-turbo"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "API Key",
+            "description": "Chiave API per provider remoti",
+            "default": ""
+          },
+          "system_prompt": {
+            "type": "string",
+            "title": "System Prompt",
+            "description": "Prompt di sistema per definire comportamento AI",
+            "default": ""
+          },
+          "prompt_template": {
+            "type": "string",
+            "title": "Prompt Template", 
+            "description": "Template per formattare prompt utente",
+            "default": "{prompt}"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template Engine",
+            "description": "Engine per templating prompt",
+            "enum": ["simple", "jinja"],
+            "default": "simple"
+          },
+          "response_format": {
+            "type": "string",
+            "title": "Response Format",
+            "description": "Formato di output della risposta",
+            "enum": ["detailed", "simple", "markdown"],
+            "default": "detailed"
+          },
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation ID",
+            "description": "ID univoco per conversazioni multi-turn",
+            "default": "default"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "title": "Max Tokens",
+            "description": "Numero massimo di token nella risposta",
+            "minimum": 1,
+            "maximum": 4000,
+            "default": 1000
+          },
+          "temperature": {
+            "type": "number",
+            "title": "Temperature",
+            "description": "Temperatura per la generazione (0-2)",
+            "minimum": 0,
+            "maximum": 2,
+            "default": 0.7
+          },
+          "top_p": {
+            "type": "number",
+            "title": "Top P",
+            "description": "Top-p sampling per la generazione",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 1.0
+          },
+          "frequency_penalty": {
+            "type": "number",
+            "title": "Frequency Penalty",
+            "description": "Penalità per ripetizioni frequenti",
+            "minimum": -2,
+            "maximum": 2,
+            "default": 0.0
+          },
+          "presence_penalty": {
+            "type": "number",
+            "title": "Presence Penalty",
+            "description": "Penalità per presenza di token",
+            "minimum": -2,
+            "maximum": 2,
+            "default": 0.0
+          },
+          "max_history_length": {
+            "type": "integer",
+            "title": "Max History Length",
+            "description": "Lunghezza massima storia conversazionale",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 10
+          },
+          "include_metadata": {
+            "type": "boolean",
+            "title": "Include Metadata",
+            "description": "Includere metadati nella risposta",
+            "default": true
+          },
+          "include_usage": {
+            "type": "boolean",
+            "title": "Include Usage",
+            "description": "Includere informazioni usage token",
+            "default": true
+          },
+          "include_raw": {
+            "type": "boolean",
+            "title": "Include Raw",
+            "description": "Includere risposta raw del provider",
+            "default": false
+          },
+          "max_response_length": {
+            "type": "integer",
+            "title": "Max Response Length",
+            "description": "Lunghezza massima risposta (per troncamento)",
+            "minimum": 0,
+            "default": 0
+          },
+          "timeout": {
+            "type": "integer",
+            "title": "Timeout",
+            "description": "Timeout in secondi per le richieste",
+            "minimum": 1,
+            "maximum": 300,
+            "default": 60
+          },
+          "ollama_url": {
+            "type": "string",
+            "title": "Ollama URL",
+            "description": "URL del server Ollama per provider locale",
+            "default": "http://localhost:11434"
+          },
+          "use_gpu": {
+            "type": "boolean",
+            "title": "Use GPU",
+            "description": "Utilizzare GPU per modelli HuggingFace",
+            "default": false
+          }
+        }
+      },
+      "defaultConfig": {
+        "operation": "generate",
+        "provider": "openai",
+        "model": "gpt-3.5-turbo",
+        "system_prompt": "",
+        "prompt_template": "{prompt}",
+        "template": "simple",
+        "response_format": "detailed",
+        "conversation_id": "default",
+        "max_tokens": 1000,
+        "temperature": 0.7,
+        "top_p": 1.0,
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "max_history_length": 10,
+        "include_metadata": true,
+        "include_usage": true,
+        "include_raw": false,
+        "timeout": 60,
+        "ollama_url": "http://localhost:11434",
+        "use_gpu": false
+      }
+    },
+    {
+      "id": "generic_system_processor",
+      "name": "Generic System Processor",
+      "type": "processing",
+      "category": "System",
+      "description": "Processore universale per operazioni sistema: file management, monitoring, backup, cleanup, logging, scheduling",
+      "icon": "⚙️",
+      "color": "#4CAF50",
+      "entry": "src/generic_system_processor.py",
+      "inputs": [
+        {
+          "name": "source_path",
+          "type": "string",
+          "description": "Percorso sorgente per operazioni file",
+          "required": false
+        },
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Percorso file (alias per source_path)",
+          "required": false
+        },
+        {
+          "name": "destination_path",
+          "type": "string",
+          "description": "Percorso destinazione per operazioni file",
+          "required": false
+        },
+        {
+          "name": "archive_dir",
+          "type": "string",
+          "description": "Directory archivio (alias per destination_path)",
+          "required": false
+        },
+        {
+          "name": "paths",
+          "type": "array",
+          "description": "Array di percorsi per monitoraggio",
+          "required": false
+        },
+        {
+          "name": "watch_paths",
+          "type": "array",
+          "description": "Percorsi da monitorare (alias per paths)",
+          "required": false
+        },
+        {
+          "name": "source_paths",
+          "type": "array",
+          "description": "Percorsi sorgente per backup",
+          "required": false
+        },
+        {
+          "name": "target_paths",
+          "type": "array",
+          "description": "Percorsi target per cleanup",
+          "required": false
+        },
+        {
+          "name": "backup_path",
+          "type": "string",
+          "description": "Percorso backup per restore",
+          "required": false
+        },
+        {
+          "name": "restore_path",
+          "type": "string",
+          "description": "Percorso ripristino per restore",
+          "required": false
+        },
+        {
+          "name": "backup_dir",
+          "type": "string",
+          "description": "Directory backup per list",
+          "required": false
+        },
+        {
+          "name": "event_type",
+          "type": "string",
+          "description": "Tipo di evento per logging",
+          "required": false
+        },
+        {
+          "name": "details",
+          "type": "object",
+          "description": "Dettagli evento per logging",
+          "required": false
+        },
+        {
+          "name": "event_data",
+          "type": "object",
+          "description": "Dati evento (alias per details)",
+          "required": false
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "description": "Timestamp ISO per filtrare eventi",
+          "required": false
+        },
+        {
+          "name": "task_name",
+          "type": "string",
+          "description": "Nome task per scheduling",
+          "required": false
+        },
+        {
+          "name": "schedule_config",
+          "type": "object",
+          "description": "Configurazione scheduling",
+          "required": false
+        },
+        {
+          "name": "task_config",
+          "type": "object",
+          "description": "Configurazione task",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "object",
+          "description": "Risultato dell'operazione sistema"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Generic System Processor Configuration",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation Type",
+            "description": "Tipo di operazione sistema",
+            "enum": ["file_operation", "monitor", "backup", "cleanup", "logging", "schedule"],
+            "default": "file_operation"
+          },
+          "file_operation": {
+            "type": "string",
+            "title": "File Operation",
+            "description": "Tipo di operazione sui file",
+            "enum": ["copy", "move", "delete", "archive"],
+            "default": "copy"
+          },
+          "file_config": {
+            "type": "object",
+            "title": "File Operation Config",
+            "description": "Configurazione operazioni file",
+            "properties": {
+              "preserve_metadata": {
+                "type": "boolean",
+                "title": "Preserve Metadata",
+                "description": "Preservare metadati durante copy",
+                "default": true
+              },
+              "overwrite": {
+                "type": "boolean",
+                "title": "Overwrite",
+                "description": "Sovrascrivere file esistenti",
+                "default": false
+              },
+              "secure_delete": {
+                "type": "boolean",
+                "title": "Secure Delete",
+                "description": "Cancellazione sicura (sovrascrittura)",
+                "default": false
+              }
+            }
+          },
+          "monitor_operation": {
+            "type": "string",
+            "title": "Monitor Operation",
+            "description": "Operazione di monitoraggio",
+            "enum": ["start", "stop", "get_events"],
+            "default": "start"
+          },
+          "monitor_config": {
+            "type": "object",
+            "title": "Monitor Config",
+            "description": "Configurazione monitoraggio",
+            "properties": {
+              "db_path": {
+                "type": "string",
+                "title": "Database Path",
+                "description": "Percorso database eventi",
+                "default": "./monitoring_events.db"
+              },
+              "max_events": {
+                "type": "integer",
+                "title": "Max Events",
+                "description": "Numero massimo eventi in memoria",
+                "default": 10000
+              }
+            }
+          },
+          "backup_operation": {
+            "type": "string",
+            "title": "Backup Operation",
+            "description": "Operazione di backup",
+            "enum": ["create", "restore", "list"],
+            "default": "create"
+          },
+          "backup_type": {
+            "type": "string",
+            "title": "Backup Type",
+            "description": "Tipo di backup",
+            "enum": ["full", "incremental", "differential"],
+            "default": "full"
+          },
+          "compression": {
+            "type": "boolean",
+            "title": "Compression",
+            "description": "Abilitare compressione backup",
+            "default": false
+          },
+          "encryption": {
+            "type": "boolean",
+            "title": "Encryption",
+            "description": "Abilitare crittografia backup",
+            "default": false
+          },
+          "retention_days": {
+            "type": "integer",
+            "title": "Retention Days",
+            "description": "Giorni di retention backup",
+            "minimum": 1,
+            "maximum": 365,
+            "default": 30
+          },
+          "exclude_patterns": {
+            "type": "array",
+            "title": "Exclude Patterns",
+            "description": "Pattern da escludere dal backup",
+            "items": {"type": "string"},
+            "default": []
+          },
+          "cleanup_operation": {
+            "type": "string",
+            "title": "Cleanup Operation",
+            "description": "Operazione di pulizia",
+            "enum": ["analyze", "execute"],
+            "default": "analyze"
+          },
+          "cleanup_type": {
+            "type": "string",
+            "title": "Cleanup Type",
+            "description": "Tipo di pulizia",
+            "enum": ["files", "logs", "temp", "cache", "database"],
+            "default": "files"
+          },
+          "age_threshold": {
+            "type": "integer",
+            "title": "Age Threshold",
+            "description": "Soglia età file in giorni",
+            "minimum": 1,
+            "maximum": 365,
+            "default": 7
+          },
+          "size_threshold": {
+            "type": "integer",
+            "title": "Size Threshold",
+            "description": "Soglia dimensione file in bytes",
+            "minimum": 0,
+            "default": 0
+          },
+          "pattern_filters": {
+            "type": "array",
+            "title": "Pattern Filters",
+            "description": "Pattern per filtrare file da pulire",
+            "items": {"type": "string"},
+            "default": []
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "description": "Simulazione senza modifiche reali",
+            "default": true
+          },
+          "logging_operation": {
+            "type": "string",
+            "title": "Logging Operation",
+            "description": "Operazione di logging",
+            "enum": ["log", "get"],
+            "default": "log"
+          },
+          "schedule_operation": {
+            "type": "string",
+            "title": "Schedule Operation",
+            "description": "Operazione di scheduling",
+            "enum": ["add", "remove", "list", "execute"],
+            "default": "add"
+          }
+        }
+      },
+      "defaultConfig": {
+        "operation": "file_operation",
+        "file_operation": "copy",
+        "file_config": {
+          "preserve_metadata": true,
+          "overwrite": false,
+          "secure_delete": false
+        },
+        "monitor_operation": "start",
+        "monitor_config": {
+          "db_path": "./monitoring_events.db",
+          "max_events": 10000
+        },
+        "backup_operation": "create",
+        "backup_type": "full",
+        "compression": false,
+        "encryption": false,
+        "retention_days": 30,
+        "exclude_patterns": [],
+        "cleanup_operation": "analyze",
+        "cleanup_type": "files",
+        "age_threshold": 7,
+        "size_threshold": 0,
+        "pattern_filters": [],
+        "dry_run": true,
+        "logging_operation": "log",
+        "schedule_operation": "add"
+      }
+    },
+    {
+      "id": "plugin_architecture_framework",
+      "name": "Plugin Architecture Framework",
+      "type": "framework",
+      "category": "Architecture",
+      "description": "Framework estendibile per registrare dinamicamente nuovi connettori, provider e strategy per tutti i processori generici",
+      "icon": "🔧",
+      "color": "#9C27B0",
+      "entry": "src/plugin_architecture_framework.py",
+      "inputs": [
+        {
+          "name": "plugin_id",
+          "type": "string",
+          "description": "ID del plugin da caricare/gestire",
+          "required": false
+        },
+        {
+          "name": "interface_type",
+          "type": "string",
+          "description": "Tipo di interfaccia per filtrare plugin",
+          "required": false
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "description": "Categoria per filtrare plugin",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "object",
+          "description": "Risultato dell'operazione framework"
+        }
+      ],
+      "configSchema": {
+        "type": "object",
+        "title": "Plugin Architecture Framework Configuration",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation Type",
+            "description": "Operazione del framework",
+            "enum": ["list_plugins", "get_stats", "discover", "load_plugin", "register_plugin"],
+            "default": "list_plugins"
+          },
+          "registry_file": {
+            "type": "string",
+            "title": "Registry File",
+            "description": "Percorso file registro plugin",
+            "default": "./plugin_registry.json"
+          },
+          "plugin_directories": {
+            "type": "array",
+            "title": "Plugin Directories",
+            "description": "Directory dove cercare plugin",
+            "items": {"type": "string"},
+            "default": ["./plugins", "./extensions", "./custom_plugins"]
+          },
+          "auto_discover": {
+            "type": "boolean",
+            "title": "Auto Discovery",
+            "description": "Scoperta automatica nuovi plugin",
+            "default": true
+          },
+          "validate_interfaces": {
+            "type": "boolean",
+            "title": "Validate Interfaces",
+            "description": "Validare interfacce plugin",
+            "default": true
+          }
+        }
+      },
+      "defaultConfig": {
+        "operation": "list_plugins",
+        "registry_file": "./plugin_registry.json",
+        "plugin_directories": ["./plugins", "./extensions", "./custom_plugins"],
+        "auto_discover": true,
+        "validate_interfaces": true
+      }
     }
   ],
   "dependencies": {
     "numpy": ">=1.20.0",
     "chromadb": ">=0.4.0",
     "openai": ">=1.0.0",
-    "sentence-transformers": ">=2.2.0"
+    "sentence-transformers": ">=2.2.0",
+    "anthropic": ">=0.7.0",
+    "transformers": ">=4.21.0",
+    "torch": ">=1.12.0",
+    "requests": ">=2.28.0",
+    "jinja2": ">=3.0.0",
+    "schedule": ">=1.2.0",
+    "watchdog": ">=3.0.0"
   }
 }

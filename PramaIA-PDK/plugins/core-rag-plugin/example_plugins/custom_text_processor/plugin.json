@@ -1,0 +1,52 @@
+{
+  "id": "advanced_text_analyzer",
+  "name": "Advanced Text Analyzer",
+  "version": "1.0.0", 
+  "description": "Plugin avanzato per analisi testuale con sentiment analysis, keyword extraction e topic modeling",
+  "author": "PramaIA Team",
+  "category": "text",
+  "plugin_type": "strategy",
+  "interface_type": "TextProcessorPlugin",
+  "dependencies": [
+    "transformers",
+    "torch", 
+    "scikit-learn",
+    "textblob"
+  ],
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "sentiment_model": {
+        "type": "string",
+        "default": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+        "description": "Modello per sentiment analysis"
+      },
+      "enable_topic_modeling": {
+        "type": "boolean", 
+        "default": false,
+        "description": "Abilitare topic modeling"
+      },
+      "num_topics": {
+        "type": "integer",
+        "default": 5,
+        "description": "Numero di topic per LDA"
+      },
+      "language": {
+        "type": "string",
+        "default": "en",
+        "description": "Lingua del testo"
+      }
+    },
+    "default_config": {
+      "sentiment_model": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "enable_topic_modeling": false,
+      "num_topics": 5,
+      "language": "en"
+    }
+  },
+  "entry_point": "advanced_text_analyzer.py",
+  "enabled": true,
+  "priority": 50,
+  "created_at": "2024-11-25T10:00:00Z",
+  "updated_at": "2024-11-25T10:00:00Z"
+}

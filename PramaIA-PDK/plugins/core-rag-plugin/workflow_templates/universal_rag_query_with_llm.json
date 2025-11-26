@@ -1,0 +1,103 @@
+{
+  "name": "Universal RAG Query with Generic LLM",
+  "description": "Workflow universale per query RAG usando i processori generici: estrazione documenti, embedding, ricerca vettoriale e generazione LLM",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "id": "query_processor",
+      "type": "generic_text_processor", 
+      "config": {
+        "operation": "filter",
+        "filter_type": "query_enhancement",
+        "enhancement": {
+          "expand_synonyms": true,
+          "remove_stopwords": false,
+          "add_context_keywords": true
+        }
+      },
+      "inputs": {
+        "text": "{user_query}"
+      }
+    },
+    {
+      "id": "query_embedder",
+      "type": "generic_text_processor",
+      "config": {
+        "operation": "embed",
+        "embedding_provider": "openai",
+        "model": "text-embedding-ada-002"
+      },
+      "inputs": {
+        "text": "{query_processor.output.processed_text}"
+      }
+    },
+    {
+      "id": "vector_search",
+      "type": "generic_vector_store_processor",
+      "config": {
+        "operation": "query",
+        "connector": "chroma",
+        "connection": {
+          "collection_name": "documents",
+          "database_path": "./chroma_db"
+        },
+        "query_config": {
+          "top_k": 5,
+          "score_threshold": 0.7
+        }
+      },
+      "inputs": {
+        "query_embedding": "{query_embedder.output.embedding}",
+        "query": "{query_processor.output.processed_text}"
+      }
+    },
+    {
+      "id": "context_builder",
+      "type": "generic_text_processor",
+      "config": {
+        "operation": "join",
+        "join_strategy": "context_assembly",
+        "separator": "\\n\\n---\\n\\n",
+        "max_length": 4000
+      },
+      "inputs": {
+        "texts": "{vector_search.output.documents}"
+      }
+    },
+    {
+      "id": "rag_generator",
+      "type": "generic_llm_processor",
+      "config": {
+        "operation": "generate",
+        "provider": "openai",
+        "model": "gpt-3.5-turbo",
+        "prompt_template": "Context:\\n{context}\\n\\nUser Question: {query}\\n\\nBased on the provided context, please provide a comprehensive answer to the user's question. If the context doesn't contain relevant information, please state that clearly.",
+        "temperature": 0.7,
+        "max_tokens": 1000,
+        "response_format": "detailed"
+      },
+      "inputs": {
+        "context": "{context_builder.output.joined_text}",
+        "query": "{user_query}"
+      }
+    }
+  ],
+  "connections": [
+    {"from": "query_processor", "to": "query_embedder"},
+    {"from": "query_embedder", "to": "vector_search"}, 
+    {"from": "vector_search", "to": "context_builder"},
+    {"from": "context_builder", "to": "rag_generator"}
+  ],
+  "inputs": {
+    "user_query": {
+      "type": "string",
+      "description": "Domanda dell'utente",
+      "required": true
+    }
+  },
+  "outputs": {
+    "answer": "{rag_generator.output.response}",
+    "sources": "{vector_search.output.sources}",
+    "metadata": "{rag_generator.output.metadata}"
+  }
+}

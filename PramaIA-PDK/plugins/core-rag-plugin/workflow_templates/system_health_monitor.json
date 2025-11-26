@@ -1,0 +1,183 @@
+{
+  "name": "System Health Monitor",
+  "description": "Monitoring completo dello stato del sistema: file system events, performance logging, error tracking e automated recovery",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "id": "filesystem_monitor",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "monitor",
+        "monitor_operation": "start",
+        "monitor_config": {
+          "db_path": "./system_health.db",
+          "max_events": 10000
+        }
+      },
+      "inputs": {
+        "paths": "{critical_paths}"
+      }
+    },
+    {
+      "id": "event_retriever",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "monitor",
+        "monitor_operation": "get_events"
+      },
+      "inputs": {
+        "since": "{last_check_timestamp}"
+      }
+    },
+    {
+      "id": "system_logger",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "logging",
+        "logging_operation": "log"
+      },
+      "inputs": {
+        "event_type": "system_health_check",
+        "details": {
+          "filesystem_events": "{event_retriever.output.events}",
+          "event_count": "{event_retriever.output.event_count}",
+          "check_timestamp": "{current_timestamp}",
+          "system_status": "monitoring_active"
+        }
+      }
+    },
+    {
+      "id": "error_detector",
+      "type": "generic_text_processor",
+      "config": {
+        "operation": "filter",
+        "filter_type": "pattern_matching",
+        "patterns": ["error", "failed", "exception", "crash", "timeout"]
+      },
+      "inputs": {
+        "text": "{event_retriever.output.events}"
+      }
+    },
+    {
+      "id": "alert_generator",
+      "type": "generic_llm_processor",
+      "config": {
+        "operation": "generate",
+        "provider": "openai",
+        "model": "gpt-3.5-turbo",
+        "prompt_template": "Analyze the following system events and generate a health report:\n\nEvents: {events}\nErrors detected: {errors}\n\nProvide a summary of system health status and any recommended actions.",
+        "temperature": 0.3,
+        "max_tokens": 500,
+        "response_format": "simple"
+      },
+      "inputs": {
+        "events": "{event_retriever.output.events}",
+        "errors": "{error_detector.output.filtered_text}"
+      }
+    },
+    {
+      "id": "health_report_logger",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "logging",
+        "logging_operation": "log"
+      },
+      "inputs": {
+        "event_type": "health_report",
+        "details": {
+          "report": "{alert_generator.output.response}",
+          "events_analyzed": "{event_retriever.output.event_count}",
+          "errors_detected": "{error_detector.output.match_count}",
+          "timestamp": "{current_timestamp}",
+          "severity": "INFO"
+        }
+      }
+    },
+    {
+      "id": "backup_health_check",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "backup",
+        "backup_operation": "list"
+      },
+      "inputs": {
+        "backup_dir": "{backup_directory}"
+      }
+    },
+    {
+      "id": "emergency_backup",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "backup",
+        "backup_operation": "create",
+        "backup_type": "full",
+        "compression": true
+      },
+      "inputs": {
+        "source_paths": "{emergency_backup_paths}",
+        "destination_path": "{emergency_backup_destination}"
+      },
+      "conditions": [
+        {
+          "field": "error_detector.output.match_count",
+          "operator": "gt",
+          "value": 10
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {"from": "filesystem_monitor", "to": "event_retriever"},
+    {"from": "event_retriever", "to": "system_logger"},
+    {"from": "event_retriever", "to": "error_detector"},
+    {"from": "error_detector", "to": "alert_generator"},
+    {"from": "alert_generator", "to": "health_report_logger"},
+    {"from": "error_detector", "to": "emergency_backup"},
+    {"from": "health_report_logger", "to": "backup_health_check"}
+  ],
+  "inputs": {
+    "critical_paths": {
+      "type": "array",
+      "description": "Percorsi critici da monitorare",
+      "required": true,
+      "default": ["./logs", "./data", "./configs", "./uploads"]
+    },
+    "last_check_timestamp": {
+      "type": "string",
+      "description": "Timestamp ultimo controllo",
+      "required": false
+    },
+    "current_timestamp": {
+      "type": "string",
+      "description": "Timestamp corrente",
+      "default": "{auto_timestamp}"
+    },
+    "backup_directory": {
+      "type": "string",
+      "description": "Directory backup per health check",
+      "required": true,
+      "default": "./backups"
+    },
+    "emergency_backup_paths": {
+      "type": "array",
+      "description": "Percorsi per backup di emergenza",
+      "required": true,
+      "default": ["./critical_data", "./configs"]
+    },
+    "emergency_backup_destination": {
+      "type": "string",
+      "description": "Destinazione backup emergenza",
+      "required": true,
+      "default": "./emergency_backups"
+    }
+  },
+  "outputs": {
+    "monitoring_status": "{filesystem_monitor.output.success}",
+    "events_count": "{event_retriever.output.event_count}",
+    "errors_detected": "{error_detector.output.match_count}",
+    "health_report": "{alert_generator.output.response}",
+    "backup_list": "{backup_health_check.output.backups}",
+    "emergency_backup_created": "{emergency_backup.output.result.success}",
+    "system_health_score": "{calculated_health_score}"
+  }
+}

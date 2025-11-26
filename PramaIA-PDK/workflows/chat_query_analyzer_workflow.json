@@ -1,0 +1,308 @@
+{
+  "id": "chat_query_analyzer_workflow",
+  "name": "Chat Query Analyzer",
+  "description": "Workflow completo per elaborare domande di chat con ricerca semantica e sui metadati",
+  "version": "1.0.0",
+  "created_at": "2024-11-24T10:00:00Z",
+  "updated_at": "2024-11-24T10:00:00Z",
+  "is_active": true,
+  "trigger_type": "chat_query",
+  "metadata": {
+    "author": "PramaIA Team",
+    "category": "Chat Processing",
+    "tags": ["chat", "rag", "semantic", "metadata"],
+    "description_long": "Workflow che analizza domande degli utenti, determina la strategia di ricerca ottimale, esegue ricerche semantiche e sui metadati in parallelo quando necessario, e aggrega i risultati in una risposta coerente."
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "question": {
+        "type": "string",
+        "description": "Domanda dell'utente"
+      },
+      "user_id": {
+        "type": "integer",
+        "description": "ID dell'utente"
+      },
+      "session_id": {
+        "type": "string",
+        "description": "ID della sessione di chat"
+      },
+      "message_id": {
+        "type": "string",
+        "description": "ID del messaggio"
+      },
+      "mode": {
+        "type": "string",
+        "description": "Modalità di elaborazione",
+        "default": "rag"
+      }
+    },
+    "required": ["question"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "response": {
+        "type": "string",
+        "description": "Risposta finale per l'utente"
+      },
+      "documents": {
+        "type": "array",
+        "description": "Documenti trovati ordinati per rilevanza"
+      },
+      "sources": {
+        "type": "array",
+        "description": "Informazioni sulle fonti"
+      },
+      "search_metadata": {
+        "type": "object",
+        "description": "Metadati sulla ricerca eseguita"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "input_node",
+      "plugin_id": "core-input-plugin",
+      "node_type": "workflow_input",
+      "name": "Chat Input",
+      "description": "Riceve la domanda dell'utente e i metadati",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "config": {
+        "validate_input": true,
+        "required_fields": ["question"]
+      }
+    },
+    {
+      "id": "query_analyzer",
+      "plugin_id": "core-rag-plugin",
+      "node_type": "chat_query_analyzer",
+      "name": "Query Analyzer",
+      "description": "Analizza la domanda per determinare strategia di ricerca",
+      "position": {
+        "x": 300,
+        "y": 200
+      },
+      "config": {
+        "semantic_keywords": [
+          "contenuto", "parla di", "spiega", "cos'è", "come", "perché", 
+          "dimmi", "trova", "cerca", "informazioni su", "riguarda",
+          "argomento", "tema", "descrive", "tratta"
+        ],
+        "metadata_keywords": [
+          "quando", "creato", "data", "autore", "scritto da", "formato",
+          "tipo file", "dimensione", "modificato", "ultimo", "recente",
+          "oggi", "ieri", "settimana", "mese", "anno", "prima", "dopo"
+        ],
+        "confidence_threshold_semantic": 0.3,
+        "confidence_threshold_metadata": 0.2,
+        "default_strategy": "both"
+      }
+    },
+    {
+      "id": "semantic_search",
+      "plugin_id": "core-rag-plugin",
+      "node_type": "semantic_search",
+      "name": "Semantic Search",
+      "description": "Esegue ricerca semantica sui contenuti",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "config": {
+        "vectorstore_base_url": "http://localhost:8090",
+        "default_collection": "documents",
+        "max_results": 5,
+        "min_similarity_score": 0.1,
+        "timeout": 30,
+        "enable_fallback_search": true,
+        "include_metadata": true,
+        "sort_by_relevance": true
+      }
+    },
+    {
+      "id": "metadata_search",
+      "plugin_id": "core-rag-plugin",
+      "node_type": "metadata_search",
+      "name": "Metadata Search",
+      "description": "Esegue ricerca sui metadati dei documenti",
+      "position": {
+        "x": 500,
+        "y": 300
+      },
+      "config": {
+        "vectorstore_base_url": "http://localhost:8090",
+        "max_results": 10,
+        "timeout": 30,
+        "date_formats": ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"],
+        "temporal_keywords": {
+          "oggi": 0,
+          "ieri": -1,
+          "settimana": -7,
+          "mese": -30,
+          "anno": -365,
+          "recente": -7,
+          "ultimo": -30
+        },
+        "file_type_mapping": {
+          "pdf": [".pdf"],
+          "documento": [".doc", ".docx", ".txt"],
+          "immagine": [".jpg", ".jpeg", ".png", ".gif"],
+          "excel": [".xls", ".xlsx"],
+          "powerpoint": [".ppt", ".pptx"]
+        }
+      }
+    },
+    {
+      "id": "response_aggregator",
+      "plugin_id": "core-rag-plugin", 
+      "node_type": "response_aggregator",
+      "name": "Response Aggregator",
+      "description": "Aggrega i risultati e genera risposta finale",
+      "position": {
+        "x": 700,
+        "y": 200
+      },
+      "config": {
+        "max_total_results": 8,
+        "semantic_weight": 0.7,
+        "metadata_weight": 0.3,
+        "enable_deduplication": true,
+        "response_format": "detailed",
+        "include_sources": true,
+        "include_snippets": true,
+        "response_templates": {
+          "semantic_only": "Ho trovato {count} documenti rilevanti per la tua domanda:\n\n{results}",
+          "metadata_only": "Ho trovato {count} documenti che corrispondono ai criteri specificati:\n\n{results}",
+          "both": "Ho trovato {count} documenti combinando ricerca semantica e sui metadati:\n\n{results}",
+          "no_results": "Mi dispiace, non ho trovato documenti che rispondano alla tua domanda.",
+          "error": "Si è verificato un errore durante la ricerca: {error}"
+        }
+      }
+    },
+    {
+      "id": "output_node",
+      "plugin_id": "core-output-plugin",
+      "node_type": "workflow_output",
+      "name": "Chat Output",
+      "description": "Restituisce la risposta finale",
+      "position": {
+        "x": 900,
+        "y": 200
+      },
+      "config": {
+        "format_output": true,
+        "include_metadata": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "input_to_analyzer",
+      "source": "input_node",
+      "target": "query_analyzer",
+      "source_port": "output",
+      "target_port": "input",
+      "description": "Passa input al query analyzer"
+    },
+    {
+      "id": "analyzer_to_semantic",
+      "source": "query_analyzer",
+      "target": "semantic_search",
+      "source_port": "output",
+      "target_port": "input",
+      "description": "Esegui ricerca semantica se necessaria",
+      "condition": {
+        "field": "search_strategy.needs_semantic",
+        "operator": "equals",
+        "value": true
+      }
+    },
+    {
+      "id": "analyzer_to_metadata",
+      "source": "query_analyzer",
+      "target": "metadata_search", 
+      "source_port": "output",
+      "target_port": "input",
+      "description": "Esegui ricerca metadata se necessaria",
+      "condition": {
+        "field": "search_strategy.needs_metadata",
+        "operator": "equals",
+        "value": true
+      }
+    },
+    {
+      "id": "semantic_to_aggregator",
+      "source": "semantic_search",
+      "target": "response_aggregator",
+      "source_port": "output",
+      "target_port": "semantic_results",
+      "description": "Risultati semantici all'aggregatore"
+    },
+    {
+      "id": "metadata_to_aggregator",
+      "source": "metadata_search",
+      "target": "response_aggregator",
+      "source_port": "output", 
+      "target_port": "metadata_results",
+      "description": "Risultati metadata all'aggregatore"
+    },
+    {
+      "id": "analyzer_to_aggregator",
+      "source": "query_analyzer",
+      "target": "response_aggregator",
+      "source_port": "output",
+      "target_port": "search_strategy",
+      "description": "Strategia di ricerca all'aggregatore"
+    },
+    {
+      "id": "aggregator_to_output",
+      "source": "response_aggregator",
+      "target": "output_node",
+      "source_port": "output",
+      "target_port": "input",
+      "description": "Risposta finale all'output"
+    }
+  ],
+  "execution_config": {
+    "execution_mode": "parallel_conditional",
+    "timeout_seconds": 30,
+    "retry_on_failure": true,
+    "max_retries": 2,
+    "parallel_execution": {
+      "semantic_search": {
+        "depends_on": ["query_analyzer"],
+        "condition": "search_strategy.needs_semantic == true"
+      },
+      "metadata_search": {
+        "depends_on": ["query_analyzer"],
+        "condition": "search_strategy.needs_metadata == true"
+      },
+      "response_aggregator": {
+        "depends_on": ["semantic_search", "metadata_search", "query_analyzer"],
+        "wait_for_all": false,
+        "timeout": 25
+      }
+    }
+  },
+  "error_handling": {
+    "on_node_failure": "continue_if_possible",
+    "fallback_strategy": "partial_results",
+    "error_node": null,
+    "notify_on_error": true
+  },
+  "monitoring": {
+    "log_execution": true,
+    "track_performance": true,
+    "metrics": [
+      "execution_time",
+      "node_execution_times", 
+      "search_result_counts",
+      "user_satisfaction"
+    ]
+  }
+}

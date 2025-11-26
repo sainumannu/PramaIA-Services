@@ -1,0 +1,269 @@
+{
+  "name": "chat_processing_workflow",
+  "description": "Elaborazione completa di domande utenti in chat con analisi, ricerca semantica/metadati e aggregazione risultati",
+  "version": "1.0.0",
+  "category": "chat",
+  "tags": ["chat", "rag", "search", "aggregation"],
+  "author": "PramaIA Team",
+  "nodes": [
+    {
+      "id": "query_analysis",
+      "name": "Analisi Query Utente",
+      "type": "generic_query_analyzer",
+      "config": {
+        "analysis_types": ["classification", "intent", "strategy"],
+        "analysis_patterns": {
+          "semantic": ["contenuto", "spiega", "cos'è", "come", "dimmi", "parla di"],
+          "metadata": ["quando", "autore", "tipo", "data", "formato", "creato"],
+          "temporal": ["\\b\\d{4}\\b", "\\boggi\\b", "\\bieri\\b", "\\bsettimana\\b"],
+          "intent_search": ["trova", "cerca", "mostra", "dammi", "visualizza"],
+          "intent_info": ["cos'è", "cosa", "chi", "dove", "quale", "definisci"],
+          "intent_procedure": ["come", "modo", "procedura", "processo", "steps"]
+        },
+        "confidence_thresholds": {
+          "semantic": 0.3,
+          "metadata": 0.2,
+          "intent": 0.4
+        },
+        "input_field": "question",
+        "output_format": "detailed",
+        "include_scores": true
+      }
+    },
+    {
+      "id": "semantic_search", 
+      "name": "Ricerca Semantica",
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "vectorstore",
+        "backend_config": {
+          "base_url": "http://localhost:8090",
+          "timeout": 30,
+          "default_collection": "documents"
+        },
+        "default_search_params": {
+          "limit": 5,
+          "collection": "documents"
+        },
+        "min_score": 0.1,
+        "max_results": 8,
+        "include_snippets": true,
+        "snippet_length": 300,
+        "output_format": "detailed"
+      },
+      "condition": "query_analysis.strategy.needs_semantic == true",
+      "parallel": true
+    },
+    {
+      "id": "metadata_search",
+      "name": "Ricerca Metadati",
+      "type": "generic_metadata_search", 
+      "config": {
+        "extractors": {
+          "date_enabled": true,
+          "file_type_enabled": true,
+          "author_enabled": true,
+          "size_enabled": false,
+          "date": {
+            "temporal_keywords": {
+              "oggi": 0,
+              "ieri": -1,
+              "settimana": -7,
+              "mese": -30,
+              "anno": -365,
+              "recente": -7
+            }
+          },
+          "file_type": {
+            "type_mapping": {
+              "pdf": [".pdf"],
+              "documento": [".doc", ".docx", ".txt"],
+              "excel": [".xls", ".xlsx"],
+              "immagine": [".jpg", ".jpeg", ".png", ".gif"]
+            }
+          }
+        },
+        "data_source": {
+          "type": "vectorstore",
+          "config": {
+            "base_url": "http://localhost:8090",
+            "timeout": 30
+          }
+        },
+        "max_results": 8,
+        "output_format": "detailed",
+        "input_field": "question"
+      },
+      "condition": "query_analysis.strategy.needs_metadata == true",
+      "parallel": true
+    },
+    {
+      "id": "result_aggregation",
+      "name": "Aggregazione Risultati",
+      "type": "generic_aggregator",
+      "config": {
+        "source_weights": {
+          "semantic_search": 0.7,
+          "metadata_search": 0.3
+        },
+        "aggregation_strategy": "weighted_merge",
+        "enable_deduplication": true,
+        "deduplication_field": "id",
+        "similarity_threshold": 0.8,
+        "max_total_results": 10,
+        "scoring_method": "weighted_average",
+        "output_format": "structured",
+        "include_metadata": true,
+        "include_sources": true,
+        "format_templates": {
+          "item_template": "{index}. {title}\\n   {content}",
+          "summary_template": "Trovati {count} risultati da {sources} fonti",
+          "no_results_template": "Nessun risultato trovato"
+        }
+      },
+      "depends_on": ["semantic_search", "metadata_search"]
+    }
+  ],
+  "flows": [
+    {
+      "from": "INPUT",
+      "to": "query_analysis",
+      "data_mapping": {
+        "question": "question",
+        "user_id": "user_id",
+        "session_id": "session_id",
+        "context": "context"
+      }
+    },
+    {
+      "from": "query_analysis",
+      "to": "semantic_search", 
+      "data_mapping": {
+        "query": "original_question",
+        "context": "metadata",
+        "user_id": "metadata.user_id",
+        "session_id": "metadata.session_id"
+      },
+      "condition": "strategy.needs_semantic"
+    },
+    {
+      "from": "query_analysis",
+      "to": "metadata_search",
+      "data_mapping": {
+        "query": "original_question",
+        "context": "metadata",
+        "user_id": "metadata.user_id",
+        "session_id": "metadata.session_id"
+      },
+      "condition": "strategy.needs_metadata"
+    },
+    {
+      "from": "semantic_search",
+      "to": "result_aggregation",
+      "data_mapping": {
+        "semantic_results": "*"
+      }
+    },
+    {
+      "from": "metadata_search", 
+      "to": "result_aggregation",
+      "data_mapping": {
+        "metadata_results": "*"
+      }
+    },
+    {
+      "from": "query_analysis",
+      "to": "result_aggregation", 
+      "data_mapping": {
+        "context": {
+          "original_question": "original_question",
+          "analysis": "analysis",
+          "strategy": "search_strategy"
+        }
+      }
+    },
+    {
+      "from": "result_aggregation",
+      "to": "OUTPUT",
+      "data_mapping": "*"
+    }
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["question"],
+    "properties": {
+      "question": {
+        "type": "string",
+        "description": "Domanda dell'utente da elaborare"
+      },
+      "user_id": {
+        "type": "integer",
+        "description": "ID dell'utente che fa la domanda"
+      },
+      "session_id": {
+        "type": "string",
+        "description": "ID della sessione di chat"
+      },
+      "context": {
+        "type": "object",
+        "description": "Contesto aggiuntivo della conversazione"
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "array",
+        "description": "Lista dei risultati aggregati e ordinati"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Numero totale di risultati trovati"
+      },
+      "sources_summary": {
+        "type": "object",
+        "description": "Riassunto delle fonti utilizzate"
+      },
+      "aggregation_metadata": {
+        "type": "object",
+        "description": "Metadati del processo di aggregazione"
+      }
+    }
+  },
+  "configuration_examples": {
+    "italian_documents": {
+      "description": "Configurazione per documenti in italiano",
+      "modifications": {
+        "query_analysis.config.analysis_patterns.semantic": [
+          "contenuto", "spiega", "cos'è", "come", "dimmi", "parla di", "argomento"
+        ],
+        "query_analysis.config.analysis_patterns.metadata": [
+          "quando", "autore", "scrittore", "data", "formato", "creato", "modificato"
+        ]
+      }
+    },
+    "technical_docs": {
+      "description": "Configurazione per documentazione tecnica",
+      "modifications": {
+        "query_analysis.config.analysis_patterns": {
+          "semantic": ["implementa", "funzione", "API", "codice", "algoritmo"],
+          "technical": ["errore", "bug", "problema", "soluzione", "fix"],
+          "documentation": ["guida", "tutorial", "esempio", "reference"]
+        },
+        "semantic_search.config.max_results": 15,
+        "result_aggregation.config.max_total_results": 20
+      }
+    },
+    "high_volume": {
+      "description": "Configurazione per alto volume di richieste",
+      "modifications": {
+        "semantic_search.config.backend_config.timeout": 10,
+        "metadata_search.config.data_source.config.timeout": 10,
+        "semantic_search.config.max_results": 3,
+        "metadata_search.config.max_results": 3,
+        "result_aggregation.config.max_total_results": 5
+      }
+    }
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "name": "Automated File Management Pipeline",
+  "description": "Pipeline automatizzata per gestione file: backup automatico, monitoraggio continuo, cleanup intelligente e archiviazione sicura",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "id": "file_monitor",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "monitor",
+        "monitor_operation": "start",
+        "monitor_config": {
+          "db_path": "./file_monitor.db",
+          "max_events": 5000
+        }
+      },
+      "inputs": {
+        "paths": "{watch_directories}"
+      }
+    },
+    {
+      "id": "backup_creator",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "backup",
+        "backup_operation": "create",
+        "backup_type": "incremental",
+        "compression": true,
+        "retention_days": 30,
+        "exclude_patterns": ["*.tmp", "*.log", "*.cache"]
+      },
+      "inputs": {
+        "source_paths": "{backup_sources}",
+        "destination_path": "{backup_destination}"
+      }
+    },
+    {
+      "id": "cleanup_analyzer",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "cleanup",
+        "cleanup_operation": "analyze",
+        "cleanup_type": "files",
+        "age_threshold": 30,
+        "pattern_filters": ["*.tmp", "*.log", "*.bak"]
+      },
+      "inputs": {
+        "target_paths": "{cleanup_paths}"
+      }
+    },
+    {
+      "id": "safe_cleanup",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "cleanup",
+        "cleanup_operation": "execute",
+        "cleanup_type": "files",
+        "age_threshold": 30,
+        "dry_run": false,
+        "pattern_filters": ["*.tmp", "*.log"]
+      },
+      "inputs": {
+        "target_paths": "{cleanup_paths}"
+      },
+      "conditions": [
+        {
+          "field": "cleanup_analyzer.output.analysis.total_files",
+          "operator": "lt",
+          "value": 1000
+        }
+      ]
+    },
+    {
+      "id": "archive_old_files",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "file_operation",
+        "file_operation": "archive",
+        "file_config": {
+          "preserve_metadata": true
+        }
+      },
+      "inputs": {
+        "source_path": "{file_to_archive}",
+        "destination_path": "{archive_directory}"
+      }
+    },
+    {
+      "id": "operation_logger",
+      "type": "generic_system_processor",
+      "config": {
+        "operation": "logging",
+        "logging_operation": "log"
+      },
+      "inputs": {
+        "event_type": "file_management_pipeline",
+        "details": {
+          "backup_result": "{backup_creator.output.result}",
+          "cleanup_analysis": "{cleanup_analyzer.output.analysis}",
+          "cleanup_result": "{safe_cleanup.output.result}",
+          "archive_result": "{archive_old_files.output.result}",
+          "timestamp": "{current_timestamp}",
+          "pipeline_status": "completed"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {"from": "backup_creator", "to": "cleanup_analyzer"},
+    {"from": "cleanup_analyzer", "to": "safe_cleanup"},
+    {"from": "cleanup_analyzer", "to": "archive_old_files"},
+    {"from": "safe_cleanup", "to": "operation_logger"},
+    {"from": "archive_old_files", "to": "operation_logger"}
+  ],
+  "inputs": {
+    "watch_directories": {
+      "type": "array",
+      "description": "Directory da monitorare",
+      "required": true,
+      "default": ["./documents", "./uploads"]
+    },
+    "backup_sources": {
+      "type": "array", 
+      "description": "Percorsi da includere nel backup",
+      "required": true,
+      "default": ["./important_data", "./configs"]
+    },
+    "backup_destination": {
+      "type": "string",
+      "description": "Destinazione backup",
+      "required": true,
+      "default": "./backups"
+    },
+    "cleanup_paths": {
+      "type": "array",
+      "description": "Percorsi da pulire",
+      "required": true,
+      "default": ["./temp", "./logs", "./cache"]
+    },
+    "archive_directory": {
+      "type": "string",
+      "description": "Directory archivio",
+      "required": true,
+      "default": "./archive"
+    },
+    "file_to_archive": {
+      "type": "string",
+      "description": "File da archiviare",
+      "required": false
+    },
+    "current_timestamp": {
+      "type": "string",
+      "description": "Timestamp corrente",
+      "default": "{auto_timestamp}"
+    }
+  },
+  "outputs": {
+    "backup_status": "{backup_creator.output.result.success}",
+    "cleanup_analysis": "{cleanup_analyzer.output.analysis}",
+    "files_cleaned": "{safe_cleanup.output.result.files_processed}",
+    "bytes_cleaned": "{safe_cleanup.output.result.bytes_processed}",
+    "archive_status": "{archive_old_files.output.result.success}",
+    "monitoring_active": "{file_monitor.output.success}",
+    "pipeline_log": "{operation_logger.output.success}"
+  }
+}

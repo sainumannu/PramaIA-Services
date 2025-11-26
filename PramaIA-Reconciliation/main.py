@@ -19,6 +19,9 @@ import threading
 from pathlib import Path
 import json
 
+# Import configuration router
+from app.api.routes.configuration import router as config_router
+
 # Get current directory and setup logging paths
 BASE_DIR = Path(__file__).parent.absolute()
 LOGS_DIR = BASE_DIR / "logs"
@@ -247,6 +250,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include configuration router
+app.include_router(config_router, prefix="/api")
 
 @app.get("/health")
 async def health_check():

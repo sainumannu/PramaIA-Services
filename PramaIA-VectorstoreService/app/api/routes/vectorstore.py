@@ -26,7 +26,6 @@ async def get_vectorstore_stats():
         Dict: Vectorstore statistics.
     """
     documents = metadata_manager.get_documents()
-    stats = metadata_manager.get_stats()
     collections = metadata_manager.get_collections()
     
     # Calcola le statistiche del vectorstore
@@ -123,3 +122,16 @@ async def get_vectorstore_document(document_id: str = Path(..., description="ID 
         )
     
     return document
+
+
+# REDIRECT ENDPOINT for /collections/ compatibility
+@router.get("/", response_model=dict)
+async def collections_redirect():
+    """
+    Redirect endpoint for /collections/ requests.
+    This handles the case when the router is mounted at /collections prefix.
+    
+    Returns:
+        Dict: Collection list with document counts.
+    """
+    return await get_vectorstore_collections()

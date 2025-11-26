@@ -1,0 +1,391 @@
+{
+  "name": "document_analysis_workflow",
+  "description": "Workflow completo per analisi documentale con classificazione automatica, estrazione metadati e semantic search",
+  "version": "1.0.0",
+  "category": "document_analysis",
+  "tags": ["documents", "classification", "metadata", "analysis"],
+  "author": "PramaIA Team",
+  "nodes": [
+    {
+      "id": "document_classifier",
+      "name": "Classificatore Documenti",
+      "type": "generic_query_analyzer",
+      "config": {
+        "analysis_types": ["classification", "entities"],
+        "analysis_patterns": {
+          "document_type": {
+            "contract": ["contratto", "agreement", "accordo", "stipulato"],
+            "invoice": ["fattura", "invoice", "pagamento", "importo"],
+            "report": ["report", "relazione", "analisi", "risultati"],
+            "manual": ["manuale", "guida", "istruzioni", "procedura"],
+            "presentation": ["presentazione", "slides", "pitch", "overview"],
+            "research": ["ricerca", "studio", "paper", "analisi"],
+            "policy": ["policy", "politica", "regolamento", "normativa"],
+            "technical": ["tecnico", "specifiche", "documentazione", "api"]
+          },
+          "language": {
+            "italian": ["il", "la", "di", "che", "è", "sono", "della"],
+            "english": ["the", "and", "of", "to", "a", "in", "for"],
+            "french": ["le", "de", "et", "à", "un", "il", "être"],
+            "spanish": ["el", "la", "de", "que", "y", "a", "en"]
+          },
+          "urgency": {
+            "high": ["urgente", "immediate", "critico", "emergency"],
+            "medium": ["importante", "priority", "attention", "review"],
+            "low": ["informativo", "info", "reference", "archive"]
+          }
+        },
+        "custom_classifiers": {
+          "content_structure": {
+            "patterns": {
+              "has_tables": ["tabella", "table", "\\\\|.*\\\\|"],
+              "has_images": ["figura", "image", "foto", "grafico"],
+              "has_code": ["```", "function", "class", "def "],
+              "has_formulas": ["=", "∑", "∫", "∂"]
+            }
+          }
+        },
+        "confidence_thresholds": {
+          "classification": 0.4,
+          "language": 0.6,
+          "content_structure": 0.3
+        },
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "metadata_extractor",
+      "name": "Estrazione Metadati",
+      "type": "generic_metadata_search",
+      "config": {
+        "extractors": {
+          "date_enabled": true,
+          "date_patterns": [
+            "\\\\d{1,2}[/-]\\\\d{1,2}[/-]\\\\d{4}",
+            "\\\\d{4}-\\\\d{1,2}-\\\\d{1,2}",
+            "\\\\d{1,2}\\\\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\\\\s+\\\\d{4}"
+          ],
+          "file_type_enabled": true,
+          "author_enabled": true,
+          "author_patterns": [
+            "autore[:\\\\s]+(.*?)\\\\n",
+            "scritto da[:\\\\s]+(.*?)\\\\n",
+            "redatto da[:\\\\s]+(.*?)\\\\n"
+          ],
+          "size_enabled": true,
+          "custom": {
+            "version_extractor": {
+              "field_patterns": {
+                "version": {
+                  "patterns": ["v\\\\d+\\\\.\\\\d+", "versione\\\\s+(\\\\d+\\\\.\\\\d+)", "revision\\\\s+(\\\\d+)"],
+                  "type": "string"
+                }
+              }
+            },
+            "contact_extractor": {
+              "field_patterns": {
+                "email": {
+                  "patterns": ["[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\\\.[a-zA-Z]{2,}"],
+                  "type": "string"
+                },
+                "phone": {
+                  "patterns": ["\\\\+?\\\\d{1,3}[\\\\s-]?\\\\d{3,4}[\\\\s-]?\\\\d{6,7}"],
+                  "type": "string"
+                }
+              }
+            },
+            "reference_extractor": {
+              "field_patterns": {
+                "doc_reference": {
+                  "patterns": ["doc[\\\\s-]?(\\\\w+)", "ref[:\\\\s]+(\\\\w+)", "codice[:\\\\s]+(\\\\w+)"],
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "data_source": {
+          "type": "file_system",
+          "config": {
+            "base_path": "/documents",
+            "supported_formats": ["pdf", "docx", "txt", "md", "html"]
+          }
+        },
+        "max_results": 100,
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "content_semantic_search", 
+      "name": "Ricerca Semantica Contenuti",
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "vectorstore",
+        "backend_config": {
+          "base_url": "http://localhost:8090",
+          "timeout": 20,
+          "default_collection": "documents"
+        },
+        "default_search_params": {
+          "collection": "documents",
+          "limit": 15
+        },
+        "min_score": 0.3,
+        "max_results": 15,
+        "include_snippets": true,
+        "snippet_length": 300,
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "similar_docs_finder",
+      "name": "Ricerca Documenti Simili", 
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "vectorstore",
+        "backend_config": {
+          "base_url": "http://localhost:8090"
+        },
+        "default_search_params": {
+          "collection": "documents",
+          "limit": 10
+        },
+        "min_score": 0.4,
+        "max_results": 8,
+        "include_snippets": false,
+        "output_format": "simple"
+      }
+    },
+    {
+      "id": "analysis_aggregator",
+      "name": "Aggregatore Analisi",
+      "type": "generic_aggregator",
+      "config": {
+        "source_weights": {
+          "document_classifier": 0.2,
+          "metadata_extractor": 0.3,
+          "content_semantic_search": 0.4,
+          "similar_docs_finder": 0.1
+        },
+        "aggregation_strategy": "enriched_merge",
+        "enable_deduplication": true,
+        "deduplication_field": "document_id",
+        "similarity_threshold": 0.9,
+        "max_total_results": 50,
+        "scoring_method": "weighted_average",
+        "score_normalization": true,
+        "output_format": "structured",
+        "include_metadata": true,
+        "include_sources": true,
+        "format_templates": {
+          "item_template": "📄 {title}\\n📂 Tipo: {document_type}\\n👤 Autore: {author}\\n📅 Data: {date}\\n⭐ Rilevanza: {score:.2f}",
+          "summary_template": "Analisi completata: {count} documenti analizzati",
+          "metadata_template": "📊 Classificazione: {classification}\\n🗂️ Metadati: {metadata_count} estratti\\n🔗 Documenti simili: {similar_count}"
+        }
+      }
+    }
+  ],
+  "flows": [
+    {
+      "from": "INPUT",
+      "to": "document_classifier",
+      "data_mapping": {
+        "document_content": "content",
+        "document_title": "title"
+      }
+    },
+    {
+      "from": "INPUT",
+      "to": "metadata_extractor",
+      "data_mapping": {
+        "document_content": "content", 
+        "file_path": "path"
+      }
+    },
+    {
+      "from": "document_classifier",
+      "to": "content_semantic_search",
+      "data_mapping": {
+        "original_query": "content",
+        "search_params": {
+          "filters": {
+            "document_type": "classification.document_type"
+          }
+        }
+      }
+    },
+    {
+      "from": "document_classifier",
+      "to": "similar_docs_finder",
+      "data_mapping": {
+        "original_query": "content"
+      }
+    },
+    {
+      "from": "document_classifier",
+      "to": "analysis_aggregator",
+      "data_mapping": {
+        "classification_results": "*"
+      }
+    },
+    {
+      "from": "metadata_extractor", 
+      "to": "analysis_aggregator",
+      "data_mapping": {
+        "metadata_results": "*"
+      }
+    },
+    {
+      "from": "content_semantic_search",
+      "to": "analysis_aggregator",
+      "data_mapping": {
+        "semantic_results": "*"
+      }
+    },
+    {
+      "from": "similar_docs_finder",
+      "to": "analysis_aggregator",
+      "data_mapping": {
+        "similar_docs": "*"
+      }
+    },
+    {
+      "from": "analysis_aggregator",
+      "to": "OUTPUT"
+    }
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["content"],
+    "properties": {
+      "content": {
+        "type": "string",
+        "description": "Contenuto del documento da analizzare",
+        "minLength": 10
+      },
+      "title": {
+        "type": "string",
+        "description": "Titolo del documento (opzionale)"
+      },
+      "path": {
+        "type": "string", 
+        "description": "Percorso del file (se disponibile)"
+      },
+      "analysis_focus": {
+        "type": "array",
+        "description": "Aspetti specifici da analizzare",
+        "items": {
+          "enum": ["classification", "metadata", "similarity", "content", "structure"]
+        },
+        "default": ["classification", "metadata", "similarity"]
+      },
+      "output_detail_level": {
+        "type": "string",
+        "enum": ["basic", "detailed", "comprehensive"],
+        "default": "detailed",
+        "description": "Livello di dettaglio dell'output"
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "analysis_summary": {
+        "type": "object",
+        "properties": {
+          "document_type": {"type": "string"},
+          "language": {"type": "string"},
+          "confidence": {"type": "number"},
+          "urgency_level": {"type": "string"},
+          "content_structure": {"type": "object"}
+        }
+      },
+      "extracted_metadata": {
+        "type": "object",
+        "properties": {
+          "dates": {"type": "array"},
+          "authors": {"type": "array"},
+          "contacts": {"type": "array"},
+          "references": {"type": "array"},
+          "version": {"type": "string"},
+          "file_info": {"type": "object"}
+        }
+      },
+      "semantic_matches": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "document_id": {"type": "string"},
+            "title": {"type": "string"},
+            "snippet": {"type": "string"},
+            "score": {"type": "number"},
+            "match_type": {"type": "string"}
+          }
+        }
+      },
+      "similar_documents": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "document_id": {"type": "string"},
+            "title": {"type": "string"},
+            "similarity_score": {"type": "number"},
+            "similarity_type": {"type": "string"}
+          }
+        }
+      },
+      "analysis_metadata": {
+        "type": "object",
+        "properties": {
+          "processing_time": {"type": "number"},
+          "analysis_completeness": {"type": "number"},
+          "confidence_scores": {"type": "object"},
+          "recommendations": {"type": "array"}
+        }
+      }
+    }
+  },
+  "conditional_logic": [
+    {
+      "condition": "analysis_focus contains 'classification'",
+      "action": "enable document_classifier",
+      "description": "Abilita classificazione solo se richiesta"
+    },
+    {
+      "condition": "analysis_focus contains 'metadata'", 
+      "action": "enable metadata_extractor",
+      "description": "Abilita estrazione metadati solo se richiesta"
+    },
+    {
+      "condition": "output_detail_level == 'basic'",
+      "action": "reduce_output_fields",
+      "description": "Riduce i campi di output per livello basic"
+    },
+    {
+      "condition": "content.length > 10000",
+      "action": "increase_timeout_limits",
+      "description": "Aumenta timeout per documenti grandi"
+    }
+  ],
+  "performance_considerations": {
+    "parallel_execution": {
+      "description": "Analisi parallela per performance ottimali",
+      "parallel_groups": [
+        ["document_classifier", "metadata_extractor"],
+        ["content_semantic_search", "similar_docs_finder"]
+      ]
+    },
+    "caching": {
+      "description": "Cache per documenti già analizzati",
+      "cache_keys": ["content_hash", "file_path"],
+      "ttl": "1 hour"
+    },
+    "resource_limits": {
+      "max_document_size": "50MB",
+      "max_processing_time": "120 seconds",
+      "memory_limit": "2GB"
+    }
+  }
+}

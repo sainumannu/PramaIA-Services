@@ -1,0 +1,507 @@
+{
+  "name": "universal_document_processing_workflow",
+  "description": "Workflow universale che sostituisce multiple pipeline specifiche usando solo nodi generici",
+  "version": "1.0.0",
+  "category": "universal",
+  "tags": ["universal", "document", "text", "rag", "processing"],
+  "author": "PramaIA Team",
+  "nodes": [
+    {
+      "id": "document_ingestion",
+      "name": "Document Ingestion", 
+      "type": "generic_document_processor",
+      "config": {
+        "operation": "extract",
+        "format": "auto",
+        "preserve_layout": true,
+        "extract_images": false
+      }
+    },
+    {
+      "id": "text_preprocessing",
+      "name": "Text Preprocessing Pipeline",
+      "type": "generic_text_processor",
+      "config": {
+        "operation": "pipeline",
+        "pipeline": [
+          {
+            "operation": "filter",
+            "filter_type": "length",
+            "min_length": 10,
+            "max_length": 50000
+          },
+          {
+            "operation": "filter", 
+            "filter_type": "content",
+            "quality_threshold": 0.5,
+            "output_mapping": {
+              "filtered_texts": "texts"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "content_chunking",
+      "name": "Adaptive Content Chunking",
+      "type": "generic_text_processor", 
+      "config": {
+        "operation": "chunk",
+        "strategy": "token",
+        "chunk_size": 800,
+        "chunk_overlap": 100,
+        "separator": "\\n\\n"
+      }
+    },
+    {
+      "id": "semantic_embedding",
+      "name": "Semantic Embedding Generation",
+      "type": "generic_text_processor",
+      "config": {
+        "operation": "embed",
+        "provider": "sentence_transformers",
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
+        "batch_size": 16,
+        "normalize_embeddings": true
+      }
+    },
+    {
+      "id": "vectorstore_indexing",
+      "name": "VectorStore Indexing",
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "vectorstore",
+        "backend_config": {
+          "base_url": "http://localhost:8090",
+          "timeout": 30,
+          "default_collection": "documents"
+        },
+        "operation": "index",
+        "index_params": {
+          "collection": "documents",
+          "batch_size": 50
+        }
+      }
+    },
+    {
+      "id": "metadata_extraction",
+      "name": "Comprehensive Metadata Extraction", 
+      "type": "generic_metadata_search",
+      "config": {
+        "extractors": {
+          "date_enabled": true,
+          "file_type_enabled": true,
+          "author_enabled": true,
+          "custom": {
+            "document_classifier": {
+              "field_patterns": {
+                "document_type": {
+                  "patterns": [
+                    "contract|agreement|contratto",
+                    "invoice|fattura|bill",
+                    "report|relazione|analysis",
+                    "manual|guida|instructions"
+                  ],
+                  "type": "classification"
+                }
+              }
+            },
+            "language_detector": {
+              "field_patterns": {
+                "language": {
+                  "patterns": [
+                    "\\b(the|and|of|to|a)\\b.*english",
+                    "\\b(il|la|di|che|è)\\b.*italian", 
+                    "\\b(le|de|et|à)\\b.*french"
+                  ],
+                  "type": "classification"
+                }
+              }
+            },
+            "content_analyzer": {
+              "field_patterns": {
+                "complexity_score": {
+                  "patterns": ["word_count", "sentence_length", "vocabulary_diversity"],
+                  "type": "score"
+                }
+              }
+            }
+          }
+        },
+        "data_source": {
+          "type": "mixed",
+          "config": {
+            "sources": ["document_content", "file_system", "vectorstore"]
+          }
+        }
+      }
+    },
+    {
+      "id": "intelligent_aggregation",
+      "name": "Intelligent Results Aggregation",
+      "type": "generic_aggregator",
+      "config": {
+        "source_weights": {
+          "content_chunking": 0.4,
+          "semantic_embedding": 0.3,
+          "metadata_extraction": 0.3
+        },
+        "aggregation_strategy": "comprehensive_merge",
+        "enable_deduplication": true,
+        "deduplication_field": "content_hash",
+        "similarity_threshold": 0.9,
+        "scoring_method": "weighted_average",
+        "score_normalization": true,
+        "output_format": "structured",
+        "include_metadata": true,
+        "include_sources": true,
+        "format_templates": {
+          "item_template": "📄 Document Segment\\n🔖 Type: {document_type}\\n📝 Content: {content_preview}\\n📊 Score: {final_score:.2f}\\n🏷️ Tags: {extracted_tags}",
+          "summary_template": "📋 Processing Summary\\n📄 Documents processed: {document_count}\\n✂️ Chunks created: {chunk_count}\\n🧬 Embeddings generated: {embedding_count}\\n📊 Metadata fields: {metadata_fields}",
+          "metadata_template": "🗃️ Document Metadata\\n📁 Type: {document_type}\\n🗣️ Language: {language}\\n📅 Date: {extracted_date}\\n👤 Author: {author}\\n📏 Length: {word_count} words\\n⭐ Quality: {quality_score:.1f}/10"
+        },
+        "advanced_features": {
+          "auto_tagging": true,
+          "content_classification": true,
+          "similarity_clustering": true,
+          "quality_assessment": true
+        }
+      }
+    }
+  ],
+  "flows": [
+    {
+      "from": "INPUT",
+      "to": "document_ingestion",
+      "data_mapping": {
+        "document": "input_document",
+        "file": "document_path", 
+        "content": "document_content"
+      }
+    },
+    {
+      "from": "document_ingestion",
+      "to": "text_preprocessing",
+      "data_mapping": {
+        "texts": ["output.text"]
+      }
+    },
+    {
+      "from": "text_preprocessing",
+      "to": "content_chunking",
+      "data_mapping": {
+        "text_input": "output.final_result.text"
+      }
+    },
+    {
+      "from": "content_chunking", 
+      "to": "semantic_embedding",
+      "data_mapping": {
+        "texts": "output.chunks[].content"
+      }
+    },
+    {
+      "from": "semantic_embedding",
+      "to": "vectorstore_indexing",
+      "data_mapping": {
+        "embeddings": "output.embeddings",
+        "texts": "output.texts",
+        "metadata": {
+          "source": "document_ingestion.output.format",
+          "processing_timestamp": "${timestamp}",
+          "chunk_metadata": "content_chunking.output.chunks"
+        }
+      }
+    },
+    {
+      "from": "document_ingestion",
+      "to": "metadata_extraction",
+      "data_mapping": {
+        "document_content": "output.text",
+        "document_metadata": "output"
+      }
+    },
+    {
+      "from": "content_chunking",
+      "to": "intelligent_aggregation",
+      "data_mapping": {
+        "chunking_results": "*"
+      }
+    },
+    {
+      "from": "semantic_embedding",
+      "to": "intelligent_aggregation", 
+      "data_mapping": {
+        "embedding_results": "*"
+      }
+    },
+    {
+      "from": "metadata_extraction",
+      "to": "intelligent_aggregation",
+      "data_mapping": {
+        "metadata_results": "*"
+      }
+    },
+    {
+      "from": "vectorstore_indexing",
+      "to": "intelligent_aggregation",
+      "data_mapping": {
+        "indexing_status": "output.status",
+        "indexed_count": "output.indexed_count"
+      }
+    },
+    {
+      "from": "document_ingestion",
+      "to": "intelligent_aggregation",
+      "data_mapping": {
+        "document_info": {
+          "format": "output.format",
+          "length": "output.length",
+          "extraction_method": "output.extractor_used"
+        }
+      }
+    },
+    {
+      "from": "intelligent_aggregation",
+      "to": "OUTPUT"
+    }
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["input_document"],
+    "properties": {
+      "input_document": {
+        "type": "object",
+        "description": "Documento da processare - può essere file, bytes, path, o contenuto",
+        "examples": [
+          {"type": "file", "path": "/docs/contract.pdf"},
+          {"type": "content", "text": "Document content...", "format": "txt"},
+          {"type": "bytes", "data": "base64_encoded_content", "format": "pdf"}
+        ]
+      },
+      "document_path": {
+        "type": "string",
+        "description": "Path del file documento (alternativo a input_document)"
+      },
+      "document_content": {
+        "type": "string", 
+        "description": "Contenuto testuale del documento (alternativo a input_document)"
+      },
+      "processing_options": {
+        "type": "object",
+        "description": "Opzioni avanzate di processing",
+        "properties": {
+          "quality_threshold": {"type": "number", "default": 0.5},
+          "chunk_strategy": {"type": "string", "enum": ["token", "sentence", "semantic"], "default": "token"},
+          "embedding_model": {"type": "string", "default": "sentence-transformers/all-MiniLM-L6-v2"},
+          "extract_metadata": {"type": "boolean", "default": true},
+          "enable_classification": {"type": "boolean", "default": true}
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "processed_document": {
+        "type": "object",
+        "properties": {
+          "document_info": {
+            "type": "object",
+            "properties": {
+              "format": {"type": "string"},
+              "length": {"type": "integer"},
+              "type": {"type": "string"},
+              "language": {"type": "string"},
+              "quality_score": {"type": "number"}
+            }
+          },
+          "content_chunks": {
+            "type": "array",
+            "items": {
+              "type": "object", 
+              "properties": {
+                "content": {"type": "string"},
+                "embedding": {"type": "array"},
+                "metadata": {"type": "object"},
+                "chunk_index": {"type": "integer"},
+                "score": {"type": "number"}
+              }
+            }
+          },
+          "extracted_metadata": {
+            "type": "object",
+            "properties": {
+              "dates": {"type": "array"},
+              "entities": {"type": "array"},
+              "document_type": {"type": "string"},
+              "author": {"type": "string"},
+              "language": {"type": "string"},
+              "complexity_score": {"type": "number"}
+            }
+          },
+          "vectorstore_status": {
+            "type": "object",
+            "properties": {
+              "indexed": {"type": "boolean"},
+              "collection": {"type": "string"},
+              "indexed_chunks": {"type": "integer"},
+              "index_id": {"type": "string"}
+            }
+          }
+        }
+      },
+      "processing_summary": {
+        "type": "object",
+        "properties": {
+          "total_processing_time": {"type": "number"},
+          "steps_completed": {"type": "integer"},
+          "chunks_created": {"type": "integer"},
+          "embeddings_generated": {"type": "integer"},
+          "metadata_fields_extracted": {"type": "integer"},
+          "quality_assessment": {"type": "object"}
+        }
+      },
+      "workflow_metadata": {
+        "type": "object",
+        "properties": {
+          "workflow_version": {"type": "string"},
+          "processing_timestamp": {"type": "string"},
+          "node_execution_times": {"type": "object"},
+          "configuration_used": {"type": "object"}
+        }
+      }
+    }
+  },
+  "use_cases": [
+    {
+      "title": "Legal Document Processing",
+      "description": "Processa contratti, accordi legali e documenti normativi",
+      "configuration_overrides": {
+        "content_chunking": {
+          "chunk_size": 1200,
+          "strategy": "sentence"
+        },
+        "metadata_extraction": {
+          "extractors": {
+            "custom": {
+              "legal_classifier": {
+                "field_patterns": {
+                  "contract_type": {"patterns": ["service|employment|lease|purchase"], "type": "classification"},
+                  "legal_entities": {"patterns": ["company|corporation|LLC|partnership"], "type": "entity"},
+                  "dates": {"patterns": ["effective date|expiration|term"], "type": "date"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Technical Documentation Processing",
+      "description": "Processa manuali tecnici, API docs, guide utente",
+      "configuration_overrides": {
+        "text_preprocessing": {
+          "pipeline": [
+            {"operation": "filter", "filter_type": "regex", "include_patterns": ["function|method|class|parameter"]},
+            {"operation": "filter", "filter_type": "content", "keywords": ["technical", "code", "implementation"]}
+          ]
+        },
+        "metadata_extraction": {
+          "extractors": {
+            "custom": {
+              "tech_classifier": {
+                "field_patterns": {
+                  "doc_type": {"patterns": ["API|manual|guide|reference"], "type": "classification"},
+                  "tech_stack": {"patterns": ["python|javascript|java|sql"], "type": "entity"},
+                  "version": {"patterns": ["v\\\\d+\\\\.\\\\d+", "version\\\\s+\\\\d+"], "type": "version"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Research Paper Processing", 
+      "description": "Processa paper scientifici, articoli di ricerca, pubblicazioni",
+      "configuration_overrides": {
+        "content_chunking": {
+          "chunk_size": 1500,
+          "strategy": "semantic",
+          "separator": "\\n\\n"
+        },
+        "semantic_embedding": {
+          "model": "sentence-transformers/all-mpnet-base-v2"
+        },
+        "metadata_extraction": {
+          "extractors": {
+            "custom": {
+              "research_classifier": {
+                "field_patterns": {
+                  "research_field": {"patterns": ["computer science|biology|physics|mathematics"], "type": "classification"},
+                  "methodology": {"patterns": ["experimental|theoretical|survey|review"], "type": "classification"},
+                  "citations": {"patterns": ["\\\\[[0-9]+\\\\]", "et al\\\\.", "doi:"], "type": "entity"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Business Document Processing",
+      "description": "Processa report aziendali, fatture, comunicazioni business",
+      "configuration_overrides": {
+        "text_preprocessing": {
+          "pipeline": [
+            {"operation": "filter", "filter_type": "content", "keywords": ["revenue", "profit", "business", "financial"]},
+            {"operation": "filter", "filter_type": "length", "min_length": 50}
+          ]
+        },
+        "metadata_extraction": {
+          "extractors": {
+            "custom": {
+              "business_classifier": {
+                "field_patterns": {
+                  "document_type": {"patterns": ["invoice|receipt|report|memo"], "type": "classification"},
+                  "financial_data": {"patterns": ["\\\\$[0-9,]+", "€[0-9,]+", "revenue|profit|cost"], "type": "financial"},
+                  "departments": {"patterns": ["sales|marketing|finance|operations"], "type": "entity"}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "benefits": {
+    "unified_processing": "Un singolo workflow sostituisce 4+ pipeline specifiche",
+    "configuration_driven": "Comportamento completamente configurabile senza modifiche al codice",
+    "format_agnostic": "Supporta automaticamente PDF, DOCX, HTML, TXT, MD e altri formati",
+    "scalable_architecture": "Architettura modulare che scala con nuovi requisiti",
+    "reusable_components": "Ogni nodo è riutilizzabile in contesti diversi",
+    "intelligent_aggregation": "Combina intelligentemente risultati da fonti multiple",
+    "metadata_richness": "Estrazione automatica di metadati complessi e classificazione",
+    "vectorstore_integration": "Integrazione seamless con vector databases"
+  },
+  "performance_considerations": {
+    "parallel_execution": {
+      "description": "Nodi eseguono in parallelo quando possibile",
+      "parallel_groups": [
+        ["text_preprocessing", "metadata_extraction"],
+        ["semantic_embedding", "vectorstore_indexing"]
+      ]
+    },
+    "caching_strategy": {
+      "document_cache": "Documents cached per content hash per 4 hours",
+      "embedding_cache": "Embeddings cached per text hash per 24 hours", 
+      "metadata_cache": "Metadata cached per document per 2 hours"
+    },
+    "resource_optimization": {
+      "batch_processing": "Embeddings processed in configurable batches",
+      "memory_management": "Large documents processed in streaming mode",
+      "timeout_handling": "Graceful handling of long-running operations"
+    }
+  }
+}

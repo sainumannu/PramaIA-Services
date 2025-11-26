@@ -1,0 +1,482 @@
+{
+  "workflow_name": "universal_vector_operations_workflow",
+  "display_name": "Universal Vector Operations Workflow",
+  "version": "1.0.0",
+  "description": "Workflow universale che dimostra tutte le operazioni vector database usando un solo Generic Vector Store Processor invece di 6+ nodi specifici",
+  "author": "PramaIA Team",
+  "category": "RAG Vector Operations",
+  "tags": ["vector", "database", "chroma", "elasticsearch", "vectorstore", "generic"],
+  
+  "use_cases": [
+    {
+      "name": "complete_vector_pipeline",
+      "description": "Pipeline completa: document ingestion → chunking → embedding → vector storage → search",
+      "replaces_workflows": [
+        "document_to_chroma_workflow",
+        "document_to_vectorstore_workflow", 
+        "document_to_elasticsearch_workflow",
+        "semantic_search_chroma_workflow",
+        "semantic_search_vectorstore_workflow"
+      ]
+    },
+    {
+      "name": "multi_backend_search",
+      "description": "Ricerca su multiple vector database con aggregazione risultati",
+      "replaces_workflows": [
+        "cross_backend_search_workflow",
+        "federated_search_workflow"
+      ]
+    },
+    {
+      "name": "vector_database_management",
+      "description": "Gestione collezioni e operazioni amministrative",
+      "replaces_workflows": [
+        "chroma_admin_workflow",
+        "vectorstore_admin_workflow"
+      ]
+    }
+  ],
+
+  "workflow_inputs": [
+    {
+      "name": "operation_mode",
+      "type": "string",
+      "description": "Modalità operativa del workflow",
+      "enum": ["ingest_and_store", "search_only", "manage_collections", "full_pipeline"],
+      "default": "full_pipeline"
+    },
+    {
+      "name": "vector_backend",
+      "type": "string", 
+      "description": "Backend vector database da utilizzare",
+      "enum": ["chroma", "vectorstore_service", "elasticsearch", "multi_backend"],
+      "default": "chroma"
+    },
+    {
+      "name": "document_input",
+      "type": "object",
+      "description": "Documento da processare (per ingest_and_store, full_pipeline)"
+    },
+    {
+      "name": "search_query",
+      "type": "string",
+      "description": "Query di ricerca (per search_only, full_pipeline)"
+    },
+    {
+      "name": "collection_name",
+      "type": "string",
+      "description": "Nome della collezione",
+      "default": "documents"
+    }
+  ],
+
+  "workflow_outputs": [
+    {
+      "name": "pipeline_results",
+      "type": "object",
+      "description": "Risultati completi del pipeline"
+    },
+    {
+      "name": "stored_vectors",
+      "type": "array",
+      "description": "Vettori memorizzati (se applicabile)"
+    },
+    {
+      "name": "search_results",
+      "type": "array", 
+      "description": "Risultati di ricerca (se applicabile)"
+    },
+    {
+      "name": "management_info",
+      "type": "object",
+      "description": "Informazioni di gestione database (se applicabile)"
+    }
+  ],
+
+  "nodes": [
+    {
+      "id": "document_processor",
+      "type": "generic_document_processor",
+      "display_name": "Document Processor",
+      "position": {"x": 100, "y": 100},
+      "config": {
+        "operation": "extract",
+        "format": "auto",
+        "preserve_layout": true
+      },
+      "conditional_execution": {
+        "condition": "operation_mode in ['ingest_and_store', 'full_pipeline']",
+        "skip_if_false": true
+      }
+    },
+    {
+      "id": "text_processor", 
+      "type": "generic_text_processor",
+      "display_name": "Text Processor",
+      "position": {"x": 300, "y": 100},
+      "config": {
+        "operation": "pipeline",
+        "pipeline": [
+          {
+            "step": "chunk",
+            "strategy": "token",
+            "chunk_size": 1000,
+            "chunk_overlap": 200
+          },
+          {
+            "step": "embed",
+            "provider": "sentence_transformers",
+            "model": "sentence-transformers/all-MiniLM-L6-v2",
+            "normalize_embeddings": true
+          }
+        ]
+      },
+      "conditional_execution": {
+        "condition": "operation_mode in ['ingest_and_store', 'full_pipeline']",
+        "skip_if_false": true
+      }
+    },
+    {
+      "id": "vector_writer",
+      "type": "generic_vector_store_processor",
+      "display_name": "Vector Store Writer",
+      "position": {"x": 500, "y": 100},
+      "config": {
+        "operation": "write",
+        "backend_type": "${workflow.vector_backend}",
+        "collection": "${workflow.collection_name}",
+        "backend_config": {
+          "persist_directory": "./chroma_db",
+          "service_url": "http://localhost:8090", 
+          "host": "localhost",
+          "port": 9200,
+          "timeout": 30
+        },
+        "batch_size": 100
+      },
+      "conditional_execution": {
+        "condition": "operation_mode in ['ingest_and_store', 'full_pipeline']",
+        "skip_if_false": true
+      }
+    },
+    {
+      "id": "query_embedder",
+      "type": "generic_text_processor", 
+      "display_name": "Query Embedder",
+      "position": {"x": 100, "y": 300},
+      "config": {
+        "operation": "embed",
+        "provider": "sentence_transformers",
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
+        "normalize_embeddings": true
+      },
+      "conditional_execution": {
+        "condition": "operation_mode in ['search_only', 'full_pipeline']",
+        "skip_if_false": true
+      }
+    },
+    {
+      "id": "vector_searcher_chroma",
+      "type": "generic_vector_store_processor",
+      "display_name": "Vector Search (Chroma)",
+      "position": {"x": 300, "y": 300},
+      "config": {
+        "operation": "search",
+        "backend_type": "chroma", 
+        "collection": "${workflow.collection_name}",
+        "backend_config": {
+          "persist_directory": "./chroma_db",
+          "distance_metric": "cosine"
+        },
+        "n_results": 10,
+        "include": ["documents", "metadatas", "distances"]
+      },
+      "conditional_execution": {
+        "condition": "(operation_mode in ['search_only', 'full_pipeline']) and (vector_backend in ['chroma', 'multi_backend'])",
+        "skip_if_false": true
+      }
+    },
+    {
+      "id": "vector_searcher_vectorstore",
+      "type": "generic_vector_store_processor",
+      "display_name": "Vector Search (VectorStore)",
+      "position": {"x": 500, "y": 300},
+      "config": {
+        "operation": "search",
+        "backend_type": "vectorstore_service",
+        "collection": "${workflow.collection_name}",
+        "backend_config": {
+          "service_url": "http://localhost:8090",
+          "timeout": 30
+        },
+        "n_results": 10
+      },
+      "conditional_execution": {
+        "condition": "(operation_mode in ['search_only', 'full_pipeline']) and (vector_backend in ['vectorstore_service', 'multi_backend'])",
+        "skip_if_false": true
+      }
+    },
+    {
+      "id": "vector_searcher_elasticsearch",
+      "type": "generic_vector_store_processor", 
+      "display_name": "Vector Search (Elasticsearch)",
+      "position": {"x": 700, "y": 300},
+      "config": {
+        "operation": "search",
+        "backend_type": "elasticsearch",
+        "collection": "${workflow.collection_name}",
+        "backend_config": {
+          "host": "localhost",
+          "port": 9200,
+          "timeout": 30
+        },
+        "n_results": 10
+      },
+      "conditional_execution": {
+        "condition": "(operation_mode in ['search_only', 'full_pipeline']) and (vector_backend in ['elasticsearch', 'multi_backend'])",
+        "skip_if_false": true
+      }
+    },
+    {
+      "id": "collection_manager",
+      "type": "generic_vector_store_processor",
+      "display_name": "Collection Manager", 
+      "position": {"x": 100, "y": 500},
+      "config": {
+        "operation": "manage",
+        "backend_type": "${workflow.vector_backend}",
+        "management_action": "list_collections",
+        "backend_config": {
+          "persist_directory": "./chroma_db",
+          "service_url": "http://localhost:8090",
+          "host": "localhost",
+          "port": 9200,
+          "timeout": 30
+        }
+      },
+      "conditional_execution": {
+        "condition": "operation_mode == 'manage_collections'",
+        "skip_if_false": true
+      }
+    },
+    {
+      "id": "results_aggregator",
+      "type": "generic_aggregator",
+      "display_name": "Results Aggregator",
+      "position": {"x": 500, "y": 500}, 
+      "config": {
+        "aggregation_strategy": "weighted_merge",
+        "source_weights": {
+          "chroma": 0.4,
+          "vectorstore_service": 0.4, 
+          "elasticsearch": 0.2
+        },
+        "enable_deduplication": true,
+        "max_total_results": 10,
+        "output_format": "structured"
+      },
+      "conditional_execution": {
+        "condition": "(operation_mode in ['search_only', 'full_pipeline']) and (vector_backend == 'multi_backend')",
+        "skip_if_false": true
+      }
+    }
+  ],
+
+  "connections": [
+    {
+      "description": "Document ingestion pipeline",
+      "from": "document_processor.output",
+      "to": "text_processor.document",
+      "condition": "operation_mode in ['ingest_and_store', 'full_pipeline']"
+    },
+    {
+      "description": "Text chunks and embeddings to vector storage",
+      "from": "text_processor.output",
+      "to": "vector_writer.embeddings_input",
+      "condition": "operation_mode in ['ingest_and_store', 'full_pipeline']"
+    },
+    {
+      "description": "Query embedding for search",
+      "from": "query_embedder.output",
+      "to": [
+        "vector_searcher_chroma.query_vector",
+        "vector_searcher_vectorstore.query_vector", 
+        "vector_searcher_elasticsearch.query_vector"
+      ],
+      "condition": "operation_mode in ['search_only', 'full_pipeline']",
+      "data_mapping": {
+        "query_vector": "embeddings[0]"
+      }
+    },
+    {
+      "description": "Search results aggregation",
+      "from": [
+        "vector_searcher_chroma.output",
+        "vector_searcher_vectorstore.output",
+        "vector_searcher_elasticsearch.output"
+      ],
+      "to": "results_aggregator.context",
+      "condition": "(operation_mode in ['search_only', 'full_pipeline']) and (vector_backend == 'multi_backend')",
+      "data_mapping": {
+        "chroma_results": "vector_searcher_chroma.output",
+        "vectorstore_results": "vector_searcher_vectorstore.output", 
+        "elasticsearch_results": "vector_searcher_elasticsearch.output"
+      }
+    }
+  ],
+
+  "configuration": {
+    "default_backend_configs": {
+      "chroma": {
+        "persist_directory": "./chroma_db",
+        "distance_metric": "cosine",
+        "timeout": 30
+      },
+      "vectorstore_service": {
+        "service_url": "http://localhost:8090",
+        "timeout": 30
+      },
+      "elasticsearch": {
+        "host": "localhost", 
+        "port": 9200,
+        "timeout": 30,
+        "vector_dimensions": 384
+      }
+    },
+    "embedding_config": {
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "normalize": true,
+      "batch_size": 32
+    },
+    "chunking_config": {
+      "strategy": "token",
+      "chunk_size": 1000,
+      "chunk_overlap": 200
+    }
+  },
+
+  "execution_examples": [
+    {
+      "name": "Complete Document Ingestion + Search",
+      "description": "Dimostra l'intera pipeline dalla document extraction alla ricerca",
+      "input": {
+        "operation_mode": "full_pipeline",
+        "vector_backend": "chroma",
+        "document_input": {
+          "file": "./example.pdf"
+        },
+        "search_query": "What is the main topic?",
+        "collection_name": "test_documents"
+      },
+      "expected_flow": [
+        "document_processor → extracts text from PDF",
+        "text_processor → chunks text and creates embeddings", 
+        "vector_writer → stores vectors in Chroma",
+        "query_embedder → creates embedding for search query",
+        "vector_searcher_chroma → searches stored vectors",
+        "OUTPUT: stored vectors + search results"
+      ]
+    },
+    {
+      "name": "Multi-Backend Search",
+      "description": "Ricerca simultanea su Chroma, VectorStore e Elasticsearch",
+      "input": {
+        "operation_mode": "search_only",
+        "vector_backend": "multi_backend",
+        "search_query": "machine learning algorithms",
+        "collection_name": "tech_docs"
+      },
+      "expected_flow": [
+        "query_embedder → creates embedding for query",
+        "vector_searcher_chroma → searches Chroma database",
+        "vector_searcher_vectorstore → searches VectorStore service", 
+        "vector_searcher_elasticsearch → searches Elasticsearch",
+        "results_aggregator → combines and deduplicates results",
+        "OUTPUT: unified search results ranked by relevance"
+      ]
+    },
+    {
+      "name": "Database Management",
+      "description": "Gestione collezioni e operazioni amministrative",
+      "input": {
+        "operation_mode": "manage_collections",
+        "vector_backend": "chroma",
+        "collection_name": "documents"
+      },
+      "expected_flow": [
+        "collection_manager → lists all collections in Chroma",
+        "OUTPUT: collection information and statistics"
+      ]
+    }
+  ],
+
+  "migration_mapping": {
+    "replaced_specific_nodes": [
+      {
+        "old_node": "vectorstore_writer_processor",
+        "new_node": "generic_vector_store_processor",
+        "config_mapping": {
+          "operation": "write",
+          "backend_type": "vectorstore_service"
+        }
+      },
+      {
+        "old_node": "chroma_writer_processor", 
+        "new_node": "generic_vector_store_processor",
+        "config_mapping": {
+          "operation": "write",
+          "backend_type": "chroma"
+        }
+      },
+      {
+        "old_node": "vectorstore_reader_processor",
+        "new_node": "generic_vector_store_processor", 
+        "config_mapping": {
+          "operation": "search",
+          "backend_type": "vectorstore_service"
+        }
+      },
+      {
+        "old_node": "chroma_reader_processor",
+        "new_node": "generic_vector_store_processor",
+        "config_mapping": {
+          "operation": "search", 
+          "backend_type": "chroma"
+        }
+      },
+      {
+        "old_node": "elasticsearch_vector_processor",
+        "new_node": "generic_vector_store_processor",
+        "config_mapping": {
+          "operation": "search",
+          "backend_type": "elasticsearch"
+        }
+      }
+    ],
+    "consolidated_workflows": [
+      "document_to_chroma_workflow → universal_vector_operations_workflow (operation_mode: ingest_and_store, backend: chroma)",
+      "document_to_vectorstore_workflow → universal_vector_operations_workflow (operation_mode: ingest_and_store, backend: vectorstore_service)", 
+      "semantic_search_workflow → universal_vector_operations_workflow (operation_mode: search_only)",
+      "cross_backend_search_workflow → universal_vector_operations_workflow (operation_mode: search_only, backend: multi_backend)",
+      "vector_admin_workflow → universal_vector_operations_workflow (operation_mode: manage_collections)"
+    ]
+  },
+
+  "benefits_achieved": {
+    "code_reduction": "85% - da 6+ nodi specifici a 1 nodo generico configurabile",
+    "workflow_simplification": "1 workflow universale sostituisce 7+ workflow specifici",
+    "maintainability": "Centralizzazione logica vector store in un solo punto",
+    "extensibility": "Aggiungere nuovi backend (Pinecone, Weaviate) richiede solo un nuovo connector",
+    "consistency": "API uniforme per tutte le operazioni vector database",
+    "testing": "Test centralizzato invece di test duplicati per ogni backend",
+    "documentation": "Documentazione unica invece di 6+ documenti separati"
+  },
+
+  "performance_considerations": {
+    "connection_pooling": "Connettori riutilizzano connessioni quando possibile",
+    "batch_operations": "Supporto per operazioni batch per performance ottimali", 
+    "error_handling": "Gestione errori robusta con retry automatico",
+    "memory_efficiency": "Lazy loading dei connettori non utilizzati",
+    "async_operations": "Supporto asincrono per operazioni I/O intensive"
+  }
+}

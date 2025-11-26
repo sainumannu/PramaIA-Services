@@ -1,0 +1,150 @@
+{
+  "name": "Intelligent Conversational Assistant",
+  "description": "Assistente conversazionale intelligente con memoria persistente, gestione contesto e capacità multi-turn",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "id": "message_preprocessor",
+      "type": "generic_text_processor",
+      "config": {
+        "operation": "filter",
+        "filter_type": "conversation_enhancement",
+        "enhancement": {
+          "detect_intent": true,
+          "extract_entities": true,
+          "normalize_language": true
+        }
+      },
+      "inputs": {
+        "text": "{user_message}"
+      }
+    },
+    {
+      "id": "context_retrieval",
+      "type": "generic_vector_store_processor",
+      "config": {
+        "operation": "query",
+        "connector": "chroma",
+        "connection": {
+          "collection_name": "conversation_memory",
+          "database_path": "./conversation_db"
+        },
+        "query_config": {
+          "top_k": 3,
+          "score_threshold": 0.8
+        }
+      },
+      "inputs": {
+        "query": "{message_preprocessor.output.processed_text}",
+        "filters": {
+          "user_id": "{user_id}",
+          "session_active": true
+        }
+      }
+    },
+    {
+      "id": "conversation_manager",
+      "type": "generic_llm_processor",
+      "config": {
+        "operation": "chat",
+        "provider": "openai",
+        "model": "gpt-4",
+        "conversation_id": "{user_id}_{session_id}",
+        "system_prompt": "You are a helpful and knowledgeable assistant. Maintain context from previous conversations and provide personalized responses. If you have relevant context from past conversations, reference it appropriately.",
+        "max_history_length": 15,
+        "temperature": 0.8,
+        "max_tokens": 1200,
+        "response_format": "detailed"
+      },
+      "inputs": {
+        "message": "{message_preprocessor.output.processed_text}",
+        "context": "{context_retrieval.output.documents}"
+      }
+    },
+    {
+      "id": "memory_storage",
+      "type": "generic_vector_store_processor",
+      "config": {
+        "operation": "store",
+        "connector": "chroma", 
+        "connection": {
+          "collection_name": "conversation_memory",
+          "database_path": "./conversation_db"
+        },
+        "storage_config": {
+          "update_mode": "merge"
+        }
+      },
+      "inputs": {
+        "documents": [
+          {
+            "content": "{user_message}",
+            "metadata": {
+              "user_id": "{user_id}",
+              "session_id": "{session_id}",
+              "timestamp": "{current_timestamp}",
+              "type": "user_message",
+              "intent": "{message_preprocessor.output.intent}"
+            }
+          },
+          {
+            "content": "{conversation_manager.output.response}",
+            "metadata": {
+              "user_id": "{user_id}",
+              "session_id": "{session_id}",
+              "timestamp": "{current_timestamp}",
+              "type": "assistant_response",
+              "model_used": "{conversation_manager.output.model_used}"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "response_formatter", 
+      "type": "generic_llm_processor",
+      "config": {
+        "operation": "format",
+        "response_format": "markdown"
+      },
+      "inputs": {
+        "response": "{conversation_manager.output}"
+      }
+    }
+  ],
+  "connections": [
+    {"from": "message_preprocessor", "to": "context_retrieval"},
+    {"from": "context_retrieval", "to": "conversation_manager"},
+    {"from": "conversation_manager", "to": "memory_storage"},
+    {"from": "conversation_manager", "to": "response_formatter"}
+  ],
+  "inputs": {
+    "user_message": {
+      "type": "string",
+      "description": "Messaggio dell'utente",
+      "required": true
+    },
+    "user_id": {
+      "type": "string", 
+      "description": "ID univoco dell'utente",
+      "required": true
+    },
+    "session_id": {
+      "type": "string",
+      "description": "ID della sessione conversazionale",
+      "required": true
+    },
+    "current_timestamp": {
+      "type": "string",
+      "description": "Timestamp corrente",
+      "default": "{auto_timestamp}"
+    }
+  },
+  "outputs": {
+    "response": "{response_formatter.output.response}",
+    "conversation_metadata": "{conversation_manager.output.metadata}",
+    "memory_stored": "{memory_storage.output.status}",
+    "detected_intent": "{message_preprocessor.output.intent}",
+    "context_used": "{context_retrieval.output.documents}"
+  }
+}

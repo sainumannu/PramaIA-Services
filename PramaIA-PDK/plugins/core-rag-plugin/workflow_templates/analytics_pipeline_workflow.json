@@ -1,0 +1,487 @@
+{
+  "name": "analytics_pipeline_workflow",
+  "description": "Pipeline di analisi avanzata per aggregazione dati, pattern detection e reporting automatizzato",
+  "version": "1.0.0",
+  "category": "analytics",
+  "tags": ["analytics", "data_processing", "reporting", "insights"],
+  "author": "PramaIA Team",
+  "nodes": [
+    {
+      "id": "data_pattern_analyzer",
+      "name": "Analizzatore Pattern Dati",
+      "type": "generic_query_analyzer",
+      "config": {
+        "analysis_types": ["classification", "entities"],
+        "analysis_patterns": {
+          "data_trends": {
+            "increasing": ["crescita", "aumento", "incremento", "trend positivo"],
+            "decreasing": ["calo", "diminuzione", "riduzione", "trend negativo"],
+            "stable": ["stabile", "costante", "invariato", "plateau"],
+            "volatile": ["volatile", "fluttuante", "instabile", "variabile"]
+          },
+          "anomaly_indicators": {
+            "outliers": ["anomalia", "outlier", "valore anomalo", "picco"],
+            "missing_data": ["dati mancanti", "gap", "vuoto", "assente"],
+            "data_quality": ["qualità", "accuracy", "completezza", "validità"]
+          },
+          "metric_types": {
+            "performance": ["performance", "prestazioni", "velocità", "efficienza"],
+            "usage": ["utilizzo", "accesso", "frequenza", "volume"],
+            "conversion": ["conversione", "tasso", "percentuale", "successo"],
+            "error_rate": ["errore", "fallimento", "problema", "bug"]
+          }
+        },
+        "custom_classifiers": {
+          "temporal_patterns": {
+            "patterns": {
+              "seasonal": ["stagionale", "ciclico", "periodico"],
+              "daily_pattern": ["giornaliero", "daily", "quotidiano"],
+              "weekly_pattern": ["settimanale", "weekly", "weekend"],
+              "monthly_pattern": ["mensile", "monthly", "mese"]
+            }
+          },
+          "statistical_indicators": {
+            "patterns": {
+              "correlation": ["correlazione", "relazione", "legame"],
+              "causation": ["causazione", "causa", "effetto"],
+              "regression": ["regressione", "previsione", "trend"]
+            }
+          }
+        },
+        "confidence_thresholds": {
+          "trends": 0.6,
+          "anomalies": 0.7,
+          "patterns": 0.5
+        },
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "historical_data_search",
+      "name": "Ricerca Dati Storici",
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "vectorstore",
+        "backend_config": {
+          "base_url": "http://localhost:8090",
+          "timeout": 20,
+          "default_collection": "analytics_data"
+        },
+        "default_search_params": {
+          "collection": "analytics_data",
+          "limit": 50
+        },
+        "min_score": 0.1,
+        "max_results": 50,
+        "include_snippets": false,
+        "output_format": "simple"
+      }
+    },
+    {
+      "id": "metrics_extractor",
+      "name": "Estrazione Metriche",
+      "type": "generic_metadata_search",
+      "config": {
+        "extractors": {
+          "date_enabled": true,
+          "date_patterns": [
+            "\\\\d{4}-\\\\d{2}-\\\\d{2}",
+            "\\\\d{2}/\\\\d{2}/\\\\d{4}",
+            "\\\\d{1,2}\\\\s+(gen|feb|mar|apr|mag|giu|lug|ago|set|ott|nov|dic)\\\\s+\\\\d{4}"
+          ],
+          "custom": {
+            "numerical_metrics": {
+              "field_patterns": {
+                "percentage": {
+                  "patterns": ["(\\\\d+(?:\\\\.\\\\d+)?)%", "(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*percent"],
+                  "type": "number"
+                },
+                "count": {
+                  "patterns": ["count[:\\\\s]+(\\\\d+)", "totale[:\\\\s]+(\\\\d+)", "(\\\\d+)\\\\s*item"],
+                  "type": "number"
+                },
+                "rate": {
+                  "patterns": ["rate[:\\\\s]+(\\\\d+(?:\\\\.\\\\d+)?)", "tasso[:\\\\s]+(\\\\d+(?:\\\\.\\\\d+)?)"],
+                  "type": "number"
+                },
+                "duration": {
+                  "patterns": ["(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*ms", "(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*sec", "(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*min"],
+                  "type": "number"
+                }
+              }
+            },
+            "business_metrics": {
+              "field_patterns": {
+                "revenue": {
+                  "patterns": ["revenue[:\\\\s]+([\\\\d,]+)", "ricavi[:\\\\s]+([\\\\d,]+)", "€\\\\s*([\\\\d,]+)"],
+                  "type": "currency"
+                },
+                "users": {
+                  "patterns": ["users[:\\\\s]+(\\\\d+)", "utenti[:\\\\s]+(\\\\d+)", "user_count[:\\\\s]+(\\\\d+)"],
+                  "type": "number"
+                },
+                "conversions": {
+                  "patterns": ["conversions[:\\\\s]+(\\\\d+)", "conversioni[:\\\\s]+(\\\\d+)"],
+                  "type": "number"
+                }
+              }
+            },
+            "performance_metrics": {
+              "field_patterns": {
+                "response_time": {
+                  "patterns": ["response_time[:\\\\s]+(\\\\d+(?:\\\\.\\\\d+)?)ms", "latenza[:\\\\s]+(\\\\d+(?:\\\\.\\\\d+)?)ms"],
+                  "type": "number"
+                },
+                "throughput": {
+                  "patterns": ["throughput[:\\\\s]+(\\\\d+)", "req/sec[:\\\\s]+(\\\\d+)"],
+                  "type": "number"
+                },
+                "error_rate": {
+                  "patterns": ["error_rate[:\\\\s]+(\\\\d+(?:\\\\.\\\\d+)?)%", "errori[:\\\\s]+(\\\\d+(?:\\\\.\\\\d+)?)%"],
+                  "type": "percentage"
+                }
+              }
+            }
+          }
+        },
+        "data_source": {
+          "type": "mixed",
+          "config": {
+            "sources": ["vectorstore", "database", "api"],
+            "field_mapping": {
+              "timestamp": ["timestamp", "date", "time"],
+              "value": ["value", "amount", "count"],
+              "metric_name": ["metric", "name", "type"],
+              "category": ["category", "group", "dimension"]
+            }
+          }
+        },
+        "max_results": 100
+      }
+    },
+    {
+      "id": "comparative_analyzer",
+      "name": "Analizzatore Comparativo",
+      "type": "generic_semantic_search",
+      "config": {
+        "backend_type": "http",
+        "backend_config": {
+          "base_url": "http://analytics-api:8080",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "X-Analytics-Key": "${ANALYTICS_API_KEY}"
+          },
+          "timeout": 30
+        },
+        "request_mapping": {
+          "metrics": "$.input_metrics",
+          "timeframe": "$.analysis_period",
+          "comparison_type": "$.comparison_method"
+        },
+        "response_mapping": {
+          "results": "$.analysis_results",
+          "comparisons": "$.comparative_data",
+          "insights": "$.generated_insights"
+        },
+        "max_results": 25,
+        "output_format": "detailed"
+      }
+    },
+    {
+      "id": "insights_aggregator",
+      "name": "Aggregatore Insights",
+      "type": "generic_aggregator",
+      "config": {
+        "source_weights": {
+          "data_pattern_analyzer": 0.3,
+          "historical_data_search": 0.2,
+          "metrics_extractor": 0.3,
+          "comparative_analyzer": 0.2
+        },
+        "aggregation_strategy": "analytical_merge",
+        "enable_deduplication": false,
+        "max_total_results": 100,
+        "scoring_method": "analytical_relevance",
+        "score_normalization": true,
+        "output_format": "analytical_report",
+        "include_metadata": true,
+        "include_sources": true,
+        "format_templates": {
+          "insight_template": "📊 {insight_type}: {description}\\n📈 Trend: {trend_direction} ({confidence:.1%})\\n🔍 Dettaglio: {supporting_data}",
+          "summary_template": "📋 Report Analitico\\n📊 Metriche analizzate: {metrics_count}\\n📈 Insights generati: {insights_count}\\n🎯 Confidenza media: {avg_confidence:.1%}",
+          "recommendation_template": "💡 Raccomandazioni:\\n{recommendations}\\n⚠️ Aree di attenzione:\\n{attention_areas}"
+        },
+        "analytical_settings": {
+          "trend_detection_sensitivity": 0.1,
+          "anomaly_detection_threshold": 2.0,
+          "confidence_weighting": true,
+          "temporal_analysis": true,
+          "correlation_analysis": true
+        }
+      }
+    }
+  ],
+  "flows": [
+    {
+      "from": "INPUT",
+      "to": "data_pattern_analyzer",
+      "data_mapping": {
+        "raw_data": "data",
+        "analysis_query": "query"
+      }
+    },
+    {
+      "from": "data_pattern_analyzer",
+      "to": "historical_data_search",
+      "data_mapping": {
+        "query": "detected_patterns",
+        "search_params": {
+          "filters": {
+            "metric_type": "classification.metric_types"
+          }
+        }
+      }
+    },
+    {
+      "from": "INPUT",
+      "to": "metrics_extractor",
+      "data_mapping": {
+        "raw_data": "data",
+        "time_period": "timeframe"
+      }
+    },
+    {
+      "from": "metrics_extractor",
+      "to": "comparative_analyzer",
+      "data_mapping": {
+        "extracted_metrics": "*",
+        "analysis_period": "timeframe"
+      }
+    },
+    {
+      "from": "data_pattern_analyzer",
+      "to": "insights_aggregator",
+      "data_mapping": {
+        "pattern_analysis": "*"
+      }
+    },
+    {
+      "from": "historical_data_search",
+      "to": "insights_aggregator",
+      "data_mapping": {
+        "historical_context": "*"
+      }
+    },
+    {
+      "from": "metrics_extractor",
+      "to": "insights_aggregator",
+      "data_mapping": {
+        "extracted_metrics": "*"
+      }
+    },
+    {
+      "from": "comparative_analyzer",
+      "to": "insights_aggregator",
+      "data_mapping": {
+        "comparative_insights": "*"
+      }
+    },
+    {
+      "from": "insights_aggregator",
+      "to": "OUTPUT"
+    }
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["data"],
+    "properties": {
+      "data": {
+        "type": "object",
+        "description": "Dati da analizzare - può essere raw data o riferimenti a dataset",
+        "properties": {
+          "dataset_id": {"type": "string"},
+          "raw_values": {"type": "array"},
+          "data_source": {"type": "string"},
+          "format": {"type": "string", "enum": ["json", "csv", "database_query", "api_endpoint"]}
+        }
+      },
+      "query": {
+        "type": "string",
+        "description": "Query di analisi specifica",
+        "examples": [
+          "analizza trend vendite ultimo trimestre",
+          "identifica anomalie performance sistema",
+          "confronta metriche utenti mese corrente vs precedente"
+        ]
+      },
+      "timeframe": {
+        "type": "object",
+        "description": "Periodo temporale per l'analisi",
+        "properties": {
+          "start_date": {"type": "string", "format": "date"},
+          "end_date": {"type": "string", "format": "date"},
+          "period_type": {
+            "type": "string",
+            "enum": ["hourly", "daily", "weekly", "monthly", "quarterly", "yearly"]
+          },
+          "comparison_period": {
+            "type": "string",
+            "enum": ["previous", "year_over_year", "custom"],
+            "description": "Periodo di confronto per analisi comparative"
+          }
+        }
+      },
+      "analysis_focus": {
+        "type": "array",
+        "description": "Aree specifiche di analisi da approfondire",
+        "items": {
+          "enum": [
+            "trend_analysis",
+            "anomaly_detection", 
+            "comparative_analysis",
+            "correlation_analysis",
+            "forecasting",
+            "segmentation"
+          ]
+        },
+        "default": ["trend_analysis", "anomaly_detection"]
+      },
+      "output_preferences": {
+        "type": "object",
+        "properties": {
+          "detail_level": {
+            "type": "string",
+            "enum": ["summary", "detailed", "comprehensive"],
+            "default": "detailed"
+          },
+          "include_visualizations": {"type": "boolean", "default": false},
+          "format": {
+            "type": "string", 
+            "enum": ["json", "markdown", "html", "pdf"],
+            "default": "json"
+          }
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "executive_summary": {
+        "type": "object",
+        "properties": {
+          "key_insights": {"type": "array"},
+          "trend_summary": {"type": "string"},
+          "anomalies_detected": {"type": "integer"},
+          "confidence_score": {"type": "number"},
+          "recommendation_priority": {"type": "string"}
+        }
+      },
+      "detailed_analysis": {
+        "type": "object",
+        "properties": {
+          "trend_analysis": {
+            "type": "object",
+            "properties": {
+              "detected_trends": {"type": "array"},
+              "trend_strength": {"type": "number"},
+              "seasonality": {"type": "object"},
+              "forecast": {"type": "object"}
+            }
+          },
+          "anomaly_analysis": {
+            "type": "object",
+            "properties": {
+              "anomalies": {"type": "array"},
+              "anomaly_severity": {"type": "array"},
+              "potential_causes": {"type": "array"}
+            }
+          },
+          "comparative_analysis": {
+            "type": "object",
+            "properties": {
+              "period_comparison": {"type": "object"},
+              "performance_deltas": {"type": "array"},
+              "benchmark_analysis": {"type": "object"}
+            }
+          }
+        }
+      },
+      "metrics_summary": {
+        "type": "object",
+        "properties": {
+          "extracted_metrics": {"type": "array"},
+          "metric_correlations": {"type": "array"},
+          "performance_indicators": {"type": "object"},
+          "data_quality_assessment": {"type": "object"}
+        }
+      },
+      "actionable_insights": {
+        "type": "object",
+        "properties": {
+          "recommendations": {"type": "array"},
+          "attention_areas": {"type": "array"},
+          "optimization_opportunities": {"type": "array"},
+          "risk_indicators": {"type": "array"}
+        }
+      },
+      "technical_metadata": {
+        "type": "object",
+        "properties": {
+          "analysis_timestamp": {"type": "string"},
+          "data_sources_used": {"type": "array"},
+          "processing_time": {"type": "number"},
+          "confidence_intervals": {"type": "object"},
+          "methodology": {"type": "string"}
+        }
+      }
+    }
+  },
+  "conditional_logic": [
+    {
+      "condition": "analysis_focus contains 'forecasting'",
+      "action": "enable_predictive_models",
+      "description": "Abilita modelli predittivi per forecasting"
+    },
+    {
+      "condition": "timeframe.period_type in ['hourly', 'daily']",
+      "action": "enable_real_time_analysis",
+      "description": "Abilita analisi real-time per dati granulari"
+    },
+    {
+      "condition": "output_preferences.include_visualizations == true",
+      "action": "generate_charts",
+      "description": "Genera visualizzazioni per il report"
+    },
+    {
+      "condition": "data.format == 'database_query'",
+      "action": "enable_sql_connector",
+      "description": "Abilita connettore database per query dirette"
+    }
+  ],
+  "performance_considerations": {
+    "parallel_execution": {
+      "description": "Analisi parallela per dataset grandi",
+      "parallel_groups": [
+        ["data_pattern_analyzer", "metrics_extractor"],
+        ["historical_data_search", "comparative_analyzer"]
+      ]
+    },
+    "data_sampling": {
+      "description": "Campionamento per dataset molto grandi",
+      "sample_size": 10000,
+      "sampling_strategy": "stratified"
+    },
+    "caching": {
+      "description": "Cache per analisi ripetute",
+      "cache_keys": ["dataset_id", "timeframe", "analysis_focus"],
+      "ttl": "2 hours"
+    },
+    "resource_limits": {
+      "max_dataset_size": "1GB",
+      "max_processing_time": "300 seconds",
+      "memory_limit": "4GB"
+    }
+  }
+}

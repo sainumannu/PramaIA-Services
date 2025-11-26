@@ -1,0 +1,11 @@
+{
+  "daily": {
+    "enabled": true,
+    "hour": 3,
+    "minute": 30
+  },
+  "periodic": {
+    "enabled": true,
+    "interval_minutes": 45
+  }
+}
