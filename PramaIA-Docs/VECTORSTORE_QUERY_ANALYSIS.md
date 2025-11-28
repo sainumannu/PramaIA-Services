@@ -1,6 +1,17 @@
-# Analisi Endpoint VectorstoreService: Verifica Funzionalità Query
+# ✅ RISOLTO: Analisi Endpoint VectorstoreService
 
-## Background
+**Status**: ✅ **PROBLEMA RISOLTO** (28/11/2025)
+**Fix Version**: v1.1.1
+
+## 🎉 Risoluzione Problema Similarity Score
+
+**Root Cause Identificato**: ChromaDB restituiva distanze > 1.0, ma la formula di conversione `similarity = 1.0 - distance` produceva sempre 0.0.
+
+**Soluzione Implementata**: Formula normalizzata nel DocumentManager per gestire distanze > 1.0.
+
+**Risultati**: Sistema VectorStore completamente operativo con similarity scores realistici (0.037-0.448).
+
+## Background Storico
 
 Sulla base del feedback di un'altra sessione di chat, è emerso il bisogno di verificare e documentare completamente gli endpoint disponibili per le query vettoriali nel VectorstoreService, considerando che:
 

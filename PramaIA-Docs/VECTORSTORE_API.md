@@ -45,6 +45,23 @@ Base URL: `http://localhost:8090`
 | POST | `/documents/{collection}/query` | `{"query_text": "...", "limit": 5}` | `{"matches": [...], "total": N}` | Semantic search in collection |
 | POST | `/search` | Query object | Search results | Alternative search endpoint |
 
+### Similarity Score Calculation
+
+**Fixed in v1.1.1**: Risolto problema con similarity_score sempre 0.0
+
+Il sistema utilizza una formula normalizzata per convertire le distanze ChromaDB in similarity scores:
+
+```python
+# Per distanze standard (≤ 1.0)
+similarity_score = max(0.0, 1.0 - distance)
+
+# Per distanze > 1.0 (modelli embedding specifici)
+similarity_score = max(0.0, 1.0 - sqrt(distance) / 2.0)
+```
+
+**Range tipici**: 0.0-1.0 (0% - 100% similarità)
+**Note**: ChromaDB può restituire distanze > 1.0 con certi modelli di embedding
+
 ## Database Management
 
 | Method | Endpoint | Response | Description |

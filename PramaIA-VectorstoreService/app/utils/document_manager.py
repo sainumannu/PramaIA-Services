@@ -335,7 +335,15 @@ class DocumentManager:
             for i, doc_content in enumerate(documents):
                 # Converti distanza coseno in score similarità (0-1)
                 distance = distances[i] if i < len(distances) else 1.0
-                similarity_score = max(0.0, 1.0 - distance)
+                
+                # 🔧 FIX: Usa formula normalizzata per distanze > 1.0
+                # ChromaDB può restituire distanze > 1.0 con certi embedding models
+                import math
+                if distance <= 1.0:
+                    similarity_score = max(0.0, 1.0 - distance)
+                else:
+                    # Normalizzazione con radice quadrata per distanze > 1.0
+                    similarity_score = max(0.0, 1.0 - math.sqrt(distance) / 2.0)
                 
                 # DEBUG: Log delle distanze
                 print(f"[DEBUG] Doc {i}: distance={distance}, similarity={similarity_score}")
