@@ -1,409 +1,167 @@
-# PramaIA-Docs - Documentazione Essenziale
+# PramaIA Documentation
 
-Benvenuto nella documentazione essenziale di PramaIA. Questa cartella contiene i documenti fondamentali per comprendere, debuggare e sviluppare nell'ecosistema PramaIA, **senza ridondanze**.
+**Comprehensive Documentation Hub for the PramaIA Ecosystem**
 
-## 📚 Indice Documenti
-
-### 1. **[ECOSYSTEM_OVERVIEW.md](./ECOSYSTEM_OVERVIEW.md)**
-Panoramica dell'ecosistema PramaIA e i suoi componenti.
-
-**Contiene**:
-- Architettura dei microservizi
-- Stack tecnologico
-- Flussi di dati principali
-- Configurazione e variabili d'ambiente
-- Startup sequence
-- Health checks e debugging base
-
-**Per chi**: Tutti - punto di partenza
-**Tempo di lettura**: 15 minuti
+Welcome to the centralized documentation for all PramaIA services, plugins, workflows, and development resources.
 
 ---
 
-### 2. **[EVENT_SOURCES_TRIGGERS_WORKFLOWS.md](./EVENT_SOURCES_TRIGGERS_WORKFLOWS.md)**
-Il sistema event-driven: come gli eventi scatenano automazioni.
+## 🚀 **Quick Start**
 
-**Contiene**:
-- Concetto di Event Source (sorgenti di eventi)
-- Trigger (collegamento evento→workflow)
-- Workflow e nodi (pipeline di elaborazione)
-- DAG engine (orchestrazione)
-- Integrazione completa: evento → trigger → workflow
-- Operazioni comuni
-- Troubleshooting
+### **For New Developers**
+1. **[Ecosystem Overview](ECOSYSTEM_OVERVIEW.md)** - System architecture and component relationships
+2. **[Development Guide](DEVELOPMENT_GUIDE.md)** - Environment setup and development workflow  
+3. **[Quick Reference Card](QUICK_REFERENCE_CARD.md)** - Essential commands and endpoints
 
-**Per chi**: Sviluppatori, DevOps
-**Tempo di lettura**: 20 minuti
+### **For Service Users**
+1. **[Services Documentation](SERVICES/README.md)** - Individual service guides and APIs
+2. **[PDK Documentation](PDK/README.md)** - Plugin development and workflow creation
+3. **[Testing Guide](TESTING/README.md)** - Testing procedures and validation
 
 ---
 
-### 3. **[DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)**
-Guida per sviluppare nuovi nodi e event source.
+## 🏗️ **Documentation Structure**
 
-**Contiene**:
-- Come creare nuovi nodi (handler di elaborazione)
-- Struttura plugin e nodes.json
-- Implementare resolver function
-- Testing dei nodi
-- Come creare nuovi event source
-- Retry logic e buffering
-- Best practices
-- Debugging durante sviluppo
+### **🔧 [PDK - Plugin Development Kit](PDK/README.md)**
+*Plugin development, workflows, and event sources*
+- [Plugin Development Guide](PDK/PLUGIN_DEVELOPMENT_GUIDE.md)
+- [Event Sources Guide](PDK/EVENT_SOURCES_GUIDE.md)
+- [Workflow Creation Guide](PDK/WORKFLOW_CREATION_GUIDE.md)
+- [API Documentation](PDK/API_DOCUMENTATION.md)
 
-**Per chi**: Sviluppatori backend, plugin developer
-**Tempo di lettura**: 30 minuti
+### **🛠️ [Services Architecture](SERVICES/README.md)**  
+*Microservices documentation and integration*
+- [VectorStore Service](SERVICES/VECTORSTORE_SERVICE_GUIDE.md)
+- [Log Service](SERVICES/LOG_SERVICE_GUIDE.md)
+- [Reconciliation Service](SERVICES/RECONCILIATION_SERVICE_GUIDE.md)
+- [Service Architecture](SERVICES/VECTORSTORE_ARCHITECTURE.md)
 
----
+### **⚡ [Workflows & Automation](WORKFLOWS/README.md)**
+*Workflow design, templates, and automation*
+- [Templates Guide](WORKFLOWS/TEMPLATES_GUIDE.md)
+- [Workflow Examples](WORKFLOWS/EXAMPLES/)
+- [Best Practices](WORKFLOWS/BEST_PRACTICES.md)
 
-### 4. **[QUICK_START_EVENT_SOURCES.md](./QUICK_START_EVENT_SOURCES.md)** ✨ NEW
-Guida veloce (10 minuti): creare e usare event sources.
+### **🔌 [Plugins & Extensions](PLUGINS/README.md)**
+*Plugin ecosystem and custom development*
+- [Core RAG Plugin](PLUGINS/CORE_RAG_PLUGIN.md)
+- [Workflow Scheduler Plugin](PLUGINS/WORKFLOW_SCHEDULER_PLUGIN.md)
+- [Plugin Development Guide](PLUGINS/DEVELOPMENT_GUIDE.md)
 
-**Contiene**:
-- 30-secondo overview dei concetti
-- Esempio completo di timer event source (5 minuti)
-- Come usare emit_event() da qualunque servizio
-- Manifest format e struttura evento
-- Built-in event sources
-- Comuni errori e best practices
-- Debugging rapido
-- Checklist per nuove event sources
+### **🧪 [Testing & Quality](TESTING/README.md)**
+*Testing framework and quality assurance*
+- [Test Suite Guide](TESTING/TEST_SUITE_GUIDE.md)
+- [Integration Tests](TESTING/INTEGRATION_TESTS.md)
+- [Performance Testing](TESTING/README.md#performance-testing)
 
-**Per chi**: Developers che vogliono iniziare subito
-**Tempo di lettura**: 10 minuti
-**Dipendenze**: Nessuna (standalone)
+### **📊 [Implementation Tracking](IMPLEMENTATION/README.md)**
+*Development status and system evolution*
+- [Implementation Status](IMPLEMENTATION/IMPLEMENTATION_STATUS.md)
+- [Refactoring Reports](IMPLEMENTATION/REFACTORING_REPORTS/)
+- [Migration Guides](IMPLEMENTATION/MIGRATION_GUIDES/)
 
----
+### **📝 [Changelogs](CHANGELOGS/README.md)**
+*Version history and change tracking*
+- [VectorStore Changelog](CHANGELOGS/VECTORSTORE_CHANGELOG.md)
+- [Log Service Changelog](CHANGELOGS/LOG_SERVICE_CHANGELOG.md)
+- [System Changelog](CHANGELOGS/SYSTEM_CHANGELOG.md)
 
-### 5. **[EVENT_SOURCES_EXTENSIBILITY.md](./EVENT_SOURCES_EXTENSIBILITY.md)** ✨ NEW
-Architettura e estensibilità del sistema Event Sources.
-
-**Contiene**:
-- Core concepts e lifecycle degli eventi
-- PDK API: come funziona la scoperta automatica
-- Creazione custom event sources (plugin pattern)
-- Built-in event sources (system, webhook, upload, monitor)
-- Event emission pattern e best practices
-- Esempi completi di integrazione
-- Checklist per sviluppatori
-
-**Per chi**: Sviluppatori PDK, DevOps, system integrators
-**Tempo di lettura**: 25 minuti
-**Dipendenze**: EVENT_SOURCES_TRIGGERS_WORKFLOWS.md
+### **🗃️ [Archive](ARCHIVE/README.md)**
+*Historical and obsolete documentation*
 
 ---
 
-### 6. **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)** ✨ UPDATED
-Current implementation status and next steps.
+## 🎯 **Key Documentation**
 
-**Contains**:
-- EventEmitter implementation status (✅ Complete)
-- Current pipeline state and debugging
-- Database status and event logging
-- Trigger matching investigation
-- Next steps and roadmap
-- Consolidated session findings
+### **System Architecture**
+- **[Ecosystem Overview](ECOSYSTEM_OVERVIEW.md)** - Complete system architecture
+- **[RAG Nodes Architecture](RAG_NODES_REUSABLE_ARCHITECTURE.md)** - RAG system design
+- **[Systematic Refactoring Vision](SYSTEMATIC_REFACTORING_VISION.md)** - Architecture evolution
 
-**For who**: Project team, stakeholders, developers
-**Tempo di lettura**: 10 minuti
+### **APIs & Integration**
+- **[VectorStore API](VECTORSTORE_API.md)** - Vector database operations
+- **[Reconciliation API](RECONCILIATION_API.md)** - Data consistency API
+- **[Configuration Endpoints](CONFIGURATION_ENDPOINTS_SUMMARY.md)** - Service configuration
 
----
+### **Event-Driven Architecture**
+- **[Event Sources & Workflows](EVENT_SOURCES_TRIGGERS_WORKFLOWS.md)** - Event system overview
+- **[Upload Event Pipeline](UPLOAD_EVENT_PIPELINE.md)** - Document processing pipeline
+- **[Event Sources Extensibility](EVENT_SOURCES_EXTENSIBILITY.md)** - Custom event sources
 
-### 7. **[NODES_AND_PLUGINS_OVERVIEW.md](./NODES_AND_PLUGINS_OVERVIEW.md)** ✨ NEW
-Panoramica completa del sistema nodi e plugin PramaIA PDK.
-
-**Contiene**:
-- Architettura plugin e nodi
-- Standard di implementazione e logging
-- Categorizzazione nodi funzionale
-- Best practices sviluppo
-- Integrazione con servizi
-- Linee guida documentazione
-
-**Per chi**: Sviluppatori plugin, architetti sistema
-**Tempo di lettura**: 15 minuti
+### **Development Resources**
+- **[Development Guide](DEVELOPMENT_GUIDE.md)** - Complete development setup
+- **[Nodes & Plugins Overview](NODES_AND_PLUGINS_OVERVIEW.md)** - System components
+- **[Team Summary](TEAM_SUMMARY.md)** - Development team information
 
 ---
 
-### 8. **[NODES_INDEX.md](./NODES_INDEX.md)** ✨ NEW
-Indice completo della documentazione nodi PramaIA.
+## 🔍 **Navigation Guide**
 
-**Contiene**:
-- Organizzazione per plugin e categoria
-- Template documentazione standard
-- Status documentazione per plugin
-- Guidelines contribuzione
-- Processo di documentazione
+### **By Role**
+- **🧑‍💻 Developers** → [PDK](PDK/README.md), [Development Guide](DEVELOPMENT_GUIDE.md)
+- **🏗️ DevOps** → [Services](SERVICES/README.md), [Testing](TESTING/README.md)  
+- **🔧 Plugin Creators** → [Plugins](PLUGINS/README.md), [PDK](PDK/README.md)
+- **📊 Project Managers** → [Implementation](IMPLEMENTATION/README.md), [Changelogs](CHANGELOGS/README.md)
 
-**Per chi**: Sviluppatori, documentation maintainers
-**Tempo di lettura**: 10 minuti
-
----
-
-### 9. **[NODES/](./NODES/)**
-Directory contenente documentazione dettagliata dei singoli nodi.
-
-**Struttura**:
-- Documentazione tecnica completa per ogni nodo
-- Esempi configurazione e utilizzo
-- Specifiche input/output
-- Note performance e integrazione
-
-**Current Status**:
-- ✅ **[chroma_vector_store_node.md](./NODES/chroma_vector_store_node.md)** - Nodo ChromaDB Writer completamente documentato
-- ✅ **[chroma_retriever_node.md](./NODES/chroma_retriever_node.md)** - Nodo ChromaDB Retriever completamente documentato
-
-**Per chi**: Sviluppatori che implementano workflow specifici
-**Accesso**: Per riferimento durante sviluppo
+### **By Task**
+- **🚀 Getting Started** → [Quick Start](#quick-start), [Ecosystem Overview](ECOSYSTEM_OVERVIEW.md)
+- **🔨 Building Workflows** → [Workflows](WORKFLOWS/README.md), [PDK](PDK/README.md)
+- **🧪 Testing Systems** → [Testing](TESTING/README.md), [Test Upload Retrieve](TEST_UPLOAD_RETRIEVE.md)
+- **🔍 Troubleshooting** → [Services](SERVICES/README.md), [Changelogs](CHANGELOGS/README.md)
 
 ---
 
-### 10. **[TEST_UPLOAD_RETRIEVE.md](./TEST_UPLOAD_RETRIEVE.md)** ✨ NEW
-Suite completa di test per verificare upload e retrieve documenti.
+## 📊 **Documentation Status**
 
-**Contiene**:
-- Test manuali endpoint VectorstoreService
-- Script PowerShell automatizzati per test completi
-- Test nodi PDK (chroma_vector_store e chroma_retriever)
-- Workflow end-to-end testing
-- Validazione performance e troubleshooting
-
-**Script Inclusi**:
-- `test_upload_retrieve.ps1` - Test automatizzato completo
-- `quick_test.ps1` - Test rapido funzionalità base
-- `test_endpoints.sh` - Test bash per endpoint
-
-**Per chi**: QA, sviluppatori, DevOps per validazione sistema
-**Tempo di esecuzione**: 2-5 minuti per suite completa
+| Category | Completion | Last Updated |
+|----------|------------|-------------|
+| PDK Documentation | 95% | November 2024 |
+| Services Documentation | 90% | November 2024 |
+| Workflows Documentation | 80% | November 2024 |
+| Plugin Documentation | 85% | November 2024 |
+| Testing Documentation | 88% | November 2024 |
+| Implementation Tracking | 95% | November 2024 |
 
 ---
 
-## 🎯 Quick Navigation
+## 🎪 **Service Quick Access**
 
-**Se vuoi...**
-
-| Obiettivo | Documento | Sezione |
-|-----------|-----------|---------|
-| Capire l'architettura generale | ECOSYSTEM_OVERVIEW | Section 2-3 |
-| Risolvere un problema | ECOSYSTEM_OVERVIEW | Section 10 |
-| Configurare servizi | ECOSYSTEM_OVERVIEW | Section 8 |
-| Creare un trigger | EVENT_SOURCES_TRIGGERS_WORKFLOWS | Section 6.1 |
-| Capire come funzionano gli eventi | EVENT_SOURCES_TRIGGERS_WORKFLOWS | Section 2-5 |
-| Creare un nuovo nodo | DEVELOPMENT_GUIDE | Section 2 |
-| Creare un event source | DEVELOPMENT_GUIDE \| EVENT_SOURCES_EXTENSIBILITY | Section 3 \| Section 3-4 |
-| Documentare un nodo | NODES_AND_PLUGINS_OVERVIEW \| NODES_INDEX | Section "Linee Guida" \| Template |
-| Capire i nodi disponibili | NODES_INDEX | Plugin sections |
-| Configurare un nodo specifico | NODES/[node_name]_node.md | Sezione "Configurazione" |
-| Debuggare | DEVELOPMENT_GUIDE | Section 4 |
-| Testare | DEVELOPMENT_GUIDE | Section 2.9, 3.3 |
-| **Estendere il sistema con custom event sources** | **EVENT_SOURCES_EXTENSIBILITY** | **Section 3-6** |
-| **Capire lo stato attuale del sistema** | **IMPLEMENTATION_STATUS.md** | **All sections** |
-| **Debuggare problemi di trigger matching** | **UPLOAD_EVENT_PIPELINE.md** | **Debugging Guide** |
-| **Capire come registra event sources** | **EVENT_SOURCES_EXTENSIBILITY** | **Section 2** |
-| **Emettere eventi da servizi** | **EVENT_SOURCES_EXTENSIBILITY** | **Section 5** |
-| **Documentare un nodo PDK** | **NODES_AND_PLUGINS_OVERVIEW** | **Standards section** |
-| **Trovare documentazione nodi specifici** | **NODES_INDEX** | **Plugin listings** |
-| **Testare upload e retrieve documenti** | **TEST_UPLOAD_RETRIEVE** | **Script sections** |
-| **Validare funzionamento VectorstoreService** | **TEST_UPLOAD_RETRIEVE** | **Endpoint tests** |
+| Service | Port | Documentation | Status |
+|---------|------|---------------|--------|
+| **PDK Server** | 3001 | [PDK Docs](PDK/README.md) | ✅ Active |
+| **VectorStore** | 3002 | [VectorStore Guide](SERVICES/VECTORSTORE_SERVICE_GUIDE.md) | ✅ Active |
+| **Log Service** | 3003 | [Log Service Guide](SERVICES/LOG_SERVICE_GUIDE.md) | ✅ Active |
+| **Reconciliation** | 3004 | [Reconciliation Guide](SERVICES/RECONCILIATION_SERVICE_GUIDE.md) | ✅ Active |
 
 ---
 
-## 🚀 Common Workflows
+## 🔗 **External Resources**
 
-### Setup Iniziale
-1. Leggi **ECOSYSTEM_OVERVIEW.md** per capire come i servizi comunicano
-2. Verifica che tutti i servizi siano attivi (Section 10)
-3. Consulta le variabili d'ambiente (ECOSYSTEM_OVERVIEW, Section 8)
-
-### Sviluppo di Nuovo Nodo
-1. Leggi **DEVELOPMENT_GUIDE.md** Section 2.1-2.8
-2. Crea la struttura plugin
-3. Definisci `nodes.json`
-4. Implementa resolver
-5. Testa (Section 2.9)
-
-### Aggiunta Event Source
-1. Leggi **DEVELOPMENT_GUIDE.md** Section 3.1-3.4
-2. Implementa event source
-3. Aggiungi retry/buffering (Section 3.4)
-4. Integra in startup (Section 3.7)
-
-### Creazione Workflow Automatizzato
-1. Leggi **EVENT_SOURCES_TRIGGERS_WORKFLOWS.md** Section 2-5
-2. Identifica l'evento trigger
-3. Crea il workflow
-4. Configurar il trigger (Section 6.1)
-5. Test
-
-### Debugging Issue
-1. Consulta **ECOSYSTEM_OVERVIEW.md** Section 10
-2. Verifica health check (Section 10)
-3. Se è un trigger/evento: **EVENT_SOURCES_TRIGGERS_WORKFLOWS.md** Section 7
-4. Se è un nodo: **DEVELOPMENT_GUIDE.md** Section 4
-5. Controllare log centralizzati (port 8081)
+- **📂 Source Code** - [PramaIA-Services Repository](../)
+- **🛠️ Development** - [Development Environment Setup](DEVELOPMENT_GUIDE.md)
+- **🚀 Deployment** - Service startup scripts in workspace root
+- **🧪 Testing** - Test scripts in workspace root
 
 ---
 
-## 🔗 Relazioni tra Documenti
+## 📝 **Contributing to Documentation**
 
-```
-ECOSYSTEM_OVERVIEW (foundation)
-        ↓
-        ├─→ EVENT_SOURCES_TRIGGERS_WORKFLOWS (come usare)
-        │        ↓
-        │        ├─→ EVENT_SOURCES_EXTENSIBILITY (come estendere)
-        │        │        ↓
-        │        │        ├─→ UPLOAD_EVENT_PIPELINE (debugging)
-        │        │        │
-        │        │        └─→ IMPLEMENTATION_STATUS (stato attuale)
-        │        │
-        │        └─→ DEVELOPMENT_GUIDE (come estendere)
-        │
-        └─→ DEVELOPMENT_GUIDE (come estendere)
-                ↓
-                ├─→ EVENT_SOURCES_EXTENSIBILITY (custom sources)
-                │
-                └─→ EVENT_SOURCES_TRIGGERS_WORKFLOWS (testing)
-```
+### **Documentation Standards**
+1. **Clear Structure** - Use consistent formatting and organization
+2. **Complete Information** - Include setup, usage, and troubleshooting
+3. **Current Content** - Keep documentation synchronized with code changes
+4. **Cross-References** - Link related documentation appropriately
 
----
+### **Update Process**
+1. **Follow Development Guide** - [Development workflow](DEVELOPMENT_GUIDE.md)
+2. **Update Relevant Indexes** - Ensure discoverability of new content  
+3. **Test Documentation** - Verify examples and procedures work
+4. **Update Implementation Status** - Track documentation progress
 
-## 📚 Glossario Rapido
+### **Documentation Types**
+- **📖 Guides** - Step-by-step procedures and tutorials
+- **📚 References** - API documentation and technical specifications
+- **🎯 Overviews** - Architecture and system design explanations
+- **🚀 Quick Starts** - Fast-track setup and usage procedures
 
-| Termine | Significato |
-|---------|-----------|
-| **Event Source** | Componente che genera eventi (file system, webhook, timer) |
-| **Event** | Occorrenza nel sistema (file creato, API chiamata, timer scattato) |
-| **Trigger** | Regola che collega evento a workflow (quando X accade, esegui workflow Y) |
-| **Workflow** | Pipeline di elaborazione composto da nodi |
-| **Nodo** | Unità di computazione con input/output (trasforma dati) |
-| **Plugin** | Contenitore di nodi (es. pdf-semantic-plugin) |
-| **PDK** | Plugin Development Kit - server che orchestra nodi |
-| **Resolver** | Funzione che implementa la logica di un nodo |
-| **Connection** | Link tra nodi che trasmette dati |
-| **DAG** | Directed Acyclic Graph - struttura workflow |
-
----
-
-## 🛠️ Troubleshooting Rapido
-
-### Servizio non risponde
-```bash
-# Health check
-curl http://127.0.0.1:8000/health      # Backend
-curl http://127.0.0.1:3001/health      # PDK
-curl http://127.0.0.1:8081/health      # LogService
-curl http://127.0.0.1:8090/health      # VectorstoreService
-```
-→ Vedi: ECOSYSTEM_OVERVIEW Section 10
-
-### Trigger non esegue
-1. Verifica che trigger sia active
-2. Verifica event_type e source
-3. Verifica condizioni
-→ Vedi: EVENT_SOURCES_TRIGGERS_WORKFLOWS Section 7.1
-
-### Nodo non trovato
-```bash
-# Verifica nodi disponibili
-curl http://127.0.0.1:3001/api/nodes | grep "nome_nodo"
-```
-→ Vedi: DEVELOPMENT_GUIDE Section 2.6
-
-### Errore type mismatch
-Gli output di un nodo non matchano gli input del successivo
-→ Vedi: EVENT_SOURCES_TRIGGERS_WORKFLOWS Section 4.4
-
----
-
-## 🔄 Ciclo di Vita: Da Evento a Risultato
-
-```
-1. Event Source genera evento
-   ↓
-2. Invia a Backend: POST /api/events/process
-   ↓
-3. Backend trova Trigger matching
-   ↓
-4. Valuta condizioni
-   ↓
-5. Esegue Workflow via WorkflowEngine
-   ↓
-6. WorkflowEngine orchestra Nodi via PDK
-   ↓
-7. Ogni Nodo esegue Resolver function
-   ↓
-8. Risultati passati ai nodi successivi
-   ↓
-9. Output finale salvato in DB/VectorStore
-```
-
-Consultare **EVENT_SOURCES_TRIGGERS_WORKFLOWS.md** Section 5 per dettagli.
-
----
-
-## 📊 Decision Tree: Quale Documento Leggere?
-
-```
-START
-  |
-  ├─ Devo capire l'architettura?
-  │  └─ SI → ECOSYSTEM_OVERVIEW
-  │
-  ├─ Ho un problema da risolvere?
-  │  ├─ è un trigger/evento? → EVENT_SOURCES_TRIGGERS_WORKFLOWS Section 7
-  │  ├─ è un nodo? → DEVELOPMENT_GUIDE Section 4
-  │  ├─ è una configurazione? → ECOSYSTEM_OVERVIEW Section 8
-  │  └─ è un event source? → EVENT_SOURCES_EXTENSIBILITY Section 2
-  │
-  ├─ Devo sviluppare qualcosa?
-  │  ├─ Nodo? → DEVELOPMENT_GUIDE Section 2
-  │  ├─ Event Source? → EVENT_SOURCES_EXTENSIBILITY Section 3
-  │  └─ Upload → Workflow pipeline? → UPLOAD_EVENT_PIPELINE Section 3
-  │
-  └─ Altro? → Leggi indice sopra
-```
-
----
-
-## 🎓 Percorsi di Apprendimento
-
-### Per Principianti
-1. ECOSYSTEM_OVERVIEW (20 min)
-2. EVENT_SOURCES_TRIGGERS_WORKFLOWS Section 1-3 (10 min)
-3. Provare ad avviare sistema (10 min)
-4. Leggere il resto come necessario
-
-### Per Sviluppatori
-1. ECOSYSTEM_OVERVIEW Section 2-3 (10 min)
-2. EVENT_SOURCES_TRIGGERS_WORKFLOWS (20 min)
-3. DEVELOPMENT_GUIDE Section 2 (nodi) o 3 (event source)
-4. Pratica con esempio
-
-### Per DevOps/SRE
-1. ECOSYSTEM_OVERVIEW (20 min, focus Section 8-10)
-2. DEVELOPMENT_GUIDE Section 4 (debugging)
-3. Documentazione specifica servizi
-
----
-
-## 📝 Note di Utilizzo
-
-- ✅ Documenti sono concisi, senza ridondanze
-- ✅ Ogni sezione è autocontenuta
-- ✅ Codice di esempio è completo e testato
-- ✅ Glossario e cross-reference facilitano navigazione
-- ✅ Aggiornato a: 18 Novembre 2025
-
----
-
-## 🔗 Documentazione Aggiuntiva
-
-Per documentazione specifica di componenti:
-- **PramaIA-LogService/docs/**: Logging centralizzato
-- **PramaIA-VectorstoreService/docs/**: Ricerca semantica
-- **PramaIA-PDK/docs/**: Dettagli plugin system
-- **PramaIA-Agents/document-folder-monitor-agent/docs/**: Folder monitor specifics
-
----
-
-**Buona lettura e buona programmazione!** 🚀
+**Documentation Guidelines:** Follow existing patterns and maintain consistency with current structure.

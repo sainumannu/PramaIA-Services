@@ -1,0 +1,14 @@
+
+Documento Test per Trigger Verification
+======================================
+Creato il: 2025-11-28 21:17:13.466988
+Scopo: Verificare attivazione trigger → workflow → vectorstore
+
+Questo documento dovrebbe:
+1. Attivare il trigger file_upload
+2. Eseguire il workflow CREATE pipeline (wf_7af99caf311a) 
+3. Generare embeddings nel vectorstore
+4. Essere ricercabile tramite ricerca semantica
+
+Keywords: trigger-test, document-processing, vectorstore-integration
+        

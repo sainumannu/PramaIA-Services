@@ -6,6 +6,19 @@ import path from 'path';
 import express from 'express';
 
 /**
+ * Converte una stringa in snake_case
+ * @param {string} str - Stringa da convertire
+ * @returns {string} Stringa convertita in snake_case
+ */
+function toSnakeCase(str) {
+    return str
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^\w_]/g, '');
+}
+
+/**
  * Configura le route per la gestione dei plugin
  * @param {express.Router} router - Router Express su cui registrare le route
  * @param {string} PLUGIN_DIR - Directory contenente i plugin
@@ -327,6 +340,7 @@ export function configurePluginRoutes(router, PLUGIN_DIR, executePythonPlugin, l
                             // ENRICHMENT DEL NODO
                             const enrichedNode = {
                                 ...node,
+                                node_id: toSnakeCase(node.name),  // NUOVO - identificatore univoco
                                 pluginId: folder,
                                 pluginName: manifest.name
                             };
@@ -393,54 +407,60 @@ export function configurePluginRoutes(router, PLUGIN_DIR, executePythonPlugin, l
             
             // Assicuriamoci che ogni nodo abbia un configSchema valido
             nodes = nodes.map(node => {
+                // Aggiunge node_id al nodo
+                const nodeWithId = {
+                    ...node,
+                    node_id: toSnakeCase(node.name)  // NUOVO - identificatore univoco
+                };
+                
                 // Verifica presenza di configSchema
-                const hasConfigSchema = node.configSchema && 
-                                      typeof node.configSchema === 'object' && 
-                                      node.configSchema.properties && 
-                                      Object.keys(node.configSchema.properties).length > 0;
+                const hasConfigSchema = nodeWithId.configSchema && 
+                                      typeof nodeWithId.configSchema === 'object' && 
+                                      nodeWithId.configSchema.properties && 
+                                      Object.keys(nodeWithId.configSchema.properties).length > 0;
                 
                 // Se non ha configSchema, aggiungiamo uno schema base
                 if (!hasConfigSchema) {
-                    logger.debug(`⚠️ Aggiunta configSchema di default al nodo ${node.name} nel plugin ${req.params.id}`);
+                    logger.debug(`⚠️ Aggiunta configSchema di default al nodo ${nodeWithId.name} nel plugin ${req.params.id}`);
                     return {
-                        ...node,
+                        ...nodeWithId,
                         configSchema: {
-                            "title": `Configurazione ${node.name}`,
+                            "title": `Configurazione ${nodeWithId.name}`,
                             "type": "object",
                             "properties": {
                                 "description": {
                                     "type": "string",
                                     "title": "Descrizione",
                                     "description": "Descrizione personalizzata per questo nodo",
-                                    "default": node.description || ""
+                                    "default": nodeWithId.description || ""
                                 },
                                 "custom_name": {
                                     "type": "string", 
                                     "title": "Nome personalizzato",
                                     "description": "Nome personalizzato per identificare questo nodo",
-                                    "default": node.name || ""
+                                    "default": nodeWithId.name || ""
                                 }
                             },
-                            "nodeId": node.id,  // Forziamo l'ID del nodo nel configSchema
-                            "nodeName": node.name  // Forziamo il nome del nodo nel configSchema
+                            "nodeId": nodeWithId.id,  // Forziamo l'ID del nodo nel configSchema
+                            "nodeName": nodeWithId.name  // Forziamo il nome del nodo nel configSchema
                         }
                     };
                 }
                 
                 // Anche se ha configSchema, assicuriamo che il titolo sia corretto e che contenga l'ID del nodo
-                if (node.configSchema) {
+                if (nodeWithId.configSchema) {
                     // Correzione del titolo se necessario
-                    if (!node.configSchema.title || !node.configSchema.title.includes(node.name)) {
-                        logger.debug(`🔧 Correzione titolo configSchema per ${node.name} in plugin ${req.params.id}`);
-                        node.configSchema.title = `Configurazione ${node.name}`;
+                    if (!nodeWithId.configSchema.title || !nodeWithId.configSchema.title.includes(nodeWithId.name)) {
+                        logger.debug(`🔧 Correzione titolo configSchema per ${nodeWithId.name} in plugin ${req.params.id}`);
+                        nodeWithId.configSchema.title = `Configurazione ${nodeWithId.name}`;
                     }
                     
                     // Aggiungiamo ID e nome del nodo al configSchema
-                    node.configSchema.nodeId = node.id;
-                    node.configSchema.nodeName = node.name;
+                    nodeWithId.configSchema.nodeId = nodeWithId.id;
+                    nodeWithId.configSchema.nodeName = nodeWithId.name;
                 }
                 
-                return node;
+                return nodeWithId;
             });
             
             const response = {

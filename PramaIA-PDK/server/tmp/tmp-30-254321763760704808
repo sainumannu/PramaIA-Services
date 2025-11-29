@@ -1,0 +1,10 @@
+Test After Router Fix
+=====================
+
+Creato: 21/11/2025 19:25
+Scopo: Testare se l'agent ora riesce a inviare documenti al backend dopo il fix del router
+
+Il router document_monitor aveva un doppio prefix che causava 404.
+Dovrebbe ora funzionare correttamente.
+
+Test in corso...

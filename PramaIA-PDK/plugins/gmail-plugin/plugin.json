@@ -1,0 +1,343 @@
+{
+  "id": "email-reader-plugin",
+  "name": "Email Reader Plugin",
+  "version": "1.0.0",
+  "description": "Plugin per lettura email da provider multipli (Gmail, Outlook, IMAP)",
+  "author": "PramaIA Team",
+  "dependencies": [
+    "google-auth",
+    "google-auth-oauthlib",
+    "google-api-python-client",
+    "exchangelib",
+    "imaplib",
+    "email",
+    "requests"
+  ],
+  "nodes": [
+    {
+      "id": "email_reader",
+      "name": "Email Reader",
+      "description": "Legge email da provider multipli con supporto OAuth2",
+      "icon": "📧",
+      "color": "#EA4335",
+      "entry": "src/email_processor.py",
+      "inputs": [
+        {
+          "name": "operation",
+          "type": "string",
+          "description": "Operazione email: list, read, search, get_attachments, mark_read, get_folders",
+          "required": true,
+          "enum": ["list", "read", "search", "get_attachments", "mark_read", "get_folders"]
+        },
+        {
+          "name": "provider",
+          "type": "string",
+          "description": "Provider email: gmail, outlook, imap",
+          "required": true,
+          "enum": ["gmail", "outlook", "imap"]
+        },
+        {
+          "name": "credentials_path",
+          "type": "string",
+          "description": "Percorso file credenziali OAuth2 o configurazione",
+          "required": true
+        },
+        {
+          "name": "email_id",
+          "type": "string",
+          "description": "ID email per operazioni specifiche (read, get_attachments, mark_read)",
+          "required": false
+        },
+        {
+          "name": "folder",
+          "type": "string",
+          "description": "Cartella email (INBOX, Sent, Drafts, etc.)",
+          "required": false,
+          "default": "INBOX"
+        },
+        {
+          "name": "max_emails",
+          "type": "integer",
+          "description": "Numero massimo email da recuperare",
+          "required": false,
+          "default": 50,
+          "minimum": 1,
+          "maximum": 500
+        },
+        {
+          "name": "unread_only",
+          "type": "boolean",
+          "description": "Recupera solo email non lette",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "search_query",
+          "type": "string",
+          "description": "Query di ricerca per operazione search",
+          "required": false
+        },
+        {
+          "name": "date_from",
+          "type": "string",
+          "description": "Data inizio filtro (YYYY-MM-DD)",
+          "required": false,
+          "format": "date"
+        },
+        {
+          "name": "date_to",
+          "type": "string",
+          "description": "Data fine filtro (YYYY-MM-DD)",
+          "required": false,
+          "format": "date"
+        },
+        {
+          "name": "sender_filter",
+          "type": "string",
+          "description": "Filtro per mittente email",
+          "required": false
+        },
+        {
+          "name": "subject_filter",
+          "type": "string",
+          "description": "Filtro per oggetto email",
+          "required": false
+        },
+        {
+          "name": "include_body",
+          "type": "boolean",
+          "description": "Includi corpo email nei risultati",
+          "required": false,
+          "default": true
+        },
+        {
+          "name": "include_html",
+          "type": "boolean",
+          "description": "Includi versione HTML del corpo",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "attachment_download",
+          "type": "boolean",
+          "description": "Scarica allegati automaticamente",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "download_path",
+          "type": "string",
+          "description": "Percorso download allegati",
+          "required": false
+        },
+        {
+          "name": "imap_server",
+          "type": "string",
+          "description": "Server IMAP per provider custom",
+          "required": false
+        },
+        {
+          "name": "imap_port",
+          "type": "integer",
+          "description": "Porta IMAP",
+          "required": false,
+          "default": 993
+        },
+        {
+          "name": "username",
+          "type": "string",
+          "description": "Username per autenticazione IMAP",
+          "required": false
+        },
+        {
+          "name": "password",
+          "type": "string",
+          "description": "Password per autenticazione IMAP",
+          "required": false,
+          "sensitive": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "success",
+          "type": "boolean",
+          "description": "Indica se l'operazione è riuscita"
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "description": "Messaggio di stato dell'operazione"
+        },
+        {
+          "name": "emails",
+          "type": "array",
+          "description": "Lista email recuperate",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "ID univoco email"
+              },
+              "subject": {
+                "type": "string",
+                "description": "Oggetto email"
+              },
+              "sender": {
+                "type": "string",
+                "description": "Mittente email"
+              },
+              "recipients": {
+                "type": "array",
+                "description": "Lista destinatari"
+              },
+              "date": {
+                "type": "string",
+                "description": "Data email"
+              },
+              "body_text": {
+                "type": "string",
+                "description": "Corpo email in formato testo"
+              },
+              "body_html": {
+                "type": "string",
+                "description": "Corpo email in formato HTML"
+              },
+              "is_read": {
+                "type": "boolean",
+                "description": "Email già letta"
+              },
+              "attachments": {
+                "type": "array",
+                "description": "Lista allegati"
+              },
+              "folder": {
+                "type": "string",
+                "description": "Cartella contenitore"
+              }
+            }
+          }
+        },
+        {
+          "name": "email_count",
+          "type": "integer",
+          "description": "Numero totale email trovate"
+        },
+        {
+          "name": "folders",
+          "type": "array",
+          "description": "Lista cartelle disponibili (per get_folders)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Nome cartella"
+              },
+              "full_name": {
+                "type": "string",
+                "description": "Nome completo cartella"
+              },
+              "message_count": {
+                "type": "integer",
+                "description": "Numero messaggi in cartella"
+              },
+              "unread_count": {
+                "type": "integer",
+                "description": "Numero messaggi non letti"
+              }
+            }
+          }
+        },
+        {
+          "name": "attachments_info",
+          "type": "array",
+          "description": "Informazioni allegati scaricati",
+          "items": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string",
+                "description": "Nome file allegato"
+              },
+              "size": {
+                "type": "integer",
+                "description": "Dimensione in bytes"
+              },
+              "path": {
+                "type": "string",
+                "description": "Percorso file scaricato"
+              },
+              "content_type": {
+                "type": "string",
+                "description": "Tipo MIME allegato"
+              }
+            }
+          }
+        },
+        {
+          "name": "provider_info",
+          "type": "object",
+          "description": "Informazioni provider utilizzato",
+          "properties": {
+            "provider": {
+              "type": "string",
+              "description": "Nome provider"
+            },
+            "authenticated": {
+              "type": "boolean",
+              "description": "Status autenticazione"
+            },
+            "user_email": {
+              "type": "string",
+              "description": "Email utente autenticato"
+            },
+            "quota_usage": {
+              "type": "object",
+              "description": "Utilizzo quota (se disponibile)"
+            }
+          }
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "description": "Messaggio di errore se operazione fallita"
+        }
+      ]
+    }
+  ],
+  "configuration": {
+    "oauth_scopes": {
+      "gmail": [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.modify"
+      ],
+      "outlook": [
+        "https://graph.microsoft.com/mail.read",
+        "https://graph.microsoft.com/mail.readwrite"
+      ]
+    },
+    "default_servers": {
+      "gmail_imap": {
+        "server": "imap.gmail.com",
+        "port": 993,
+        "ssl": true
+      },
+      "outlook_imap": {
+        "server": "outlook.office365.com",
+        "port": 993,
+        "ssl": true
+      },
+      "yahoo_imap": {
+        "server": "imap.mail.yahoo.com",
+        "port": 993,
+        "ssl": true
+      }
+    }
+  },
+  "security": {
+    "encryption": "required",
+    "oauth_required": true,
+    "credential_storage": "secure"
+  }
+}

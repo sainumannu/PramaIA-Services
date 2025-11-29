@@ -1,0 +1,103 @@
+{
+  "id": "file-operations-plugin",
+  "name": "File Operations Plugin",
+  "version": "1.0.0",
+  "description": "Plugin per operazioni avanzate sui file del sistema",
+  "author": "PramaIA Team",
+  "nodes": [
+    {
+      "id": "file_operations",
+      "name": "File Operations",
+      "description": "Esegue operazioni sui file: aprire Explorer, copiare, spostare, eliminare, zippare",
+      "icon": "🗂️",
+      "color": "#4A90E2",
+      "entry": "src/file_operations_processor.py",
+      "inputs": [
+        {
+          "name": "operation",
+          "type": "string",
+          "description": "Tipo di operazione: open_explorer, copy, move, delete, zip, unzip, create_dir, file_info",
+          "required": true,
+          "enum": ["open_explorer", "copy", "move", "delete", "zip", "unzip", "create_dir", "file_info"]
+        },
+        {
+          "name": "source_path",
+          "type": "string",
+          "description": "Path del file o cartella sorgente",
+          "required": true
+        },
+        {
+          "name": "destination_path",
+          "type": "string",
+          "description": "Path di destinazione (per copy, move, zip, unzip)",
+          "required": false
+        },
+        {
+          "name": "confirm_delete",
+          "type": "boolean",
+          "description": "Richiede conferma prima di eliminare",
+          "required": false,
+          "default": true
+        },
+        {
+          "name": "overwrite",
+          "type": "boolean",
+          "description": "Sovrascrive file esistenti",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "zip_compression",
+          "type": "string",
+          "description": "Livello di compressione ZIP",
+          "required": false,
+          "enum": ["none", "fast", "best"],
+          "default": "best"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "success",
+          "type": "boolean",
+          "description": "Indica se l'operazione è riuscita"
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "description": "Messaggio di risultato dell'operazione"
+        },
+        {
+          "name": "result_path",
+          "type": "string",
+          "description": "Path del file risultante (per copy, move, zip)"
+        },
+        {
+          "name": "file_info",
+          "type": "object",
+          "description": "Informazioni dettagliate sul file (size, dates, permissions)"
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "description": "Messaggio di errore in caso di fallimento"
+        }
+      ],
+      "config": {
+        "timeout": 30,
+        "show_confirmations": true,
+        "log_operations": true,
+        "safe_mode": true
+      }
+    }
+  ],
+  "dependencies": [
+    "os",
+    "shutil", 
+    "zipfile",
+    "pathlib",
+    "subprocess",
+    "tkinter"
+  ],
+  "platform_support": ["windows", "linux", "macos"],
+  "tags": ["file", "system", "operations", "explorer", "zip", "utility"]
+}

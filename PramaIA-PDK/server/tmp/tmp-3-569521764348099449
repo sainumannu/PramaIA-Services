@@ -1,0 +1,22 @@
+
+PramaIA - Guida Completa
+
+PramaIA è un sistema modulare di elaborazione documenti basato su intelligenza artificiale.
+Il sistema utilizza un'architettura a microservizi con i seguenti componenti:
+
+1. Backend FastAPI - Server principale API
+2. PDK Server - Plugin Development Kit per estensioni  
+3. VectorStore Service - Gestione embeddings e ricerca semantica
+4. Log Service - Centralizzazione logging
+5. Frontend React - Interfaccia utente web
+
+CARATTERISTICHE PRINCIPALI:
+- Workflow visuali per automazioni
+- Ricerca semantica nei documenti
+- Trigger automatici per eventi file system
+- Plugin system estensibile
+- Supporto per PDF, DOC, TXT
+
+Il sistema è progettato per essere scalabile e modulare.
+Ogni plugin può estendere le funzionalità del core system.
+            

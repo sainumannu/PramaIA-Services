@@ -1,0 +1,26 @@
+
+PramaIA Workflows - Documentazione
+
+I workflow in PramaIA permettono di automatizzare processi complessi.
+Ogni workflow è composto da:
+
+NODI DISPONIBILI:
+- chat_query_analyzer: Analizza query utente
+- semantic_search: Ricerca semantica in vectorstore  
+- metadata_search: Ricerca per metadati documento
+- response_aggregator: Aggrega risultati multipli
+
+CONNESSIONI:
+I nodi sono collegati tramite porte input/output tipizzate.
+Il data flow segue la direzione delle connessioni.
+
+ESECUZIONE:
+I workflow possono essere eseguiti:
+- Manualmente dall'interfaccia
+- Automaticamente tramite trigger
+- Via API REST
+
+TRIGGER SYSTEM:
+Gli eventi del file system possono attivare workflow automatici.
+Supportati: file_added, file_modified, file_deleted.
+            
