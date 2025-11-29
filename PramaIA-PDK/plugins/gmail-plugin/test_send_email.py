@@ -65,6 +65,8 @@ async def test_send_email():
     send_config = {
         'operation': 'send_email',
         'provider': 'gmail',
+        'username': username,  # Per autenticazione
+        'password': password,  # Per autenticazione  
         'to': username,  # Invia a se stesso
         'subject': f'🎉 Test Plugin Gmail - {asyncio.get_event_loop().time()}',
         'body': f'''Ciao!
