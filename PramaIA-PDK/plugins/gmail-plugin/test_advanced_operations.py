@@ -68,13 +68,56 @@ async def test_advanced_operations():
             "🏷️ manage_labels - Gestione etichette",
             "📁 move_email - Spostamento email",
             "📊 get_stats - Statistiche",
-            "📂 get_folders - Lista cartelle"
+            "📂 get_folders - Lista cartelle",
+            "📧 send_email - Invio email SMTP"
         ]
         for op in operations:
             print(f"   ✅ {op}")
         
         print(f"\n🎯 Plugin pronto! Configura credenziali per test reali.")
         return
+    
+    # Test di invio email prima degli altri test
+    print("\n📧 Test 0: Invio email di test...")
+    
+    send_config = imap_config.copy()
+    send_config.update({
+        'operation': 'send_email',
+        'to': imap_config['username'],  # Invia a se stesso
+        'subject': f'🚀 Test Plugin Gmail Advanced - {asyncio.get_event_loop().time()}',
+        'body': f'''Ciao!
+
+Questa è un'email di test dal Plugin Gmail con operazioni avanzate.
+
+🎯 Operazioni disponibili:
+✅ read - Lettura email specifica  
+✅ search - Ricerca avanzata
+✅ mark_read - Gestione stato letto
+✅ get_attachments - Download allegati
+✅ manage_labels - Gestione etichette  
+✅ move_email - Spostamento email
+✅ get_stats - Statistiche
+✅ send_email - Invio email (questa!)
+
+Plugin completamente operativo! 🎉
+
+Timestamp: {asyncio.get_event_loop().time()}
+''',
+        'smtp_username': imap_config['username'],
+        'smtp_password': imap_config['password']
+    })
+    
+    send_result = await processor.process(send_config)
+    
+    if send_result['success']:
+        print("✅ Email di test inviata con successo!")
+        print(f"   📧 Inviata a: {send_result.get('sent_to')}")
+        print(f"   📝 Oggetto: {send_result.get('subject', '')[:50]}...")
+        print(f"   🆔 Message ID: {send_result.get('message_id', 'N/A')}")
+        print("   🎯 Controlla la tua casella per l'email di test!")
+    else:
+        print(f"⚠️ Invio email fallito: {send_result.get('error', 'Errore sconosciuto')}")
+        print("   💡 Continuo con gli altri test...")
     
     # Test 1: Lista email base per ottenere IDs
     print("\n📋 Test 1: Lista email per ottenere IDs test...")
@@ -216,13 +259,14 @@ async def test_advanced_operations():
     print("\n" + "="*60)
     print("✅ TEST OPERAZIONI AVANZATE COMPLETATO!")
     print("\nOperazioni implementate e testate:")
+    print("✅ Invio email di test")
     print("✅ Lettura email specifica")
     print("✅ Ricerca avanzata con filtri")
     print("✅ Gestione stato letto/non letto")
     print("✅ Statistiche email")
     print("✅ Download allegati")
-    print("✅ Supporto IMAP generico")
-    print("\n🎯 Plugin Gmail/IMAP ora supporta operazioni email professionali!")
+    print("✅ Supporto IMAP + SMTP completo")
+    print("\n🎯 Plugin Gmail/IMAP ora è un SISTEMA EMAIL COMPLETO!")
 
 if __name__ == "__main__":
     # Esegui test

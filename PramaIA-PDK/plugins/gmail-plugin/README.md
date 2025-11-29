@@ -1,11 +1,11 @@
-# 📧 Gmail Plugin - Sistema Email Professionale Completo
+# 📧 Gmail Plugin - Sistema Email Completo
 
-**Plugin enterprise-grade per gestione email completa con 8 operazioni avanzate, supporto multi-provider e architettura production-ready.**
+**Plugin enterprise-grade per gestione email completa con 9 operazioni avanzate, supporto multi-provider e architettura production-ready.**
 
 ## 🏆 **CARATTERISTICHE PRINCIPALI**
 
-✅ **8 Operazioni Email Professionali** - Read, Search, Labels, Stats, Attachments  
-✅ **Multi-Provider Support** - Gmail API + IMAP universale  
+✅ **9 Operazioni Email Complete** - Read, Search, Send, Labels, Stats, Attachments  
+✅ **Multi-Provider Support** - Gmail API + IMAP + SMTP universale  
 ✅ **Error Handling Robusto** - Fallback automatico e recovery  
 ✅ **Test Suite Completa** - Validazione automatica funzionamenti  
 ✅ **Async Performance** - Operazioni non-blocking ottimizzate  
@@ -19,12 +19,15 @@ cd "C:\PramaIA-Services\PramaIA-PDK\plugins\gmail-plugin"
 # 2. Test demo (senza credenziali) 
 python test_advanced_operations.py
 
-# 3. Test reale con Gmail App Password
+# 3. Test completo con Gmail App Password + invio email
 $env:GMAIL_USERNAME = "tuaemail@gmail.com"
 $env:GMAIL_APP_PASSWORD = "abcd efgh ijkl mnop"
 python test_advanced_operations.py
 
-# 4. Script assistito
+# 4. Test solo invio email
+python test_send_email.py
+
+# 5. Script assistito
 .\test_gmail_quick.ps1
 ```
 
@@ -39,10 +42,38 @@ python test_advanced_operations.py
 ### 📁 **MOVE_EMAIL** - Sposta Email
 ### 📊 **GET_STATS** - Statistiche Email
 ### 📂 **GET_FOLDERS** - Lista Cartelle
+### 📧 **SEND_EMAIL** - Invio Email SMTP
+
+```python
+# Invio email semplice
+result = await processor.process({
+    'operation': 'send_email',
+    'to': 'destinatario@example.com',
+    'subject': 'Test Email',
+    'body': 'Corpo email in testo',
+    'smtp_username': 'mittente@gmail.com',
+    'smtp_password': 'app-password'
+})
+
+# Invio email con allegati e HTML
+result = await processor.process({
+    'operation': 'send_email',
+    'to': ['dest1@test.com', 'dest2@test.com'],
+    'cc': 'copia@test.com',
+    'bcc': 'nascosta@test.com',
+    'subject': 'Email Avanzata',
+    'body': 'Versione testo',
+    'body_html': '<h1>Versione HTML</h1><p>Corpo HTML</p>',
+    'attachments': ['documento.pdf', 'immagine.jpg'],
+    'smtp_username': 'mittente@gmail.com',
+    'smtp_password': 'app-password'
+})
+```
 
 ## 🎯 **FEATURES PRINCIPALI**
 
-✅ **Multi-Provider**: Gmail, IMAP, Outlook  
+✅ **Multi-Provider**: Gmail, IMAP, SMTP, Outlook  
+✅ **Invio Email**: SMTP con supporto HTML, allegati, destinatari multipli  
 ✅ **Ricerca Avanzata**: Filtri complessi per mittente, oggetto, data, allegati  
 ✅ **Download Allegati**: Con filtri dimensione e tipo file  
 ✅ **Gestione Stati**: Letto/Non letto con operazioni bulk  
@@ -56,14 +87,8 @@ python test_advanced_operations.py
 
 ### Test Completo
 ```bash
-python test_advanced_operations.py  # Test tutte le operazioni
-```
-
-### Test Specifici
-```bash
-python test_file_credentials.py      # Test IMAP base
-python benchmark_email.py           # Performance test
-python debug_email.py              # Debug connessioni
+python test_advanced_operations.py  # Test tutte le operazioni + invio
+python test_send_email.py          # Test specifico invio email
 ```
 
 ## 📚 **DOCUMENTAZIONE COMPLETA**

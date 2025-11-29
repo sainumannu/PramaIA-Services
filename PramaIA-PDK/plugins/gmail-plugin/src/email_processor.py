@@ -7,6 +7,7 @@ Supporta Gmail, Outlook, e provider IMAP generici con:
 - Download allegati automatico
 - Ricerca semantica
 - Gestione cartelle
+- Invio email SMTP
 """
 
 import os
@@ -15,6 +16,7 @@ import json
 import base64
 import email
 import imaplib
+import smtplib
 import logging
 import asyncio
 import requests
@@ -23,6 +25,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 import email.utils
 
 # Import condizionali per provider specifici
@@ -108,7 +112,8 @@ class EmailProcessor:
                 'get_folders': self._get_folders,
                 'manage_labels': self._manage_labels,
                 'move_email': self._move_email,
-                'get_stats': self._get_email_stats
+                'get_stats': self._get_email_stats,
+                'send_email': self._send_email
             }
             
             if operation not in operations:
@@ -1475,3 +1480,232 @@ class EmailProcessor:
             'attachments_info': [],
             'provider_info': {}
         }
+
+    # ===============================
+    # OPERAZIONE: SEND EMAIL
+    # ===============================
+    
+    async def _send_email(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Invia email tramite SMTP.
+        
+        Parametri inputs:
+        - to: destinatario (str) o lista destinatari
+        - cc: destinatari in copia (optional)
+        - bcc: destinatari in copia nascosta (optional)  
+        - subject: oggetto email
+        - body: corpo email (testo)
+        - body_html: corpo email HTML (optional)
+        - attachments: lista file da allegare (optional)
+        - smtp_server: server SMTP (default gmail)
+        - smtp_port: porta SMTP (default 587)
+        - smtp_username: username SMTP 
+        - smtp_password: password SMTP (App Password)
+        """
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Validazione parametri obbligatori
+            required_params = ['to', 'subject', 'body']
+            for param in required_params:
+                if not inputs.get(param):
+                    return self._error_result(f"Parametro obbligatorio mancante: {param}")
+            
+            # Configurazione SMTP
+            smtp_config = self._get_smtp_config(inputs)
+            if not smtp_config['success']:
+                return smtp_config
+            
+            # Creazione messaggio
+            msg_result = self._create_email_message(inputs)
+            if not msg_result['success']:
+                return msg_result
+                
+            message = msg_result['message']
+            
+            # Invio email
+            send_result = await self._send_via_smtp(message, smtp_config['config'])
+            
+            if send_result['success']:
+                logger.info(f"Email inviata con successo a: {inputs['to']}")
+                return self._success_result("Email inviata con successo", {
+                    'sent_to': inputs['to'],
+                    'subject': inputs['subject'],
+                    'message_id': send_result.get('message_id'),
+                    'sent_at': datetime.now().isoformat(),
+                    'smtp_server': smtp_config['config']['server'],
+                    'attachments_count': len(inputs.get('attachments', []))
+                })
+            else:
+                return send_result
+                
+        except Exception as e:
+            logger.error(f"Errore invio email: {str(e)}")
+            return self._error_result(f"Errore invio email: {str(e)}")
+    
+    def _get_smtp_config(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """Ottiene configurazione SMTP."""
+        try:
+            # SMTP Gmail di default
+            smtp_server = inputs.get('smtp_server', 'smtp.gmail.com')
+            smtp_port = inputs.get('smtp_port', 587)
+            
+            # Credenziali
+            smtp_username = inputs.get('smtp_username') or inputs.get('username')
+            smtp_password = inputs.get('smtp_password') or inputs.get('password') or inputs.get('app_password')
+            
+            if not smtp_username or not smtp_password:
+                return self._error_result("Credenziali SMTP mancanti: smtp_username e smtp_password richiesti")
+            
+            return {
+                'success': True,
+                'config': {
+                    'server': smtp_server,
+                    'port': smtp_port,
+                    'username': smtp_username,
+                    'password': smtp_password,
+                    'use_tls': inputs.get('use_tls', True)
+                }
+            }
+            
+        except Exception as e:
+            return self._error_result(f"Errore configurazione SMTP: {str(e)}")
+    
+    def _create_email_message(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """Crea messaggio email con allegati."""
+        try:
+            # Destinatari
+            to_addresses = self._normalize_addresses(inputs['to'])
+            cc_addresses = self._normalize_addresses(inputs.get('cc', []))
+            bcc_addresses = self._normalize_addresses(inputs.get('bcc', []))
+            
+            # Creazione messaggio
+            if inputs.get('body_html') or inputs.get('attachments'):
+                message = MIMEMultipart('alternative' if inputs.get('body_html') else 'mixed')
+            else:
+                message = MIMEText(inputs['body'], 'plain', 'utf-8')
+                message['To'] = ', '.join(to_addresses)
+                message['Subject'] = inputs['subject']
+                if cc_addresses:
+                    message['Cc'] = ', '.join(cc_addresses)
+                return {'success': True, 'message': message}
+            
+            # Headers
+            message['To'] = ', '.join(to_addresses)
+            message['Subject'] = inputs['subject']
+            if cc_addresses:
+                message['Cc'] = ', '.join(cc_addresses)
+            
+            # Corpo testo
+            text_part = MIMEText(inputs['body'], 'plain', 'utf-8')
+            message.attach(text_part)
+            
+            # Corpo HTML (se presente)
+            if inputs.get('body_html'):
+                html_part = MIMEText(inputs['body_html'], 'html', 'utf-8')
+                message.attach(html_part)
+            
+            # Allegati
+            if inputs.get('attachments'):
+                attach_result = self._add_attachments(message, inputs['attachments'])
+                if not attach_result['success']:
+                    return attach_result
+            
+            return {'success': True, 'message': message}
+            
+        except Exception as e:
+            return self._error_result(f"Errore creazione messaggio: {str(e)}")
+    
+    def _normalize_addresses(self, addresses) -> List[str]:
+        """Normalizza indirizzi email."""
+        if isinstance(addresses, str):
+            return [addr.strip() for addr in addresses.split(',')]
+        elif isinstance(addresses, list):
+            return [str(addr).strip() for addr in addresses]
+        return []
+    
+    def _add_attachments(self, message: MIMEMultipart, attachments: List[str]) -> Dict[str, Any]:
+        """Aggiunge allegati al messaggio."""
+        try:
+            attached_files = []
+            
+            for file_path in attachments:
+                if not os.path.exists(file_path):
+                    return self._error_result(f"File allegato non trovato: {file_path}")
+                
+                # Leggi file
+                with open(file_path, 'rb') as f:
+                    file_data = f.read()
+                
+                # Crea allegato
+                attachment = MIMEBase('application', 'octet-stream')
+                attachment.set_payload(file_data)
+                encoders.encode_base64(attachment)
+                
+                # Headers
+                filename = os.path.basename(file_path)
+                attachment.add_header(
+                    'Content-Disposition',
+                    f'attachment; filename= {filename}'
+                )
+                
+                message.attach(attachment)
+                attached_files.append(filename)
+            
+            return {'success': True, 'attached_files': attached_files}
+            
+        except Exception as e:
+            return self._error_result(f"Errore allegati: {str(e)}")
+    
+    async def _send_via_smtp(self, message: MIMEText, smtp_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Invia email via SMTP."""
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Connessione SMTP
+            server = smtplib.SMTP(smtp_config['server'], smtp_config['port'])
+            
+            if smtp_config.get('use_tls', True):
+                server.starttls()
+            
+            # Login
+            server.login(smtp_config['username'], smtp_config['password'])
+            
+            # Invio
+            from_addr = smtp_config['username']
+            to_addrs = []
+            
+            # Raccogli tutti i destinatari
+            if message['To']:
+                to_addrs.extend(self._normalize_addresses(message['To']))
+            if message['Cc']:
+                to_addrs.extend(self._normalize_addresses(message['Cc']))
+            if message['Bcc']:
+                to_addrs.extend(self._normalize_addresses(message['Bcc']))
+            
+            # Headers mittente
+            message['From'] = from_addr
+            message['Date'] = email.utils.formatdate(localtime=True)
+            message['Message-ID'] = email.utils.make_msgid()
+            
+            # Invio messaggio
+            text = message.as_string()
+            server.sendmail(from_addr, to_addrs, text)
+            server.quit()
+            
+            logger.info(f"Email inviata via SMTP a {len(to_addrs)} destinatari")
+            
+            return {
+                'success': True,
+                'message_id': message['Message-ID'],
+                'recipients_count': len(to_addrs),
+                'smtp_server': smtp_config['server']
+            }
+            
+        except Exception as e:
+            logger.error(f"Errore SMTP: {str(e)}")
+            return self._error_result(f"Errore SMTP: {str(e)}")
+
+    # ===============================
+    # METODI HELPER
+    # ===============================

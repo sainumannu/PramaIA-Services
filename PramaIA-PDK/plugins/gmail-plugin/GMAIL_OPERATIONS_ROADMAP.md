@@ -1,19 +1,20 @@
-# 📧 GMAIL: Operazioni Aggiuntive - ✅ IMPLEMENTAZIONE COMPLETATA
+# 📧 GMAIL: Operazioni Aggiuntive - ✅ IMPLEMENTAZIONE COMPLETATA + INVIO EMAIL
 
-## 🎯 **STATO FINALE: TUTTE LE OPERAZIONI IMPLEMENTATE**
+## 🎯 **STATO FINALE: TUTTE LE OPERAZIONI + INVIO EMAIL IMPLEMENTATE**
 
-### ✅ **OBIETTIVO RAGGIUNTO: PLUGIN EMAIL PROFESSIONALE**
+### ✅ **OBIETTIVO RAGGIUNTO: SISTEMA EMAIL COMPLETO BIDIREZIONALE**
 
-Il plugin Gmail è stato trasformato da utility base a **sistema completo di gestione email** con 8 operazioni avanzate, supporto multi-provider e architettura enterprise-ready.
+Il plugin Gmail è stato trasformato da utility base a **sistema completo di gestione email bidirezionale** con 9 operazioni avanzate, supporto multi-provider e architettura enterprise-ready.
 
 ### 🏆 **RISULTATI FINALI**
 
-- **8/8 Operazioni completate** ✅
-- **Multi-provider support** (Gmail API + IMAP) ✅  
+- **9/9 Operazioni completate** ✅
+- **Multi-provider support** (Gmail API + IMAP + SMTP) ✅  
 - **Test suite completa** ✅
 - **Documentazione aggiornata** ✅
 - **Error handling robusto** ✅
 - **Produzione-ready** ✅
+- **🆕 INVIO EMAIL SMTP** ✅
 
 ---
 
@@ -111,9 +112,25 @@ Il plugin Gmail è stato trasformato da utility base a **sistema completo di ges
    # Ritorna: conteggi per mittente, allegati, trend temporali
    ```
 
+9. **📧 Invio email SMTP** ✅ 🆕
+   ```python
+   # IMPLEMENTATO: operation="send_email"
+   result = await processor.process({
+       'operation': 'send_email',
+       'to': 'destinatario@example.com',
+       'subject': 'Test Email',
+       'body': 'Corpo email',
+       'body_html': '<h1>HTML optional</h1>',
+       'attachments': ['file.pdf'],
+       'smtp_username': 'mittente@gmail.com',
+       'smtp_password': 'app-password'
+   })
+   # Supporta: destinatari multipli, CC, BCC, HTML, allegati
+   ```
+
 ---
 
-## 🚀 **OPERAZIONI FUTURE** (Non ancora implementate)
+## 🚀 **OPERAZIONI FUTURE** (Possibili espansioni)
 
 ### 🔴 **COMPLESSITÀ: ALTA** (1-2 giorni)
 
