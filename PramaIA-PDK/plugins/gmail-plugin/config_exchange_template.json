@@ -1,0 +1,68 @@
+{
+  "_comment": "Template di configurazione Exchange/Office 365 per PramaIA Email Plugin",
+  "_note": "IMPORTANTE: Non committare mai questo file con credenziali reali!",
+  
+  "exchange_config": {
+    "provider": "office365",
+    "authentication_method": "oauth2",
+    
+    "oauth2": {
+      "client_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      "tenant_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", 
+      "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "_comment_client_secret": "Solo per confidential client applications",
+      
+      "scopes": [
+        "https://graph.microsoft.com/Mail.Read",
+        "https://graph.microsoft.com/Mail.Send", 
+        "https://graph.microsoft.com/Mail.ReadWrite"
+      ],
+      
+      "_additional_scopes_for_shared_mailbox": [
+        "https://graph.microsoft.com/Mail.Read.Shared",
+        "https://graph.microsoft.com/Mail.Send.Shared",
+        "https://graph.microsoft.com/Mail.ReadWrite.Shared"
+      ]
+    },
+    
+    "ropc_flow": {
+      "_comment": "Resource Owner Password Credentials (sconsigliato in produzione)",
+      "username": "user@yourdomain.com",
+      "password": "user-password",
+      "_warning": "Questo flow è deprecato da Microsoft e meno sicuro"
+    },
+    
+    "shared_mailbox": {
+      "enabled": false,
+      "mailbox_email": "shared@yourdomain.com",
+      "_note": "Per shared mailbox, sostituire /me/ con /users/{mailbox_email}/ nelle API calls"
+    }
+  },
+  
+  "fallback_imap_smtp": {
+    "_comment": "Configurazione fallback IMAP/SMTP se OAuth2 non disponibile",
+    "enabled": true,
+    "imap_server": "outlook.office365.com",
+    "imap_port": 993,
+    "smtp_server": "smtp.office365.com", 
+    "smtp_port": 587,
+    "username": "user@yourdomain.com",
+    "password": "app-password-or-regular-password"
+  },
+  
+  "test_configuration": {
+    "_comment": "Configurazioni per test e sviluppo",
+    "test_email_recipient": "test@yourdomain.com",
+    "test_shared_mailbox": "testshared@yourdomain.com",
+    "device_flow_enabled": true,
+    "_note": "Device flow è ideale per test interattivi"
+  },
+  
+  "production_settings": {
+    "token_cache_location": "./tokens/exchange_tokens.json",
+    "log_level": "INFO",
+    "request_timeout": 30,
+    "retry_attempts": 3,
+    "_security_note": "In produzione usare Azure Key Vault per secret"
+  }
+}

@@ -1,11 +1,12 @@
-# 📧 Gmail Plugin - Sistema Email Completo
+# 📧 Gmail Plugin - Sistema Email Completo Multi-Provider
 
-**Plugin enterprise-grade per gestione email completa con 9 operazioni avanzate, supporto multi-provider e architettura production-ready.**
+**Plugin enterprise-grade per gestione email completa con 9 operazioni avanzate, supporto multi-provider (Gmail + Exchange/Office 365) e architettura production-ready.**
 
 ## 🏆 **CARATTERISTICHE PRINCIPALI**
 
 ✅ **9 Operazioni Email Complete** - Read, Search, Send, Labels, Stats, Attachments  
-✅ **Multi-Provider Support** - Gmail API + IMAP + SMTP universale  
+✅ **Multi-Provider Support** - Gmail API + Exchange/Office 365 + IMAP + SMTP  
+✅ **Exchange/Office 365** - OAuth2 con Microsoft Graph API + Shared Mailbox  
 ✅ **Error Handling Robusto** - Fallback automatico e recovery  
 ✅ **Test Suite Completa** - Validazione automatica funzionamenti  
 ✅ **Async Performance** - Operazioni non-blocking ottimizzate  
@@ -72,7 +73,9 @@ result = await processor.process({
 
 ## 🎯 **FEATURES PRINCIPALI**
 
-✅ **Multi-Provider**: Gmail, IMAP, SMTP, Outlook  
+✅ **Multi-Provider**: Gmail API, Exchange/Office 365, IMAP, SMTP  
+✅ **Exchange/Office 365**: OAuth2 con Microsoft Graph API  
+✅ **Shared Mailbox**: Supporto completo per mailbox condivise  
 ✅ **Invio Email**: SMTP con supporto HTML, allegati, destinatari multipli  
 ✅ **Ricerca Avanzata**: Filtri complessi per mittente, oggetto, data, allegati  
 ✅ **Download Allegati**: Con filtri dimensione e tipo file  
@@ -97,21 +100,76 @@ python test_send_email.py          # Test specifico invio email
 - `GMAIL_OPERATIONS_ROADMAP.md` - Roadmap operazioni e complessità
 - `GUIDA_CONFIGURAZIONE.md` - Configurazione completa e troubleshooting
 - `FINAL_PLUGIN_SUMMARY.md` - Riassunto implementazione completa
+- `EXCHANGE_SETUP_GUIDE.md` - **NUOVO** Setup completo Exchange/Office 365
+
+## 💼 **EXCHANGE/OFFICE 365 SETUP**
+
+**🆕 SUPPORTO COMPLETO per Exchange/Office 365!**
+
+```powershell
+# Test configurazioni Exchange
+python test_exchange_oauth.py
+
+# Guida completa setup Azure AD + OAuth2
+Get-Content EXCHANGE_SETUP_GUIDE.md
+```
+
+### Quick Start Exchange OAuth2:
+```python
+from email_processor import EmailProcessor
+import asyncio
+
+async def test_exchange():
+    processor = EmailProcessor()
+    
+    # Device Flow (raccomandato per test)
+    success = await processor.authenticate_exchange_oauth2(
+        client_id="your-azure-app-client-id",
+        tenant_id="your-azure-tenant-id",
+        use_device_flow=True
+    )
+    
+    if success:
+        # Lista email da Exchange/Office 365
+        result = await processor._list_emails({
+            'folder': 'INBOX',
+            'max_emails': 10,
+            'unread_only': True
+        })
+        print(f"📧 {result['data']['email_count']} email trovate")
+        
+        # Invia via Graph API
+        send_result = await processor._send_email({
+            'to': 'colleague@company.com',
+            'subject': 'Test Exchange Plugin',
+            'body': 'Inviato via Microsoft Graph API!'
+        })
+        
+asyncio.run(test_exchange())
+```
+
+**Caratteristiche Exchange:**
+- ✅ **OAuth2 Microsoft Graph API** - Autenticazione sicura enterprise
+- ✅ **Shared Mailbox Support** - Accesso mailbox condivise  
+- ✅ **Device Flow** - Autenticazione interattiva MFA-ready
+- ✅ **Client Credentials** - Automazione server-to-server
+- ✅ **IMAP/SMTP Fallback** - Compatibilità legacy
 
 ## 🔗 **PLUGIN CORRELATI**
 
-- **outlook-plugin** (futuro) - Microsoft 365/Exchange
+- **exchange-plugin** ✅ **INTEGRATO** - Microsoft 365/Exchange OAuth2
 - **imap-plugin** (futuro) - Server IMAP generici
 - **email-automation-plugin** (futuro) - Automazioni email avanzate
 
 ## 🏆 **STATO IMPLEMENTAZIONE**
 
 **🟢 COMPLETO** - Plugin production-ready per:
-- ✅ Gestione email professionale aziendale
-- ✅ Automazioni email avanzate e workflow  
-- ✅ Analisi e reportistica email dettagliata
+- ✅ Gestione email professionale aziendale (Gmail + Exchange)
+- ✅ Automazioni email avanzate e workflow multi-provider
+- ✅ Analisi e reportistica email dettagliata  
 - ✅ Download e backup automatico allegati
 - ✅ Integrazione con sistemi di ticketing/CRM
+- ✅ **Exchange/Office 365 OAuth2** con Microsoft Graph API
 
 ---
 

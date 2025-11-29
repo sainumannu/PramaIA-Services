@@ -46,6 +46,14 @@ try:
 except ImportError:
     OUTLOOK_AVAILABLE = False
 
+# Microsoft Graph API per Exchange OAuth2
+try:
+    import msal
+    import requests
+    MICROSOFT_GRAPH_AVAILABLE = True
+except ImportError:
+    MICROSOFT_GRAPH_AVAILABLE = False
+
 try:
     import ssl
     SSL_AVAILABLE = True
@@ -56,16 +64,224 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Configurazioni Exchange/Office 365
+EXCHANGE_CONFIGS = {
+    'office365': {
+        'imap_server': 'outlook.office365.com',
+        'imap_port': 993,
+        'smtp_server': 'smtp.office365.com',
+        'smtp_port': 587,
+        'graph_endpoint': 'https://graph.microsoft.com/v1.0',
+        'authority': 'https://login.microsoftonline.com',
+        'scopes': ['https://graph.microsoft.com/Mail.Read',
+                  'https://graph.microsoft.com/Mail.Send',
+                  'https://graph.microsoft.com/Mail.ReadWrite']
+    },
+    'exchange_onprem': {
+        'imap_server': None,  # Da configurare
+        'imap_port': 993,
+        'smtp_server': None,  # Da configurare  
+        'smtp_port': 587,
+        'ews_url': None  # Da configurare
+    }
+}
+
 class EmailProcessor:
-    """Processore per lettura email multi-provider."""
+    """Processore per lettura email multi-provider con supporto Exchange."""
     
     def __init__(self):
         """Inizializza il processore email."""
         self.gmail_service = None
         self.outlook_account = None
         self.imap_connection = None
+        self.microsoft_app = None  # MSAL app per OAuth2
+        self.access_token = None   # Token Microsoft Graph
         self.current_provider = None
-        logger.info("EmailProcessor inizializzato")
+        logger.info("EmailProcessor inizializzato con supporto Exchange")
+    
+    async def authenticate_exchange_oauth2(self, client_id: str, tenant_id: str, 
+                                         client_secret: Optional[str] = None,
+                                         username: Optional[str] = None,
+                                         password: Optional[str] = None,
+                                         use_device_flow: bool = False):
+        """Autentica con Exchange/Office 365 usando OAuth2 e Microsoft Graph.
+        
+        Args:
+            client_id: ID dell'applicazione Azure AD
+            tenant_id: ID del tenant Azure AD
+            client_secret: Secret dell'applicazione (per confidential client)
+            username: Username per Resource Owner Password Credential flow
+            password: Password per ROPC flow
+            use_device_flow: Se usare device code flow per interactive auth
+            
+        Returns:
+            bool: True se autenticazione riuscita
+        """
+        if not MICROSOFT_GRAPH_AVAILABLE:
+            logger.error("Microsoft Graph (msal) non disponibile")
+            return False
+            
+        try:
+            authority_url = f"{EXCHANGE_CONFIGS['office365']['authority']}/{tenant_id}"
+            
+            if client_secret:
+                # Confidential client application (con secret)
+                self.microsoft_app = msal.ConfidentialClientApplication(
+                    client_id=client_id,
+                    client_credential=client_secret,
+                    authority=authority_url
+                )
+                
+                # Prova prima silent acquisition (token cache)
+                accounts = self.microsoft_app.get_accounts()
+                if accounts:
+                    result = self.microsoft_app.acquire_token_silent(
+                        EXCHANGE_CONFIGS['office365']['scopes'],
+                        account=accounts[0]
+                    )
+                else:
+                    result = None
+                
+                # Se non c'è token cached, usa client credentials flow
+                if not result:
+                    result = self.microsoft_app.acquire_token_for_client(
+                        scopes=EXCHANGE_CONFIGS['office365']['scopes']
+                    )
+                    
+            elif username and password:
+                # Public client con Resource Owner Password Credentials
+                self.microsoft_app = msal.PublicClientApplication(
+                    client_id=client_id,
+                    authority=authority_url
+                )
+                
+                result = self.microsoft_app.acquire_token_by_username_password(
+                    username=username,
+                    password=password,
+                    scopes=EXCHANGE_CONFIGS['office365']['scopes']
+                )
+                
+            elif use_device_flow:
+                # Device code flow per autenticazione interattiva
+                self.microsoft_app = msal.PublicClientApplication(
+                    client_id=client_id,
+                    authority=authority_url
+                )
+                
+                flow = self.microsoft_app.initiate_device_flow(
+                    scopes=EXCHANGE_CONFIGS['office365']['scopes']
+                )
+                
+                if "user_code" not in flow:
+                    raise Exception("Device flow non riuscito")
+                    
+                logger.info(f"Device Code: {flow['message']}")
+                print(f"\n{flow['message']}")
+                
+                result = self.microsoft_app.acquire_token_by_device_flow(flow)
+                
+            else:
+                logger.error("Parametri di autenticazione insufficienti")
+                return False
+                
+            if "access_token" in result:
+                self.access_token = result["access_token"]
+                self.current_provider = "exchange"
+                logger.info("Autenticazione Exchange OAuth2 riuscita")
+                return True
+            else:
+                logger.error(f"Errore autenticazione Exchange: {result.get('error_description', result)}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Errore durante autenticazione Exchange: {str(e)}")
+            return False
+    
+    def _make_graph_request(self, endpoint: str, method: str = "GET", data: dict = None):
+        """Effettua richiesta autenticata a Microsoft Graph API.
+        
+        Args:
+            endpoint: Endpoint Graph API (relativo a /v1.0/)
+            method: Metodo HTTP (GET, POST, PATCH, DELETE)
+            data: Dati per richieste POST/PATCH
+            
+        Returns:
+            dict: Risposta JSON dell'API
+        """
+        if not self.access_token:
+            raise Exception("Token di accesso non disponibile")
+            
+        headers = {
+            'Authorization': f'Bearer {self.access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        url = f"{EXCHANGE_CONFIGS['office365']['graph_endpoint']}/{endpoint}"
+        
+        if method == "GET":
+            response = requests.get(url, headers=headers)
+        elif method == "POST":
+            response = requests.post(url, headers=headers, json=data)
+        elif method == "PATCH":
+            response = requests.patch(url, headers=headers, json=data)
+        elif method == "DELETE":
+            response = requests.delete(url, headers=headers)
+        else:
+            raise ValueError(f"Metodo HTTP non supportato: {method}")
+            
+        if response.status_code == 401:
+            raise Exception("Token di accesso scaduto o non valido")
+        elif response.status_code >= 400:
+            raise Exception(f"Errore Graph API: {response.status_code} - {response.text}")
+            
+        return response.json() if response.content else {}
+        
+    async def authenticate_exchange_imap_smtp(self, email: str, password: str, 
+                                           imap_server: str = None, smtp_server: str = None,
+                                           imap_port: int = 993, smtp_port: int = 587):
+        """Autentica con Exchange usando IMAP/SMTP (fallback).
+        
+        Args:
+            email: Indirizzo email
+            password: Password dell'account
+            imap_server: Server IMAP personalizzato
+            smtp_server: Server SMTP personalizzato  
+            imap_port: Porta IMAP (default 993)
+            smtp_port: Porta SMTP (default 587)
+            
+        Returns:
+            bool: True se autenticazione riuscita
+        """
+        try:
+            # Usa server Office 365 di default se non specificati
+            if not imap_server:
+                imap_server = EXCHANGE_CONFIGS['office365']['imap_server']
+            if not smtp_server:
+                smtp_server = EXCHANGE_CONFIGS['office365']['smtp_server']
+                
+            # Test connessione IMAP
+            self.imap_connection = imaplib.IMAP4_SSL(imap_server, imap_port)
+            self.imap_connection.login(email, password)
+            
+            # Salva credenziali per SMTP
+            self.smtp_email = email
+            self.smtp_password = password
+            self.smtp_server = smtp_server
+            self.smtp_port = smtp_port
+            
+            self.current_provider = "exchange_imap"
+            logger.info(f"Autenticazione Exchange IMAP/SMTP riuscita per {email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Errore autenticazione Exchange IMAP/SMTP: {str(e)}")
+            if self.imap_connection:
+                try:
+                    self.imap_connection.close()
+                except:
+                    pass
+                self.imap_connection = None
+            return False
     
     async def process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -298,6 +514,16 @@ class EmailProcessor:
                     folder, max_emails, unread_only, date_from, date_to,
                     sender_filter, subject_filter, include_body, include_html
                 )
+            elif self.current_provider == 'exchange':
+                return await self._list_emails_exchange(
+                    folder, max_emails, unread_only, date_from, date_to,
+                    sender_filter, subject_filter, include_body, include_html
+                )
+            elif self.current_provider == 'exchange_imap':
+                return await self._list_emails_imap(
+                    folder, max_emails, unread_only, date_from, date_to,
+                    sender_filter, subject_filter, include_body, include_html
+                )
             elif self.current_provider == 'imap':
                 return await self._list_emails_imap(
                     folder, max_emails, unread_only, date_from, date_to,
@@ -514,6 +740,212 @@ class EmailProcessor:
             
         except Exception as e:
             return self._error_result(f"Errore IMAP list: {e}")
+    
+    async def _list_emails_exchange(self, folder: str, max_emails: int, unread_only: bool,
+                                  date_from: str = None, date_to: str = None, 
+                                  sender_filter: str = None, subject_filter: str = None,
+                                  include_body: bool = True, include_html: bool = False) -> Dict[str, Any]:
+        """Lista email usando Microsoft Graph API.
+        
+        Args:
+            folder: Nome cartella (default 'INBOX')
+            max_emails: Numero massimo email da recuperare
+            unread_only: Solo email non lette
+            date_from: Data minima (YYYY-MM-DD)
+            date_to: Data massima (YYYY-MM-DD)
+            sender_filter: Filtra per mittente
+            subject_filter: Filtra per oggetto
+            include_body: Include corpo email
+            include_html: Include corpo HTML
+            
+        Returns:
+            Dict con risultato operazione
+        """
+        try:
+            # Costruisci endpoint Graph API per messaggi
+            if folder.upper() == 'INBOX':
+                endpoint = "me/messages"
+            else:
+                # Per cartelle personalizzate, prima cerchiamo l'ID della cartella
+                folders_response = self._make_graph_request("me/mailFolders")
+                folder_id = None
+                for f in folders_response.get('value', []):
+                    if f.get('displayName', '').upper() == folder.upper():
+                        folder_id = f.get('id')
+                        break
+                
+                if not folder_id:
+                    return self._error_result(f"Cartella '{folder}' non trovata")
+                    
+                endpoint = f"me/mailFolders/{folder_id}/messages"
+            
+            # Parametri query
+            params = []
+            
+            # Limita risultati
+            params.append(f"$top={min(max_emails, 1000)}")
+            
+            # Ordinamento per data (più recenti prima)
+            params.append("$orderby=receivedDateTime desc")
+            
+            # Filtro per email non lette
+            filters = []
+            if unread_only:
+                filters.append("isRead eq false")
+            
+            # Filtro per date
+            if date_from:
+                try:
+                    date_obj = datetime.strptime(date_from, '%Y-%m-%d')
+                    filters.append(f"receivedDateTime ge {date_obj.strftime('%Y-%m-%d')}T00:00:00Z")
+                except ValueError:
+                    pass
+                    
+            if date_to:
+                try:
+                    date_obj = datetime.strptime(date_to, '%Y-%m-%d')
+                    filters.append(f"receivedDateTime le {date_obj.strftime('%Y-%m-%d')}T23:59:59Z")
+                except ValueError:
+                    pass
+            
+            # Filtro per mittente
+            if sender_filter:
+                filters.append(f"from/emailAddress/address eq '{sender_filter}'")
+            
+            # Filtro per oggetto (contiene)
+            if subject_filter:
+                filters.append(f"contains(subject,'{subject_filter}')")
+            
+            # Aggiungi filtri alla query
+            if filters:
+                params.append(f"$filter={' and '.join(filters)}")
+            
+            # Seleziona campi necessari
+            select_fields = [
+                'id', 'subject', 'from', 'toRecipients', 'ccRecipients', 
+                'receivedDateTime', 'isRead', 'importance', 'hasAttachments'
+            ]
+            
+            if include_body or include_html:
+                select_fields.append('body')
+            
+            params.append(f"$select={','.join(select_fields)}")
+            
+            # Esegui richiesta
+            full_endpoint = f"{endpoint}?" + "&".join(params)
+            response = self._make_graph_request(full_endpoint)
+            
+            # Processa risultati
+            emails = []
+            for msg in response.get('value', []):
+                email_data = self._parse_exchange_email(msg, include_body, include_html)
+                if email_data:
+                    emails.append(email_data)
+            
+            return self._success_result(
+                f"Recuperate {len(emails)} email via Exchange Graph API",
+                {
+                    'emails': emails,
+                    'email_count': len(emails),
+                    'total_available': len(response.get('value', []))
+                }
+            )
+            
+        except Exception as e:
+            return self._error_result(f"Errore Exchange Graph API list: {e}")
+    
+    def _parse_exchange_email(self, msg: dict, include_body: bool, include_html: bool) -> Dict[str, Any]:
+        """Converte messaggio Exchange Graph API in formato standardizzato.
+        
+        Args:
+            msg: Messaggio raw da Graph API
+            include_body: Include corpo email
+            include_html: Include corpo HTML
+            
+        Returns:
+            Dict con dati email formattati
+        """
+        try:
+            # Estrai mittente
+            from_data = msg.get('from', {}).get('emailAddress', {})
+            sender = from_data.get('address', 'sconosciuto')
+            sender_name = from_data.get('name', sender)
+            
+            # Estrai destinatari
+            recipients = []
+            for recipient in msg.get('toRecipients', []):
+                email_addr = recipient.get('emailAddress', {})
+                recipients.append({
+                    'email': email_addr.get('address', ''),
+                    'name': email_addr.get('name', email_addr.get('address', ''))
+                })
+            
+            # Estrai CC
+            cc_recipients = []
+            for recipient in msg.get('ccRecipients', []):
+                email_addr = recipient.get('emailAddress', {})
+                cc_recipients.append({
+                    'email': email_addr.get('address', ''),
+                    'name': email_addr.get('name', email_addr.get('address', ''))
+                })
+            
+            # Data ricezione
+            received_date = msg.get('receivedDateTime', '')
+            if received_date:
+                try:
+                    # Converte da formato ISO a timestamp
+                    date_obj = datetime.fromisoformat(received_date.replace('Z', '+00:00'))
+                    received_timestamp = int(date_obj.timestamp() * 1000)
+                except:
+                    received_timestamp = 0
+            else:
+                received_timestamp = 0
+            
+            # Corpo email
+            body_text = ""
+            body_html = ""
+            if include_body or include_html:
+                body_data = msg.get('body', {})
+                content = body_data.get('content', '')
+                content_type = body_data.get('contentType', '').lower()
+                
+                if content_type == 'html':
+                    body_html = content
+                    if include_body:
+                        # Converte HTML in testo
+                        from html import unescape
+                        import re
+                        text = re.sub('<[^<]+?>', '', content)
+                        body_text = unescape(text).strip()
+                else:
+                    body_text = content
+            
+            # Costruisci dati email
+            email_data = {
+                'id': msg.get('id', ''),
+                'subject': msg.get('subject', 'Nessun oggetto'),
+                'sender': sender,
+                'sender_name': sender_name,
+                'recipients': recipients,
+                'cc_recipients': cc_recipients,
+                'date': received_timestamp,
+                'is_read': msg.get('isRead', False),
+                'importance': msg.get('importance', 'normal'),
+                'has_attachments': msg.get('hasAttachments', False),
+                'folder': 'INBOX',  # TODO: determinare cartella effettiva
+                'provider': 'exchange'
+            }
+            
+            if include_body:
+                email_data['body'] = body_text
+            if include_html:
+                email_data['body_html'] = body_html
+            
+            return email_data
+            
+        except Exception as e:
+            logger.warning(f"Errore parsing email Exchange: {e}")
+            return None
     
     async def _get_imap_email_detail(self, email_id: bytes, include_body: bool,
                                    include_html: bool) -> Optional[Dict[str, Any]]:
